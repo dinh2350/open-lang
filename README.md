@@ -15,15 +15,18 @@ docker compose up --detach --wait   # the LiveKit server
 pnpm dev                            # frontend, backend and Agent
 ```
 
+The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER=openai` and `OPENAI_API_KEY` in `agent/.env`. The Agent refuses to start, naming the variable, when its configuration is invalid.
+
 ## Commands
 
-| Command                                 | What it does                                                      |
-| --------------------------------------- | ----------------------------------------------------------------- |
-| `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.             |
-| `pnpm test`                             | Runs every fast test with coverage. Needs no keys and no LiveKit. |
-| `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.            |
-| `pnpm check`                            | Format check, lint, typecheck and tests.                          |
-| `pnpm sonar:up`, `sonar:setup`, `sonar` | The local SonarQube quality gate.                                 |
+| Command                                 | What it does                                                        |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.               |
+| `pnpm test`                             | Runs every fast test with coverage. Needs no keys and no LiveKit.   |
+| `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.              |
+| `pnpm test:live`                        | Runs live Agent tests against real Providers; skipped without keys. |
+| `pnpm check`                            | Format check, lint, typecheck and tests.                            |
+| `pnpm sonar:up`, `sonar:setup`, `sonar` | The local SonarQube quality gate.                                   |
 
 ## Quality gates
 
