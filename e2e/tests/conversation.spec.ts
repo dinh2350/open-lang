@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
+import { registerNewUser } from './users.ts';
 
 declare global {
   interface Window {
@@ -49,14 +49,6 @@ async function microphoneBytesSent(page: Page): Promise<number> {
       (report) => report.type === 'outbound-rtp' && report.kind === 'audio',
     )
     .reduce((total, report) => total + (report.bytesSent ?? 0), 0);
-}
-
-/** Registers a new User from the sign-in page the app opens on. */
-async function registerNewUser(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Register' }).click();
-  await page.getByLabel('Email').fill(`e2e-${randomUUID()}@example.test`);
-  await page.getByLabel('Password').fill('correct horse battery staple');
-  await page.getByRole('button', { name: 'Register' }).click();
 }
 
 test('a person registers, starts a Conversation, the Agent joins its room and shows its state, and End leaves it', async ({
