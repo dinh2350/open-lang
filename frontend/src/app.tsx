@@ -2,6 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Room } from 'livekit-client';
 import { useState } from 'react';
 import { Route, Routes } from 'react-router';
+import { AdminNav } from './admin/admin-nav';
+import { RequireAdmin } from './admin/require-admin';
+import { UsersPage } from './admin/users-page';
 import { AuthProvider } from './auth/auth-context';
 import { RegisterPage } from './auth/register-page';
 import { RequireSignedIn } from './auth/require-signed-in';
@@ -19,11 +22,15 @@ export function App({ room }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <AdminNav />
         <Routes>
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<RequireSignedIn />}>
             <Route path="/" element={<ConversationPage room={room} />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="/admin/users" element={<UsersPage />} />
+            </Route>
           </Route>
         </Routes>
       </AuthProvider>
