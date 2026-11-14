@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
+import { adminHandlers, resetAdminBackend } from './admin-backend';
 import { authHandlers, resetAuthBackend } from './auth-backend';
 
 export const TEST_LIVEKIT_URL = 'ws://livekit.test:7880';
@@ -49,6 +50,7 @@ export function roomTokenRequestAuthorizations(): readonly (string | null)[] {
 /** The backend's `/api` endpoints, as the browser sees them. */
 export const backend = setupServer(
   ...authHandlers,
+  ...adminHandlers,
   http.post('/api/token', ({ request }) => {
     roomTokenAuthorizations.push(request.headers.get('Authorization'));
     const participantToken = roomToken(
@@ -67,6 +69,7 @@ export function resetBackend(): void {
   issuedRoomTokens.length = 0;
   roomTokenAuthorizations.length = 0;
   resetAuthBackend();
+  resetAdminBackend();
 }
 
 let requestsInFlight = 0;
