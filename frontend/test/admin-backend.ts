@@ -4,9 +4,24 @@ import {
   type UserDetails,
 } from '@livekit-platform/shared';
 import { http, HttpResponse } from 'msw';
-import { backendUsers, changeRoleOnBackend } from './auth-backend';
+import {
+  backendUsers,
+  changeRoleOnBackend,
+  refusalOfAuthorization,
+} from './auth-backend';
 
 const adminAuthorizations: (string | null)[] = [];
+
+/**
+ * Records the request's `Authorization` header, and answers as the
+ * backend's authentication guard would: `401` without a valid Auth Token,
+ * `403` for a Locked User. Resolves to `undefined` when it may go through.
+ */
+function guard(request: Request): Response | undefined {
+  const authorization = request.headers.get('Authorization');
+  adminAuthorizations.push(authorization);
+  return refusalOfAuthorization(authorization ?? '');
+}
 
 /** The `Authorization` header of every Admin API request, oldest first. */
 export function adminRequestAuthorizations(): readonly (string | null)[] {
@@ -31,19 +46,24 @@ function withDetails(user: User): UserDetails {
 }
 
 /**
- * The backend's Admin API. Like the Room Token fake, it records the Auth
- * Token but leaves the Role guard and the `409` rules to the backend's own
- * tests; a test that needs a refusal overrides a handler.
+ * The backend's Admin API. It checks the Auth Token like the backend's
+ * authentication guard, but leaves the Role guard and the `409` rules to the
+ * backend's own tests; a test that needs a refusal overrides a handler.
  */
 export const adminHandlers = [
   http.get('/api/admin/users', ({ request }) => {
-    adminAuthorizations.push(request.headers.get('Authorization'));
-    return HttpResponse.json({ users: backendUsers().map(withDetails) });
+    return (
+      guard(request) ??
+      HttpResponse.json({ users: backendUsers().map(withDetails) })
+    );
   }),
   http.put<{ id: string }>(
     '/api/admin/users/:id/role',
     async ({ request, params }) => {
-      adminAuthorizations.push(request.headers.get('Authorization'));
+      const refusal = guard(request);
+      if (refusal !== undefined) {
+        return refusal;
+      }
       const { role } = changeRoleRequestSchema.parse(await request.json());
       const user = changeRoleOnBackend(params.id, role);
       return user === undefined

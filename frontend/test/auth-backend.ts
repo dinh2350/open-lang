@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_LOCKED,
   registerRequestSchema,
   type Role,
   signInRequestSchema,
@@ -6,12 +7,17 @@ import {
 } from '@livekit-platform/shared';
 import { http, HttpResponse } from 'msw';
 
+/** The message the backend gives a Locked User with its `403`. */
+export const ACCOUNT_LOCKED_MESSAGE =
+  'Your account is locked. Ask an Admin to unlock it.';
+
 const AUTH_TOKEN_LIFETIME_MILLISECONDS = 15 * 60_000;
 const REFRESH_TOKEN_LIFETIME_MILLISECONDS = 7 * 24 * 60 * 60_000;
 
 interface Account {
   readonly user: User;
   readonly password: string;
+  readonly locked: boolean;
 }
 
 interface RefreshToken {
@@ -24,6 +30,8 @@ interface RefreshToken {
 const accounts = new Map<string, Account>();
 const issuedAuthTokens: string[] = [];
 const authTokenExpiries = new Map<string, number>();
+/** The email of the User each Auth Token was issued to. */
+const authTokenOwners = new Map<string, string>();
 const refreshTokens = new Map<string, RefreshToken>();
 const authRequests: string[] = [];
 let refreshes = 0;
@@ -41,7 +49,7 @@ export function backendHasUser(
   role: Role = 'member',
 ): User {
   const user: User = { id: `user-${String(accounts.size + 1)}`, email, role };
-  accounts.set(email, { user, password });
+  accounts.set(email, { user, password, locked: false });
   return user;
 }
 
@@ -74,20 +82,69 @@ export function backendUsers(): readonly User[] {
   return [...accounts.values()].map((account) => account.user);
 }
 
+function accountWithId(userId: string): Account | undefined {
+  return [...accounts.values()].find((account) => account.user.id === userId);
+}
+
 /** Changes a User's Role on the backend. Returns the User, or `undefined` for an unknown id. */
 export function changeRoleOnBackend(
   userId: string,
   role: Role,
 ): User | undefined {
-  const account = [...accounts.values()].find(
-    (candidate) => candidate.user.id === userId,
-  );
+  const account = accountWithId(userId);
   if (account === undefined) {
     return undefined;
   }
   const user = { ...account.user, role };
   accounts.set(user.email, { ...account, user });
   return user;
+}
+
+/**
+ * Locks or unlocks a User on the backend. Locking revokes every refresh
+ * token of that User. Returns the User, or `undefined` for an unknown id.
+ */
+export function changeLockedOnBackend(
+  userId: string,
+  locked: boolean,
+): User | undefined {
+  const account = accountWithId(userId);
+  if (account === undefined) {
+    return undefined;
+  }
+  accounts.set(account.user.email, { ...account, locked });
+  if (locked) {
+    revokeEveryRefreshTokenOf(account.user.email);
+  }
+  return account.user;
+}
+
+/** Whether the User with this email is locked on the backend. */
+export function isLockedOnBackend(email: string): boolean {
+  return accounts.get(email)?.locked === true;
+}
+
+/**
+ * Sets a new password for a User on the backend, which revokes every
+ * refresh token of that User. Returns the User, or `undefined` for an
+ * unknown id.
+ */
+export function setPasswordOnBackend(
+  userId: string,
+  password: string,
+): User | undefined {
+  const account = accountWithId(userId);
+  if (account === undefined) {
+    return undefined;
+  }
+  accounts.set(account.user.email, { ...account, password });
+  revokeEveryRefreshTokenOf(account.user.email);
+  return account.user;
+}
+
+/** The password the User with this email signs in with. */
+export function passwordOnBackend(email: string): string | undefined {
+  return accounts.get(email)?.password;
 }
 
 /** The emails of every User the backend has, in the order they registered. */
@@ -110,19 +167,41 @@ export function refreshesRequested(): number {
   return refreshes;
 }
 
+/** The backend's answer to a Locked User: `403` with the account locked error code. */
+function accountLockedResponse() {
+  return HttpResponse.json(
+    {
+      statusCode: 403,
+      error: 'Forbidden',
+      errorCode: ACCOUNT_LOCKED,
+      message: ACCOUNT_LOCKED_MESSAGE,
+    },
+    { status: 403 },
+  );
+}
+
 /**
- * Whether an `Authorization` header holds an Auth Token this backend issued
- * less than 15 minutes ago.
+ * What the backend's authentication guard answers to an `Authorization`
+ * header: `401` unless it holds an Auth Token this backend issued less than
+ * 15 minutes ago, and `403` when that Auth Token's User is locked. Resolves
+ * to `undefined` when the request may go through.
  */
-export function holdsValidAuthToken(authorization: string): boolean {
+export function refusalOfAuthorization(
+  authorization: string,
+): Response | undefined {
   const authToken = /^Bearer (\S+)$/.exec(authorization)?.[1] ?? '';
-  return (authTokenExpiries.get(authToken) ?? 0) > Date.now();
+  if ((authTokenExpiries.get(authToken) ?? 0) <= Date.now()) {
+    return errorResponse(401, 'Unauthorized');
+  }
+  const owner = accounts.get(authTokenOwners.get(authToken) ?? '');
+  return owner?.locked === true ? accountLockedResponse() : undefined;
 }
 
 export function resetAuthBackend(): void {
   accounts.clear();
   issuedAuthTokens.length = 0;
   authTokenExpiries.clear();
+  authTokenOwners.clear();
   refreshTokens.clear();
   authRequests.length = 0;
   refreshes = 0;
@@ -137,6 +216,7 @@ function signedIn(user: User, status: number) {
     authToken,
     Date.now() + AUTH_TOKEN_LIFETIME_MILLISECONDS,
   );
+  authTokenOwners.set(authToken, user.email);
   issueRefreshCookie(user.email);
   return HttpResponse.json({ authToken, user }, { status });
 }
@@ -172,6 +252,9 @@ export const authHandlers = [
     if (account?.password !== password) {
       return errorResponse(401, 'Wrong email or password.');
     }
+    if (account.locked) {
+      return accountLockedResponse();
+    }
     return signedIn(account.user, 200);
   }),
   http.post('/api/auth/refresh', () => {
@@ -186,6 +269,7 @@ export const authHandlers = [
     if (
       current === undefined ||
       account === undefined ||
+      account.locked ||
       current.revoked ||
       current.expiresAt <= Date.now()
     ) {

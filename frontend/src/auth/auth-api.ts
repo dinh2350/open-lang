@@ -1,4 +1,5 @@
 import {
+  accountLockedResponseSchema,
   type AuthResponse,
   authResponseSchema,
   errorResponseSchema,
@@ -62,4 +63,25 @@ export async function signOut(): Promise<void> {
       `Signing out failed with status ${String(response.status)}`,
     );
   }
+}
+
+const FORBIDDEN = 403;
+
+/**
+ * The account locked message, when the backend answered a request with the
+ * `403` it gives a Locked User. `null` for any other response, including
+ * other `403`s such as a Member calling the Admin API.
+ */
+export async function accountLockedMessageOf(
+  response: Response,
+): Promise<string | null> {
+  if (response.status !== FORBIDDEN) {
+    return null;
+  }
+  const body: unknown = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const locked = accountLockedResponseSchema.safeParse(body);
+  return locked.success ? locked.data.message : null;
 }
