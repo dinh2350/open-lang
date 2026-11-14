@@ -25,7 +25,28 @@ model User {
   email        String   @unique
   /// argon2id hash; the password itself is never stored.
   passwordHash String
-  role         Role     @default(member)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role          Role           @default(member)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+}
+
+/// Keeps a User signed in for 7 days without their password (ADR 0003).
+/// Each refresh rotates it: the token is revoked, and a new one replaces it.
+model RefreshToken {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  userId     String        @db.Uuid
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the token. The token itself is only in the User's cookie.
+  tokenHash  String        @unique
+  expiresAt  DateTime
+  /// When it was rotated, signed out, or revoked with all of the User's tokens.
+  revokedAt  DateTime?
+  /// The token this one replaced when that token was rotated.
+  replacesId String?       @unique @db.Uuid
+  replaces   RefreshToken? @relation("Rotation", fields: [replacesId], references: [id], onDelete: SetNull)
+  replacedBy RefreshToken? @relation("Rotation")
+  createdAt  DateTime      @default(now())
+
+  @@index([userId])
 }

@@ -8,6 +8,7 @@ import { UsersPage } from './admin/users-page';
 import { AuthProvider } from './auth/auth-context';
 import { RegisterPage } from './auth/register-page';
 import { RequireSignedIn } from './auth/require-signed-in';
+import { SignedInHeader } from './auth/signed-in-header';
 import { SignInPage } from './auth/sign-in-page';
 import { ConversationPage } from './conversation/conversation-page';
 
@@ -22,7 +23,9 @@ export function App({ room }: AppProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AdminNav />
+        <SignedInHeader>
+          <AdminNav />
+        </SignedInHeader>
         <Routes>
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/register" element={<RegisterPage />} />

@@ -38,3 +38,28 @@ export function register(credentials: RegisterRequest): Promise<AuthResponse> {
 export function signIn(credentials: SignInRequest): Promise<AuthResponse> {
   return requestAuthResponse('/api/auth/sign-in', credentials);
 }
+
+/**
+ * Signs the User in again with the refresh cookie the browser holds, and
+ * rotates that cookie. Resolves to `null` when that doesn't work: the
+ * backend refuses a missing, expired or revoked cookie, or can't be
+ * reached. Either way, the person counts as signed out.
+ */
+export async function refresh(): Promise<AuthResponse | null> {
+  const response = await fetch('/api/auth/refresh', { method: 'POST' }).catch(
+    () => null,
+  );
+  return response?.ok === true
+    ? authResponseSchema.parse(await response.json())
+    : null;
+}
+
+/** Revokes the refresh cookie on the backend, which also clears it. */
+export async function signOut(): Promise<void> {
+  const response = await fetch('/api/auth/sign-out', { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(
+      `Signing out failed with status ${String(response.status)}`,
+    );
+  }
+}
