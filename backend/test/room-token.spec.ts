@@ -8,6 +8,7 @@ import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { signInFirstAdmin } from './admins.js';
 import { startTestApp, stopTestApp, testEnv } from './test-app.js';
 import { registerUser } from './users.js';
 
@@ -117,6 +118,17 @@ describe('POST /api/token (Room Token endpoint)', () => {
     expect(claims.metadata).toBeFalsy();
     expect(claims.attributes ?? {}).toEqual({});
     expect(agentNamesDispatchedBy(claims)).toEqual([testEnv.AGENT_NAME]);
+  });
+
+  it('issues an Admin a Room Token too, as for any Member', async () => {
+    const admin = await signInFirstAdmin(app);
+
+    const response = await postRoomTokenRequest({}, admin.authToken);
+
+    expect(response.status).toBe(201);
+    const roomToken = roomTokenResponseSchema.parse(response.body);
+    const claims = await verifier.verify(roomToken.participant_token);
+    expect(claims.sub).toBe(admin.user.id);
   });
 
   it('rejects a body that is not in the standard token request shape', async () => {
