@@ -1,4 +1,5 @@
 import {
+  type AuthResponse,
   roomTokenResponseSchema,
   type RoomTokenRequest,
 } from '@livekit-platform/shared';
@@ -6,31 +7,39 @@ import type { INestApplication } from '@nestjs/common';
 import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startTestApp, stopTestApp, testEnv } from './test-app.js';
+import { registerUser } from './users.js';
 
 const TEN_MINUTES_IN_SECONDS = 600;
 
 describe('POST /api/token (Room Token endpoint)', () => {
   let app: INestApplication<App>;
+  let signedIn: AuthResponse;
   const verifier = new TokenVerifier(
     testEnv.LIVEKIT_API_KEY,
     testEnv.LIVEKIT_API_SECRET,
   );
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     app = await startTestApp();
+    signedIn = await registerUser(app);
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await stopTestApp(app);
   });
 
+  function postRoomTokenRequest(body: object, authToken?: string) {
+    const call = request(app.getHttpServer()).post('/api/token').send(body);
+    return authToken === undefined
+      ? call
+      : call.auth(authToken, { type: 'bearer' });
+  }
+
   async function requestRoomToken(body: RoomTokenRequest = {}) {
-    const response = await request(app.getHttpServer())
-      .post('/api/token')
-      .send(body)
-      .expect(201);
+    const response = await postRoomTokenRequest(body, signedIn.authToken);
+    expect(response.status).toBe(201);
     const roomToken = roomTokenResponseSchema.parse(response.body);
     const claims = await verifier.verify(roomToken.participant_token);
     return { roomToken, claims };
@@ -40,11 +49,23 @@ describe('POST /api/token (Room Token endpoint)', () => {
     return (claims.roomConfig?.agents ?? []).map((agent) => agent.agentName);
   }
 
+  it('returns 401 without an Auth Token', async () => {
+    const response = await postRoomTokenRequest({});
+
+    expect(response.status).toBe(401);
+  });
+
   it('returns 201 with the LiveKit server URL and a Room Token signed with the LiveKit API key', async () => {
     const { roomToken, claims } = await requestRoomToken();
 
     expect(roomToken.server_url).toBe(testEnv.LIVEKIT_URL);
     expect(claims.iss).toBe(testEnv.LIVEKIT_API_KEY);
+  });
+
+  it("makes the signed-in User's id the participant identity", async () => {
+    const { claims } = await requestRoomToken();
+
+    expect(claims.sub).toBe(signedIn.user.id);
   });
 
   it('grants join, publish and subscribe for its own room only', async () => {
@@ -58,12 +79,10 @@ describe('POST /api/token (Room Token endpoint)', () => {
     });
   });
 
-  it('gives every request a new room and a new participant identity', async () => {
+  it('gives every request a new room', async () => {
     const first = await requestRoomToken();
     const second = await requestRoomToken();
 
-    expect(first.claims.sub).toMatch(/\S/);
-    expect(second.claims.sub).not.toBe(first.claims.sub);
     expect(second.claims.video?.room).not.toBe(first.claims.video?.room);
   });
 
@@ -93,7 +112,7 @@ describe('POST /api/token (Room Token endpoint)', () => {
     });
 
     expect(claims.video?.room).not.toBe('someone-elses-room');
-    expect(claims.sub).not.toBe('someone-else');
+    expect(claims.sub).toBe(signedIn.user.id);
     expect(claims.name).toBeFalsy();
     expect(claims.metadata).toBeFalsy();
     expect(claims.attributes ?? {}).toEqual({});
@@ -101,9 +120,10 @@ describe('POST /api/token (Room Token endpoint)', () => {
   });
 
   it('rejects a body that is not in the standard token request shape', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/token')
-      .send({ room_name: 42 });
+    const response = await postRoomTokenRequest(
+      { room_name: 42 },
+      signedIn.authToken,
+    );
 
     expect(response.status).toBe(400);
   });

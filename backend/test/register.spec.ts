@@ -45,6 +45,17 @@ describe('POST /api/auth/register', () => {
     });
   });
 
+  it('issues an Auth Token that expires 15 minutes after it was issued', async () => {
+    const response = await register({
+      email: 'ada@example.test',
+      password: PASSWORD,
+    });
+
+    const { authToken } = authResponseSchema.parse(response.body);
+    const claims = await verifyAuthToken(authToken);
+    expect(claims.exp - claims.iat).toBe(15 * 60);
+  });
+
   it('accepts any password of 12 characters, with no composition rules', async () => {
     const response = await register({
       email: 'ada@example.test',
