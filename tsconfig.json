@@ -5,5 +5,5 @@
     "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["*.ts", "scripts/*.ts", ".claude/hooks/*.ts"]
+  "include": ["*.ts", "scripts/**/*.ts", ".claude/hooks/*.ts"]
 }
