@@ -67,17 +67,34 @@ export const DEFAULT_TTS_VOICE = {
 } as const;
 
 interface Deprecation {
-  /** The day the Provider shuts the models down, or did. */
+  /** The day the Provider shuts the model down, or did. */
   readonly shutdown: string;
   /** The model to use instead. It is never itself deprecated. */
   readonly replacement: string;
-  readonly models: readonly string[];
 }
 
 /**
- * Models their Provider has deprecated, grouped as the Provider announced
- * them. The Agent refuses to start with any of them. Keep this list current
- * with the Provider's docs.
+ * Reads a table of deprecated models. Each row holds a model, the day its
+ * Provider shuts it down, and the model to use instead, separated by spaces.
+ * Lines starting with `#` are notes.
+ */
+function deprecationTable(table: string): ReadonlyMap<string, Deprecation> {
+  return new Map(
+    table
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'))
+      .map((line): [string, Deprecation] => {
+        const [model, shutdown, replacement] = line.split(/\s+/);
+        return [model, { shutdown, replacement }];
+      }),
+  );
+}
+
+/**
+ * Models their Provider has deprecated. The Agent refuses to start with any
+ * of them. Keep this table current with the Provider's docs, one row per
+ * model, as Google's deprecations table has it.
  *
  * OpenAI: https://developers.openai.com/api/docs/deprecations (checked 2026-11-14).
  * Of its language models, only chat models shut down since 2026-07-23 or
@@ -91,298 +108,137 @@ interface Deprecation {
  * know which API the Agent uses; the shutdown is the earlier of the two. Each
  * replacement works on both APIs, so it may differ from the one Google names.
  */
-const DEPRECATIONS: readonly Deprecation[] = [
-  // Realtime models
-  {
-    shutdown: '2025-10-10',
-    replacement: 'gpt-realtime-1.5',
-    models: ['gpt-4o-realtime-preview-2024-10-01'],
-  },
-  {
-    shutdown: '2026-05-07',
-    replacement: 'gpt-realtime-1.5',
-    models: [
-      'gpt-4o-realtime-preview',
-      'gpt-4o-realtime-preview-2025-06-03',
-      'gpt-4o-realtime-preview-2024-12-17',
-    ],
-  },
-  {
-    // OpenAI names gpt-realtime-mini, deprecated since, as the replacement.
-    shutdown: '2026-05-07',
-    replacement: 'gpt-realtime-2.1-mini',
-    models: ['gpt-4o-mini-realtime-preview'],
-  },
-  {
-    shutdown: '2026-07-23',
-    replacement: 'gpt-realtime-2.1-mini',
-    models: ['gpt-realtime-mini-2025-10-06'],
-  },
-  {
-    shutdown: '2027-01-20',
-    replacement: 'gpt-realtime-2.1',
-    models: ['gpt-realtime', 'gpt-realtime-2025-08-28', 'gpt-4o-realtime'],
-  },
-  {
-    shutdown: '2027-01-20',
-    replacement: 'gpt-realtime-2.1-mini',
-    models: [
-      'gpt-realtime-mini',
-      'gpt-realtime-mini-2025-12-15',
-      'gpt-4o-mini-realtime',
-    ],
-  },
-  {
-    shutdown: '2025-12-09',
-    replacement: 'gemini-3.8-live',
-    models: ['gemini-live-2.5-flash-preview', 'gemini-2.0-flash-live-001'],
-  },
-  {
-    // Vertex AI only; the plugin's default there.
-    shutdown: '2026-12-13',
-    replacement: 'gemini-3.8-live',
-    models: ['gemini-live-2.5-flash-native-audio'],
-  },
-  {
-    // Gemini API only; the plugin's default there.
-    shutdown: '2027-03-31',
-    replacement: 'gemini-3.8-live',
-    models: ['gemini-2.5-flash-native-audio-preview-12-2025'],
-  },
+const DEPRECATIONS = deprecationTable(`
+  # OpenAI realtime models
+  gpt-4o-realtime-preview-2024-10-01             2025-10-10  gpt-realtime-1.5
+  gpt-4o-realtime-preview                        2026-05-07  gpt-realtime-1.5
+  gpt-4o-realtime-preview-2025-06-03             2026-05-07  gpt-realtime-1.5
+  gpt-4o-realtime-preview-2024-12-17             2026-05-07  gpt-realtime-1.5
+  # OpenAI names gpt-realtime-mini, deprecated since, as the replacement.
+  gpt-4o-mini-realtime-preview                   2026-05-07  gpt-realtime-2.1-mini
+  gpt-realtime-mini-2025-10-06                   2026-07-23  gpt-realtime-2.1-mini
+  gpt-realtime                                   2027-01-20  gpt-realtime-2.1
+  gpt-realtime-2025-08-28                        2027-01-20  gpt-realtime-2.1
+  gpt-4o-realtime                                2027-01-20  gpt-realtime-2.1
+  gpt-realtime-mini                              2027-01-20  gpt-realtime-2.1-mini
+  gpt-realtime-mini-2025-12-15                   2027-01-20  gpt-realtime-2.1-mini
+  gpt-4o-mini-realtime                           2027-01-20  gpt-realtime-2.1-mini
 
-  // Speech-to-text models
-  {
-    // OpenAI names gpt-4o-mini-transcribe-2025-12-15, deprecated since, as
-    // the replacement.
-    shutdown: '2027-01-20',
-    replacement: 'gpt-live-transcribe',
-    models: ['gpt-4o-mini-transcribe-2025-03-20'],
-  },
-  {
-    // OpenAI names gpt-live-transcribe or gpt-transcribe.
-    shutdown: '2027-02-26',
-    replacement: 'gpt-live-transcribe',
-    models: [
-      'whisper-1',
-      'gpt-4o-transcribe',
-      'gpt-4o-mini-transcribe',
-      'gpt-4o-mini-transcribe-2025-12-15',
-      'gpt-4o-transcribe-diarize',
-    ],
-  },
+  # Google realtime (Live API) models
+  gemini-live-2.5-flash-preview                  2025-12-09  gemini-3.8-live
+  gemini-2.0-flash-live-001                      2025-12-09  gemini-3.8-live
+  # Vertex AI only; the plugin's default there.
+  gemini-live-2.5-flash-native-audio             2026-12-13  gemini-3.8-live
+  # Gemini API only; the plugin's default there.
+  gemini-2.5-flash-native-audio-preview-12-2025  2027-03-31  gemini-3.8-live
 
-  // Text-to-speech models
-  {
-    // OpenAI deprecated every Speech API model, gpt-4o-mini-tts and its
-    // snapshots too, all shutting down on 2027-01-06. It names
-    // gpt-realtime-2.1-mini on the Realtime API as the replacement, which the
-    // plugin's TTS can't call. So gpt-4o-mini-tts stays allowed, as the last
-    // OpenAI model Pipeline mode can speak with, until a human decides
-    // (ticket 05).
-    shutdown: '2027-01-06',
-    replacement: 'gpt-4o-mini-tts',
-    models: ['tts-1', 'tts-1-hd'],
-  },
-  {
-    // Google names gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts.
-    shutdown: '2026-12-18',
-    replacement: 'gemini-3.8-flash-lite-tts',
-    models: [
-      'gemini-3.1-flash-tts-preview',
-      'gemini-2.5-flash-preview-tts',
-      'gemini-2.5-pro-preview-tts',
-    ],
-  },
+  # OpenAI speech-to-text models. For gpt-4o-mini-transcribe-2025-03-20,
+  # OpenAI names gpt-4o-mini-transcribe-2025-12-15, deprecated since. For the
+  # others it names gpt-live-transcribe or gpt-transcribe.
+  gpt-4o-mini-transcribe-2025-03-20              2027-01-20  gpt-live-transcribe
+  whisper-1                                      2027-02-26  gpt-live-transcribe
+  gpt-4o-transcribe                              2027-02-26  gpt-live-transcribe
+  gpt-4o-mini-transcribe                         2027-02-26  gpt-live-transcribe
+  gpt-4o-mini-transcribe-2025-12-15              2027-02-26  gpt-live-transcribe
+  gpt-4o-transcribe-diarize                      2027-02-26  gpt-live-transcribe
 
-  // Language models
-  {
-    shutdown: '2026-07-23',
-    replacement: 'gpt-5.6-sol',
-    models: ['gpt-5-chat-latest', 'gpt-5.1-chat-latest'],
-  },
-  {
-    shutdown: '2026-08-10',
-    replacement: 'gpt-5.6-sol',
-    models: ['gpt-5.2-chat-latest', 'gpt-5.3-chat-latest'],
-  },
-  {
-    shutdown: '2026-10-23',
-    replacement: 'gpt-5.6-sol',
-    models: [
-      'gpt-4',
-      'gpt-4-0613',
-      'gpt-4-1106-preview',
-      'gpt-4-turbo',
-      'gpt-4-turbo-2024-04-09',
-      'gpt-4o-2024-05-13',
-      'o1',
-      'o1-2024-12-17',
-      'o3-mini',
-      'o3-mini-2025-01-31',
-    ],
-  },
-  {
-    shutdown: '2026-10-23',
-    replacement: 'gpt-5.6-terra',
-    models: [
-      'gpt-3.5-turbo',
-      'gpt-3.5-turbo-0125',
-      'o4-mini',
-      'o4-mini-2025-04-16',
-    ],
-  },
-  {
-    shutdown: '2026-10-23',
-    replacement: 'gpt-5.6-luna',
-    models: ['gpt-4.1-nano', 'gpt-4.1-nano-2025-04-14'],
-  },
-  {
-    shutdown: '2026-12-11',
-    replacement: 'gpt-6.1-sol',
-    models: [
-      'gpt-5',
-      'gpt-5-2025-08-07',
-      'gpt-5-pro',
-      'gpt-5-pro-2025-10-06',
-      'o3',
-      'o3-2025-04-16',
-      'o3-pro',
-      'o3-pro-2025-06-10',
-    ],
-  },
-  {
-    shutdown: '2026-12-11',
-    replacement: 'gpt-6.1-terra',
-    models: ['gpt-5-mini', 'gpt-5-mini-2025-08-07'],
-  },
-  {
-    shutdown: '2026-12-11',
-    replacement: 'gpt-6-luna',
-    models: ['gpt-5-nano', 'gpt-5-nano-2025-08-07'],
-  },
-  {
-    // OpenAI lists the dated snapshots; each alias points to one of them.
-    shutdown: '2027-01-14',
-    replacement: 'gpt-6-luna',
-    models: [
-      'gpt-4o',
-      'gpt-4o-2024-08-06',
-      'gpt-4o-2024-11-20',
-      'gpt-4o-mini',
-      'gpt-4o-mini-2024-07-18',
-      'gpt-4.1',
-      'gpt-4.1-2025-04-14',
-      'gpt-4.1-mini',
-      'gpt-4.1-mini-2025-04-14',
-    ],
-  },
-  {
-    shutdown: '2027-04-01',
-    replacement: 'gpt-6-sol',
-    models: ['gpt-5.1', 'gpt-5.1-2025-11-13'],
-  },
-  {
-    shutdown: '2027-04-01',
-    replacement: 'gpt-6-luna',
-    models: ['gpt-5.4-nano', 'gpt-5.4-nano-2026-03-17'],
-  },
-  {
-    shutdown: '2025-11-18',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-2.5-flash-preview-05-20'],
-  },
-  {
-    shutdown: '2025-12-02',
-    replacement: 'gemini-3.8-flash',
-    models: [
-      'gemini-2.5-pro-preview-03-25',
-      'gemini-2.5-pro-preview-05-06',
-      'gemini-2.5-pro-preview-06-05',
-    ],
-  },
-  {
-    shutdown: '2025-12-09',
-    replacement: 'gemini-3.5-flash-lite',
-    models: [
-      'gemini-2.0-flash-lite-preview',
-      'gemini-2.0-flash-lite-preview-02-05',
-    ],
-  },
-  {
-    shutdown: '2026-02-17',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-2.5-flash-preview-09-2025'],
-  },
-  {
-    shutdown: '2026-03-09',
-    replacement: 'gemini-3.1-pro-preview',
-    models: ['gemini-3-pro-preview'],
-  },
-  {
-    shutdown: '2026-03-31',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-2.5-flash-lite-preview-09-2025'],
-  },
-  {
-    // The plugin's fallback when no model is given. Google names
-    // gemini-3.6-flash, which Vertex AI retires on 2026-11-19.
-    shutdown: '2026-06-01',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-2.0-flash', 'gemini-2.0-flash-001'],
-  },
-  {
-    shutdown: '2026-06-01',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-2.0-flash-lite', 'gemini-2.0-flash-lite-001'],
-  },
-  {
-    // Google names gemini-3.1-flash-lite, deprecated since.
-    shutdown: '2026-05-25',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-3.1-flash-lite-preview'],
-  },
-  {
-    // Shut down on Vertex AI; the Gemini API routes requests to the
-    // replacement from 2026-12-01.
-    shutdown: '2026-10-20',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-2.5-pro'],
-  },
-  {
-    // Shut down on Vertex AI; the Gemini API routes requests to the
-    // replacement from 2026-12-01.
-    shutdown: '2026-10-20',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-2.5-flash'],
-  },
-  {
-    // Shut down on Vertex AI. The Gemini API serves it "until further notice".
-    shutdown: '2026-10-20',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-2.5-flash-lite'],
-  },
-  {
-    // The Gemini API routes requests to gemini-3.6-flash and gemini-3.8-flash
-    // since 2026-10-08. Vertex AI still serves gemini-3.5-flash until
-    // 2027-05-19 at least, and gemini-3.7-flash until 2027-01-28.
-    shutdown: '2026-10-08',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-3.5-flash', 'gemini-3.7-flash'],
-  },
-  {
-    // Vertex AI only. The Gemini API lists it as stable.
-    shutdown: '2026-11-19',
-    replacement: 'gemini-3.8-flash',
-    models: ['gemini-3.6-flash'],
-  },
-  {
-    shutdown: '2027-05-07',
-    replacement: 'gemini-3.5-flash-lite',
-    models: ['gemini-3.1-flash-lite'],
-  },
-];
+  # OpenAI text-to-speech models. OpenAI deprecated every Speech API model,
+  # gpt-4o-mini-tts and its snapshots too, all shutting down on 2027-01-06. It
+  # names gpt-realtime-2.1-mini on the Realtime API as the replacement, which
+  # the plugin's TTS can't call. So gpt-4o-mini-tts stays allowed, as the last
+  # OpenAI model Pipeline mode can speak with, until a human decides (ticket 05).
+  tts-1                                          2027-01-06  gpt-4o-mini-tts
+  tts-1-hd                                       2027-01-06  gpt-4o-mini-tts
+
+  # Google text-to-speech models. Google names gemini-3.8-flash-tts or
+  # gemini-3.8-flash-lite-tts.
+  gemini-3.1-flash-tts-preview                   2026-12-18  gemini-3.8-flash-lite-tts
+  gemini-2.5-flash-preview-tts                   2026-12-18  gemini-3.8-flash-lite-tts
+  gemini-2.5-pro-preview-tts                     2026-12-18  gemini-3.8-flash-lite-tts
+
+  # OpenAI language models. Where OpenAI lists only dated snapshots, the alias
+  # that points to one of them is listed too.
+  gpt-5-chat-latest                              2026-07-23  gpt-5.6-sol
+  gpt-5.1-chat-latest                            2026-07-23  gpt-5.6-sol
+  gpt-5.2-chat-latest                            2026-08-10  gpt-5.6-sol
+  gpt-5.3-chat-latest                            2026-08-10  gpt-5.6-sol
+  gpt-4                                          2026-10-23  gpt-5.6-sol
+  gpt-4-0613                                     2026-10-23  gpt-5.6-sol
+  gpt-4-1106-preview                             2026-10-23  gpt-5.6-sol
+  gpt-4-turbo                                    2026-10-23  gpt-5.6-sol
+  gpt-4-turbo-2024-04-09                         2026-10-23  gpt-5.6-sol
+  gpt-4o-2024-05-13                              2026-10-23  gpt-5.6-sol
+  o1                                             2026-10-23  gpt-5.6-sol
+  o1-2024-12-17                                  2026-10-23  gpt-5.6-sol
+  o3-mini                                        2026-10-23  gpt-5.6-sol
+  o3-mini-2025-01-31                             2026-10-23  gpt-5.6-sol
+  gpt-3.5-turbo                                  2026-10-23  gpt-5.6-terra
+  gpt-3.5-turbo-0125                             2026-10-23  gpt-5.6-terra
+  o4-mini                                        2026-10-23  gpt-5.6-terra
+  o4-mini-2025-04-16                             2026-10-23  gpt-5.6-terra
+  gpt-4.1-nano                                   2026-10-23  gpt-5.6-luna
+  gpt-4.1-nano-2025-04-14                        2026-10-23  gpt-5.6-luna
+  gpt-5                                          2026-12-11  gpt-6.1-sol
+  gpt-5-2025-08-07                               2026-12-11  gpt-6.1-sol
+  gpt-5-pro                                      2026-12-11  gpt-6.1-sol
+  gpt-5-pro-2025-10-06                           2026-12-11  gpt-6.1-sol
+  o3                                             2026-12-11  gpt-6.1-sol
+  o3-2025-04-16                                  2026-12-11  gpt-6.1-sol
+  o3-pro                                         2026-12-11  gpt-6.1-sol
+  o3-pro-2025-06-10                              2026-12-11  gpt-6.1-sol
+  gpt-5-mini                                     2026-12-11  gpt-6.1-terra
+  gpt-5-mini-2025-08-07                          2026-12-11  gpt-6.1-terra
+  gpt-5-nano                                     2026-12-11  gpt-6-luna
+  gpt-5-nano-2025-08-07                          2026-12-11  gpt-6-luna
+  gpt-4o                                         2027-01-14  gpt-6-luna
+  gpt-4o-2024-08-06                              2027-01-14  gpt-6-luna
+  gpt-4o-2024-11-20                              2027-01-14  gpt-6-luna
+  gpt-4o-mini                                    2027-01-14  gpt-6-luna
+  gpt-4o-mini-2024-07-18                         2027-01-14  gpt-6-luna
+  gpt-4.1                                        2027-01-14  gpt-6-luna
+  gpt-4.1-2025-04-14                             2027-01-14  gpt-6-luna
+  gpt-4.1-mini                                   2027-01-14  gpt-6-luna
+  gpt-4.1-mini-2025-04-14                        2027-01-14  gpt-6-luna
+  gpt-5.1                                        2027-04-01  gpt-6-sol
+  gpt-5.1-2025-11-13                             2027-04-01  gpt-6-sol
+  gpt-5.4-nano                                   2027-04-01  gpt-6-luna
+  gpt-5.4-nano-2026-03-17                        2027-04-01  gpt-6-luna
+
+  # Google language models
+  gemini-2.5-flash-preview-05-20                 2025-11-18  gemini-3.8-flash
+  gemini-2.5-pro-preview-03-25                   2025-12-02  gemini-3.8-flash
+  gemini-2.5-pro-preview-05-06                   2025-12-02  gemini-3.8-flash
+  gemini-2.5-pro-preview-06-05                   2025-12-02  gemini-3.8-flash
+  gemini-2.0-flash-lite-preview                  2025-12-09  gemini-3.5-flash-lite
+  gemini-2.0-flash-lite-preview-02-05            2025-12-09  gemini-3.5-flash-lite
+  gemini-2.5-flash-preview-09-2025               2026-02-17  gemini-3.8-flash
+  gemini-3-pro-preview                           2026-03-09  gemini-3.1-pro-preview
+  gemini-2.5-flash-lite-preview-09-2025          2026-03-31  gemini-3.5-flash-lite
+  # Google names gemini-3.1-flash-lite, deprecated since.
+  gemini-3.1-flash-lite-preview                  2026-05-25  gemini-3.5-flash-lite
+  # gemini-2.0-flash-001 is the plugin's fallback when no model is given. Google
+  # names gemini-3.6-flash, which Vertex AI retires on 2026-11-19.
+  gemini-2.0-flash                               2026-06-01  gemini-3.8-flash
+  gemini-2.0-flash-001                           2026-06-01  gemini-3.8-flash
+  gemini-2.0-flash-lite                          2026-06-01  gemini-3.5-flash-lite
+  gemini-2.0-flash-lite-001                      2026-06-01  gemini-3.5-flash-lite
+  # The Gemini API routes requests for these two to gemini-3.6-flash and
+  # gemini-3.8-flash since 2026-10-08. Vertex AI still serves gemini-3.5-flash
+  # until 2027-05-19 at least, and gemini-3.7-flash until 2027-01-28.
+  gemini-3.5-flash                               2026-10-08  gemini-3.8-flash
+  gemini-3.7-flash                               2026-10-08  gemini-3.8-flash
+  # Shut down on Vertex AI. The Gemini API routes requests for the first two
+  # to their replacements from 2026-12-01, and serves gemini-2.5-flash-lite
+  # "until further notice".
+  gemini-2.5-pro                                 2026-10-20  gemini-3.8-flash
+  gemini-2.5-flash                               2026-10-20  gemini-3.5-flash-lite
+  gemini-2.5-flash-lite                          2026-10-20  gemini-3.5-flash-lite
+  # Vertex AI only. The Gemini API lists it as stable.
+  gemini-3.6-flash                               2026-11-19  gemini-3.8-flash
+  gemini-3.1-flash-lite                          2027-05-07  gemini-3.5-flash-lite
+`);
 
 /** The Provider's deprecation notice for a model, if it has one. */
 export function deprecationOf(model: string): Deprecation | undefined {
-  return DEPRECATIONS.find((deprecation) => deprecation.models.includes(model));
+  return DEPRECATIONS.get(model);
 }
