@@ -1,6 +1,7 @@
 import {
   changeLockedRequestSchema,
   changeRoleRequestSchema,
+  setPasswordRequestSchema,
   type User,
   type UserDetails,
 } from '@livekit-platform/shared';
@@ -11,6 +12,7 @@ import {
   changeRoleOnBackend,
   isLockedOnBackend,
   refusalOfAuthorization,
+  setPasswordOnBackend,
 } from './auth-backend';
 
 const adminAuthorizations: (string | null)[] = [];
@@ -92,6 +94,19 @@ export const adminHandlers = [
       return user === undefined
         ? HttpResponse.json(NO_SUCH_USER, { status: 404 })
         : HttpResponse.json(withDetails(user));
+    },
+  ),
+  http.put<{ id: string }>(
+    '/api/admin/users/:id/password',
+    async ({ request, params }) => {
+      const refusal = guard(request);
+      if (refusal !== undefined) {
+        return refusal;
+      }
+      const { password } = setPasswordRequestSchema.parse(await request.json());
+      return setPasswordOnBackend(params.id, password) === undefined
+        ? HttpResponse.json(NO_SUCH_USER, { status: 404 })
+        : new HttpResponse(null, { status: 204 });
     },
   ),
 ];

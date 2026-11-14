@@ -3,6 +3,7 @@ import {
   type ChangeRoleRequest,
   errorResponseSchema,
   type Role,
+  type SetPasswordRequest,
   type UserDetails,
   userDetailsSchema,
   usersResponseSchema,
@@ -22,6 +23,14 @@ async function readResponse<T>(
   if (response.ok) {
     return parse(await response.json());
   }
+  return refused(path, response);
+}
+
+/**
+ * Throws for a response that isn't successful: a BackendRefusal with the
+ * backend's message for a `4xx`, such as a `409`, and an Error otherwise.
+ */
+async function refused(path: string, response: Response): Promise<never> {
   if (response.status >= 500) {
     throw new Error(`${path} failed with status ${String(response.status)}`);
   }
@@ -75,4 +84,25 @@ export function changeLocked(
   locked: boolean,
 ): Promise<UserDetails> {
   return changeUser(authorizedFetch, userId, 'locked', { locked });
+}
+
+/**
+ * Sets a new password for another User, which signs them out everywhere.
+ * Admins only.
+ */
+export async function setPassword(
+  authorizedFetch: AuthorizedFetch,
+  userId: string,
+  password: string,
+): Promise<void> {
+  const path = `/api/admin/users/${encodeURIComponent(userId)}/password`;
+  const request: SetPasswordRequest = { password };
+  const response = await authorizedFetch(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    await refused(path, response);
+  }
 }

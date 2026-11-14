@@ -56,15 +56,15 @@ describe('Admin Users page', () => {
     expect(adminRequestAuthorizations()).toEqual([]);
   });
 
-  it("lists every User's email, Role and creation date, oldest first", async () => {
+  it("lists every User's email, Role, status and creation date, oldest first", async () => {
     await openUsersPageAsAdmin();
 
     const rows = within(await screen.findByRole('table')).getAllByRole('row');
 
     expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringMatching(/Email.*Role.*Created/),
-      expect.stringMatching(new RegExp(`^${GRACE}.*Nov 1, 2026$`)),
-      expect.stringMatching(new RegExp(`^${ADA}.*Nov 2, 2026$`)),
+      expect.stringMatching(/Email.*Role.*Status.*Created.*Password/),
+      expect.stringMatching(new RegExp(`^${GRACE}.*Active.*Nov 1, 2026`)),
+      expect.stringMatching(new RegExp(`^${ADA}.*Active.*Nov 2, 2026`)),
     ]);
     expect(
       within(await rowOf(GRACE)).getByRole('combobox', {
