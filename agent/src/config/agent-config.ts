@@ -14,20 +14,31 @@ function unsetIfEmpty(value: unknown): unknown {
   return value === '' ? undefined : value;
 }
 
+/** A model name that is never a deprecated model. */
+function notDeprecated(name: string) {
+  return z.string().check((ctx) => {
+    const deprecation = deprecationOf(ctx.value);
+    if (deprecation) {
+      ctx.issues.push({
+        code: 'custom',
+        input: ctx.value,
+        message: `${name} "${ctx.value}" is deprecated by its Provider; use "${deprecation.replacement}" (shutdown: ${deprecation.shutdown})`,
+      });
+    }
+  });
+}
+
 /** A model variable: its default when not set, and never a deprecated model. */
 function modelVariable(name: string, defaultModel: string) {
-  return z
-    .preprocess(unsetIfEmpty, z.string().default(defaultModel))
-    .check((ctx) => {
-      const deprecation = deprecationOf(ctx.value);
-      if (deprecation) {
-        ctx.issues.push({
-          code: 'custom',
-          input: ctx.value,
-          message: `${name} "${ctx.value}" is deprecated by its Provider; use "${deprecation.replacement}" (shutdown: ${deprecation.shutdown})`,
-        });
-      }
-    });
+  return z.preprocess(unsetIfEmpty, notDeprecated(name).default(defaultModel));
+}
+
+/**
+ * A model variable the fake Provider ignores. It still never names a
+ * deprecated model, so switching to a real Provider never brings one in.
+ */
+function ignoredModelVariable(name: string) {
+  return z.preprocess(unsetIfEmpty, notDeprecated(name).optional());
 }
 
 /** The error for a Provider variable that names no known Provider. */
@@ -170,7 +181,11 @@ const googleRealtimeSchema = z
   }));
 
 const fakeRealtimeSchema = z
-  .object({ ...realtimeMode, REALTIME_PROVIDER: z.literal('fake') })
+  .object({
+    ...realtimeMode,
+    REALTIME_PROVIDER: z.literal('fake'),
+    REALTIME_MODEL: ignoredModelVariable('REALTIME_MODEL'),
+  })
   .transform((env) => ({
     agentMode: env.AGENT_MODE,
     realtime: { provider: env.REALTIME_PROVIDER, model: 'fake-llm' as const },
@@ -217,9 +232,14 @@ const speechToTextSchema = z.discriminatedUnion(
           credentials: parseWithin(googleCredentials('STT_PROVIDER'), env, ctx),
         },
       })),
-    z.object({ STT_PROVIDER: z.literal('fake') }).transform((env) => ({
-      stt: { provider: env.STT_PROVIDER, model: FAKE_STEP_MODEL.stt },
-    })),
+    z
+      .object({
+        STT_PROVIDER: z.literal('fake'),
+        STT_MODEL: ignoredModelVariable('STT_MODEL'),
+      })
+      .transform((env) => ({
+        stt: { provider: env.STT_PROVIDER, model: FAKE_STEP_MODEL.stt },
+      })),
   ],
   unknownProvider('STT_PROVIDER'),
 );
@@ -252,9 +272,14 @@ const languageModelSchema = z.discriminatedUnion(
           credentials: parseWithin(googleCredentials('LLM_PROVIDER'), env, ctx),
         },
       })),
-    z.object({ LLM_PROVIDER: z.literal('fake') }).transform((env) => ({
-      llm: { provider: env.LLM_PROVIDER, model: FAKE_STEP_MODEL.llm },
-    })),
+    z
+      .object({
+        LLM_PROVIDER: z.literal('fake'),
+        LLM_MODEL: ignoredModelVariable('LLM_MODEL'),
+      })
+      .transform((env) => ({
+        llm: { provider: env.LLM_PROVIDER, model: FAKE_STEP_MODEL.llm },
+      })),
   ],
   unknownProvider('LLM_PROVIDER'),
 );
@@ -297,9 +322,14 @@ const textToSpeechSchema = z.discriminatedUnion(
           credentials: parseWithin(googleCredentials('TTS_PROVIDER'), env, ctx),
         },
       })),
-    z.object({ TTS_PROVIDER: z.literal('fake') }).transform((env) => ({
-      tts: { provider: env.TTS_PROVIDER, model: FAKE_STEP_MODEL.tts },
-    })),
+    z
+      .object({
+        TTS_PROVIDER: z.literal('fake'),
+        TTS_MODEL: ignoredModelVariable('TTS_MODEL'),
+      })
+      .transform((env) => ({
+        tts: { provider: env.TTS_PROVIDER, model: FAKE_STEP_MODEL.tts },
+      })),
   ],
   unknownProvider('TTS_PROVIDER'),
 );

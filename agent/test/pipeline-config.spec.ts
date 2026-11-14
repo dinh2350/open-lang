@@ -274,4 +274,25 @@ describe('Agent configuration in Pipeline mode with only the fake Provider', () 
       tts: { provider: 'fake', model: 'none' },
     });
   });
+
+  it.each([
+    ['STT_MODEL', 'whisper-1', 'gpt-live-transcribe'],
+    ['LLM_MODEL', 'gpt-4.1', 'gpt-6-luna'],
+    ['TTS_MODEL', 'tts-1', 'gpt-4o-mini-tts'],
+  ])(
+    'still refuses a deprecated %s %s, suggesting %s, so switching to a real Provider never brings one in',
+    (variable, model, replacement) => {
+      expect(() =>
+        loadAgentConfig({
+          AGENT_MODE: 'pipeline',
+          STT_PROVIDER: 'fake',
+          LLM_PROVIDER: 'fake',
+          TTS_PROVIDER: 'fake',
+          [variable]: model,
+        }),
+      ).toThrow(
+        `${variable} "${model}" is deprecated by its Provider; use "${replacement}"`,
+      );
+    },
+  );
 });

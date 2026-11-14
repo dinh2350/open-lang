@@ -149,6 +149,23 @@ describe('Agent configuration in Realtime mode with the fake Provider', () => {
     });
   });
 
+  it('ignores the model set in REALTIME_MODEL', () => {
+    expect(
+      loadAgentConfig({
+        ...realtimeWithFake,
+        REALTIME_MODEL: 'gpt-realtime-2.1',
+      }),
+    ).toHaveProperty('realtime.model', 'fake-llm');
+  });
+
+  it('still refuses a deprecated REALTIME_MODEL, so switching to a real Provider never brings one in', () => {
+    expect(() =>
+      loadAgentConfig({ ...realtimeWithFake, REALTIME_MODEL: 'gpt-realtime' }),
+    ).toThrow(
+      'REALTIME_MODEL "gpt-realtime" is deprecated by its Provider; use "gpt-realtime-2.1"',
+    );
+  });
+
   it("uses the framework's FakeLLM, so the Agent makes no AI calls", () => {
     const options = createSessionOptions(loadAgentConfig(realtimeWithFake));
 
