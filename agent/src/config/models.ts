@@ -82,6 +82,14 @@ interface Deprecation {
  * OpenAI: https://developers.openai.com/api/docs/deprecations (checked 2026-11-14).
  * Of its language models, only chat models shut down since 2026-07-23 or
  * later are listed; its coding, search and research models are left out.
+ *
+ * Google (checked 2026-11-14): the Gemini API's
+ * https://aistudio.google.com/docs/deprecations and Vertex AI's
+ * https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions.
+ * Only its chat, Live API and speech models are listed. A model is listed
+ * when either API deprecated it, because the deprecated-model check doesn't
+ * know which API the Agent uses; the shutdown is the earlier of the two. Each
+ * replacement works on both APIs, so it may differ from the one Google names.
  */
 const DEPRECATIONS: readonly Deprecation[] = [
   // Realtime models
@@ -124,6 +132,23 @@ const DEPRECATIONS: readonly Deprecation[] = [
       'gpt-4o-mini-realtime',
     ],
   },
+  {
+    shutdown: '2025-12-09',
+    replacement: 'gemini-3.8-live',
+    models: ['gemini-live-2.5-flash-preview', 'gemini-2.0-flash-live-001'],
+  },
+  {
+    // Vertex AI only; the plugin's default there.
+    shutdown: '2026-12-13',
+    replacement: 'gemini-3.8-live',
+    models: ['gemini-live-2.5-flash-native-audio'],
+  },
+  {
+    // Gemini API only; the plugin's default there.
+    shutdown: '2027-03-31',
+    replacement: 'gemini-3.8-live',
+    models: ['gemini-2.5-flash-native-audio-preview-12-2025'],
+  },
 
   // Speech-to-text models
   {
@@ -157,6 +182,16 @@ const DEPRECATIONS: readonly Deprecation[] = [
     shutdown: '2027-01-06',
     replacement: 'gpt-4o-mini-tts',
     models: ['tts-1', 'tts-1-hd'],
+  },
+  {
+    // Google names gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts.
+    shutdown: '2026-12-18',
+    replacement: 'gemini-3.8-flash-lite-tts',
+    models: [
+      'gemini-3.1-flash-tts-preview',
+      'gemini-2.5-flash-preview-tts',
+      'gemini-2.5-pro-preview-tts',
+    ],
   },
 
   // Language models
@@ -250,6 +285,100 @@ const DEPRECATIONS: readonly Deprecation[] = [
     shutdown: '2027-04-01',
     replacement: 'gpt-6-luna',
     models: ['gpt-5.4-nano', 'gpt-5.4-nano-2026-03-17'],
+  },
+  {
+    shutdown: '2025-11-18',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-2.5-flash-preview-05-20'],
+  },
+  {
+    shutdown: '2025-12-02',
+    replacement: 'gemini-3.8-flash',
+    models: [
+      'gemini-2.5-pro-preview-03-25',
+      'gemini-2.5-pro-preview-05-06',
+      'gemini-2.5-pro-preview-06-05',
+    ],
+  },
+  {
+    shutdown: '2025-12-09',
+    replacement: 'gemini-3.5-flash-lite',
+    models: [
+      'gemini-2.0-flash-lite-preview',
+      'gemini-2.0-flash-lite-preview-02-05',
+    ],
+  },
+  {
+    shutdown: '2026-02-17',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-2.5-flash-preview-09-2025'],
+  },
+  {
+    shutdown: '2026-03-09',
+    replacement: 'gemini-3.1-pro-preview',
+    models: ['gemini-3-pro-preview'],
+  },
+  {
+    shutdown: '2026-03-31',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-2.5-flash-lite-preview-09-2025'],
+  },
+  {
+    // The plugin's fallback when no model is given. Google names
+    // gemini-3.6-flash, which Vertex AI retires on 2026-11-19.
+    shutdown: '2026-06-01',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-2.0-flash', 'gemini-2.0-flash-001'],
+  },
+  {
+    shutdown: '2026-06-01',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-2.0-flash-lite', 'gemini-2.0-flash-lite-001'],
+  },
+  {
+    // Google names gemini-3.1-flash-lite, deprecated since.
+    shutdown: '2026-05-25',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-3.1-flash-lite-preview'],
+  },
+  {
+    // Shut down on Vertex AI; the Gemini API routes requests to the
+    // replacement from 2026-12-01.
+    shutdown: '2026-10-20',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-2.5-pro'],
+  },
+  {
+    // Shut down on Vertex AI; the Gemini API routes requests to the
+    // replacement from 2026-12-01.
+    shutdown: '2026-10-20',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-2.5-flash'],
+  },
+  {
+    // Shut down on Vertex AI. The Gemini API serves it "until further notice".
+    shutdown: '2026-10-20',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-2.5-flash-lite'],
+  },
+  {
+    // The Gemini API routes requests to gemini-3.6-flash and gemini-3.8-flash
+    // since 2026-10-08. Vertex AI still serves gemini-3.5-flash until
+    // 2027-05-19 at least, and gemini-3.7-flash until 2027-01-28.
+    shutdown: '2026-10-08',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-3.5-flash', 'gemini-3.7-flash'],
+  },
+  {
+    // Vertex AI only. The Gemini API lists it as stable.
+    shutdown: '2026-11-19',
+    replacement: 'gemini-3.8-flash',
+    models: ['gemini-3.6-flash'],
+  },
+  {
+    shutdown: '2027-05-07',
+    replacement: 'gemini-3.5-flash-lite',
+    models: ['gemini-3.1-flash-lite'],
   },
 ];
 

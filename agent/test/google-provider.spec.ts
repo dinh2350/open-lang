@@ -320,4 +320,35 @@ describe('Agent configuration with Google refuses to start the Agent, naming the
       ).toThrow('GOOGLE_GENAI_USE_VERTEXAI must be "true" or "false"');
     },
   );
+
+  it.each([
+    // The plugin's defaults on the Gemini API and on Vertex AI.
+    [
+      'REALTIME_MODEL',
+      'gemini-2.5-flash-native-audio-preview-12-2025',
+      'gemini-3.8-live',
+    ],
+    ['REALTIME_MODEL', 'gemini-live-2.5-flash-native-audio', 'gemini-3.8-live'],
+    // The plugin's default, shutting down on 2026-12-18.
+    ['TTS_MODEL', 'gemini-3.1-flash-tts-preview', 'gemini-3.8-flash-lite-tts'],
+    ['TTS_MODEL', 'gemini-2.5-flash-preview-tts', 'gemini-3.8-flash-lite-tts'],
+    // The plugin's fallback when no model is given.
+    ['LLM_MODEL', 'gemini-2.0-flash-001', 'gemini-3.8-flash'],
+    ['LLM_MODEL', 'gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+    // The Gemini API routes it to gemini-3.6-flash, which Vertex AI retires.
+    ['LLM_MODEL', 'gemini-3.5-flash', 'gemini-3.8-flash'],
+    ['LLM_MODEL', 'gemini-3.6-flash', 'gemini-3.8-flash'],
+  ])(
+    'when %s is %s, which Google has deprecated, suggesting %s',
+    (variable, model, replacement) => {
+      const agentMode =
+        variable === 'REALTIME_MODEL' ? realtimeWithGoogle : pipelineWithGoogle;
+
+      expect(() =>
+        loadAgentConfig({ ...agentMode, [variable]: model }),
+      ).toThrow(
+        `${variable} "${model}" is deprecated by its Provider; use "${replacement}"`,
+      );
+    },
+  );
 });
