@@ -24,7 +24,7 @@ describe('Conversation page', () => {
     ]);
   });
 
-  it('shows that the Agent has joined once it is listening in the room', async () => {
+  it('shows that the Agent is listening once it joins the room', async () => {
     const liveKit = createUnconnectedRoom();
     render(<ConversationPage room={liveKit.room} />);
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
@@ -35,9 +35,29 @@ describe('Conversation page', () => {
     });
 
     expect(screen.getByRole('status')).toHaveTextContent(
-      'The Agent has joined.',
+      'The Agent is listening.',
     );
   });
+
+  it.each(['thinking', 'speaking'] as const)(
+    'shows that the Agent is %s',
+    async (agentState) => {
+      const liveKit = createUnconnectedRoom();
+      render(<ConversationPage room={liveKit.room} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      act(() => {
+        liveKit.agentJoins();
+      });
+
+      act(() => {
+        liveKit.agentIs(agentState);
+      });
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        `The Agent is ${agentState}.`,
+      );
+    },
+  );
 
   it('ends the Conversation and leaves the room when the User presses End', async () => {
     const liveKit = createUnconnectedRoom();

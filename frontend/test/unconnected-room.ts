@@ -1,6 +1,7 @@
 import {
   ConnectionState,
   DisconnectReason,
+  ParticipantEvent,
   ParticipantKind,
   RemoteParticipant,
   Room,
@@ -49,13 +50,15 @@ export function createUnconnectedRoom() {
     undefined,
   );
 
+  let agent: RemoteParticipant | undefined;
+
   return {
     room,
     /** Every room this Room connected to, oldest first. */
     connections: (): readonly RoomConnection[] => connections,
     /** The Agent joins the room and reports that it is listening. */
     agentJoins(): void {
-      const agent = new RemoteParticipant(
+      agent = new RemoteParticipant(
         room.engine.client,
         'PA_agent',
         'agent',
@@ -67,6 +70,20 @@ export function createUnconnectedRoom() {
       );
       room.remoteParticipants.set(agent.identity, agent);
       room.emit(RoomEvent.ParticipantConnected, agent);
+    },
+    /**
+     * The Agent reports a new state through its `lk.agent.state` attribute,
+     * as LiveKit's agent framework does.
+     */
+    agentIs(state: 'listening' | 'thinking' | 'speaking'): void {
+      if (!agent) {
+        throw new Error('The Agent has not joined the room');
+      }
+      const attributes = { 'lk.agent.state': state };
+      vi.spyOn(agent, 'attributes', 'get').mockReturnValue(attributes);
+      // A connected Room forwards its participants' events; this one isn't.
+      agent.emit(ParticipantEvent.AttributesChanged, attributes);
+      room.emit(RoomEvent.ParticipantAttributesChanged, attributes, agent);
     },
   };
 }

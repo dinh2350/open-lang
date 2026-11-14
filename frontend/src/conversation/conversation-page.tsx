@@ -1,11 +1,11 @@
 import {
   RoomAudioRenderer,
   SessionProvider,
-  useAgent,
   useSession,
 } from '@livekit/components-react';
 import { ConnectionState, type Room } from 'livekit-client';
 import { Button } from '@/components/ui/button';
+import { AgentStatus } from './agent-status';
 import { roomTokenSource } from './room-token-source';
 
 interface ConversationPageProps {
@@ -25,7 +25,7 @@ export function ConversationPage({ room }: ConversationPageProps) {
       <SessionProvider session={session}>
         {inConversation ? (
           <>
-            <AgentPresence />
+            <AgentStatus />
             <Button variant="outline" onClick={() => void session.end()}>
               End
             </Button>
@@ -36,14 +36,5 @@ export function ConversationPage({ room }: ConversationPageProps) {
         <RoomAudioRenderer />
       </SessionProvider>
     </main>
-  );
-}
-
-function AgentPresence() {
-  const agent = useAgent();
-  return (
-    <p role="status" className="text-muted-foreground">
-      {agent.isConnected ? 'The Agent has joined.' : 'Waiting for the Agent…'}
-    </p>
   );
 }
