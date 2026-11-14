@@ -1,4 +1,5 @@
 import {
+  type ChangeLockedRequest,
   type ChangeRoleRequest,
   errorResponseSchema,
   type Role,
@@ -42,18 +43,36 @@ export async function listUsers(
   return users;
 }
 
-/** Changes another User's Role. Admins only. */
-export async function changeRole(
+/** Changes something about a User with a PUT, and returns their details. */
+async function changeUser(
   authorizedFetch: AuthorizedFetch,
   userId: string,
-  role: Role,
+  change: 'role' | 'locked',
+  request: ChangeRoleRequest | ChangeLockedRequest,
 ): Promise<UserDetails> {
-  const path = `/api/admin/users/${encodeURIComponent(userId)}/role`;
-  const request: ChangeRoleRequest = { role };
+  const path = `/api/admin/users/${encodeURIComponent(userId)}/${change}`;
   const response = await authorizedFetch(path, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
   return readResponse(path, response, (body) => userDetailsSchema.parse(body));
+}
+
+/** Changes another User's Role. Admins only. */
+export function changeRole(
+  authorizedFetch: AuthorizedFetch,
+  userId: string,
+  role: Role,
+): Promise<UserDetails> {
+  return changeUser(authorizedFetch, userId, 'role', { role });
+}
+
+/** Locks or unlocks another User. Admins only. */
+export function changeLocked(
+  authorizedFetch: AuthorizedFetch,
+  userId: string,
+  locked: boolean,
+): Promise<UserDetails> {
+  return changeUser(authorizedFetch, userId, 'locked', { locked });
 }

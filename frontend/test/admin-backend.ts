@@ -1,4 +1,5 @@
 import {
+  changeLockedRequestSchema,
   changeRoleRequestSchema,
   type User,
   type UserDetails,
@@ -6,7 +7,9 @@ import {
 import { http, HttpResponse } from 'msw';
 import {
   backendUsers,
+  changeLockedOnBackend,
   changeRoleOnBackend,
+  isLockedOnBackend,
   refusalOfAuthorization,
 } from './auth-backend';
 
@@ -40,9 +43,15 @@ export function createdAtOfNthUser(n: number): string {
   return `2026-11-${String(n).padStart(2, '0')}T12:00:00.000Z`;
 }
 
+const NO_SUCH_USER = { statusCode: 404, message: 'No User has this id.' };
+
 function withDetails(user: User): UserDetails {
   const n = backendUsers().findIndex((other) => other.id === user.id) + 1;
-  return { ...user, locked: false, createdAt: createdAtOfNthUser(n) };
+  return {
+    ...user,
+    locked: isLockedOnBackend(user.email),
+    createdAt: createdAtOfNthUser(n),
+  };
 }
 
 /**
@@ -67,10 +76,21 @@ export const adminHandlers = [
       const { role } = changeRoleRequestSchema.parse(await request.json());
       const user = changeRoleOnBackend(params.id, role);
       return user === undefined
-        ? HttpResponse.json(
-            { statusCode: 404, message: 'No User has this id.' },
-            { status: 404 },
-          )
+        ? HttpResponse.json(NO_SUCH_USER, { status: 404 })
+        : HttpResponse.json(withDetails(user));
+    },
+  ),
+  http.put<{ id: string }>(
+    '/api/admin/users/:id/locked',
+    async ({ request, params }) => {
+      const refusal = guard(request);
+      if (refusal !== undefined) {
+        return refusal;
+      }
+      const { locked } = changeLockedRequestSchema.parse(await request.json());
+      const user = changeLockedOnBackend(params.id, locked);
+      return user === undefined
+        ? HttpResponse.json(NO_SUCH_USER, { status: 404 })
         : HttpResponse.json(withDetails(user));
     },
   ),

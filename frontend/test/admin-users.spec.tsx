@@ -3,7 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { adminRequestAuthorizations } from './admin-backend';
-import { PASSWORD, renderApp, submitCredentials } from './app';
+import {
+  ADA,
+  backendHasAdminAndMember,
+  GRACE,
+  openUsersPageAsAdmin,
+  rowOf,
+  signInAs,
+} from './admin-page';
+import { PASSWORD, renderApp } from './app';
 import {
   authTokensIssued,
   backendHasUser,
@@ -11,39 +19,6 @@ import {
   browserIsSignedInAs,
 } from './auth-backend';
 import { backend } from './backend';
-
-const GRACE = 'grace@example.test';
-const ADA = 'ada@example.test';
-
-/** Grace is an Admin and Ada a Member, registered in that order. */
-function backendHasAdminAndMember(): void {
-  backendHasUser(GRACE, PASSWORD, 'admin');
-  backendHasUser(ADA, PASSWORD, 'member');
-}
-
-async function signInAs(email: string): Promise<void> {
-  await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Talk to the Agent' });
-}
-
-async function openUsersPageAsAdmin(): Promise<void> {
-  backendHasAdminAndMember();
-  renderApp('/sign-in');
-  await signInAs(GRACE);
-  await userEvent.click(screen.getByRole('link', { name: 'Manage Users' }));
-  await screen.findByRole('heading', { name: 'Users' });
-}
-
-async function rowOf(email: string): Promise<HTMLElement> {
-  const cell = await screen.findByRole('rowheader', {
-    name: new RegExp(`^${email}`),
-  });
-  const row = cell.closest('tr');
-  if (row === null) {
-    throw new Error(`${email} has no table row`);
-  }
-  return row;
-}
 
 function roleOnBackend(email: string) {
   return backendUsers().find((user) => user.email === email)?.role;
