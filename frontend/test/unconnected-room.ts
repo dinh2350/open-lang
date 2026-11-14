@@ -6,7 +6,7 @@ import {
   Room,
   RoomEvent,
 } from 'livekit-client';
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 interface RoomConnection {
   readonly serverUrl: string;
@@ -16,6 +16,19 @@ interface RoomConnection {
 function changeConnectionState(room: Room, state: ConnectionState): void {
   room.state = state;
   room.emit(RoomEvent.ConnectionStateChanged, state);
+}
+
+/** Gives the browser a microphone for the current test; jsdom has none. */
+function stubBrowserMicrophone(
+  getUserMedia: MediaDevices['getUserMedia'],
+): void {
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia },
+  });
+  onTestFinished(() => {
+    Reflect.deleteProperty(navigator, 'mediaDevices');
+  });
 }
 
 /**
@@ -45,14 +58,37 @@ export function createUnconnectedRoom() {
     }
     return Promise.resolve();
   });
-  vi.spyOn(room.localParticipant, 'setMicrophoneEnabled').mockResolvedValue(
-    undefined,
-  );
+  const { localParticipant } = room;
+  const askBrowserForMicrophone =
+    localParticipant.setMicrophoneEnabled.bind(localParticipant);
+  const setMicrophoneEnabled = vi
+    .spyOn(localParticipant, 'setMicrophoneEnabled')
+    .mockResolvedValue(undefined);
 
   return {
     room,
     /** Every room this Room connected to, oldest first. */
     connections: (): readonly RoomConnection[] => connections,
+    /**
+     * The User blocks the browser's microphone prompt. The Room asks the
+     * browser for the microphone as it does for real, and the browser refuses
+     * once the room has connected, when a person would answer the prompt.
+     */
+    denyMicrophoneAccess(): void {
+      setMicrophoneEnabled.mockImplementation(askBrowserForMicrophone);
+      stubBrowserMicrophone(
+        () =>
+          new Promise((_resolve, reject) => {
+            room.once(RoomEvent.Connected, () => {
+              reject(new DOMException('Permission denied', 'NotAllowedError'));
+            });
+          }),
+      );
+    },
+    /** The User allows the microphone again; it publishes nothing. */
+    allowMicrophoneAccess(): void {
+      setMicrophoneEnabled.mockResolvedValue(undefined);
+    },
     /** The Agent joins the room and reports that it is listening. */
     agentJoins(): void {
       const agent = new RemoteParticipant(

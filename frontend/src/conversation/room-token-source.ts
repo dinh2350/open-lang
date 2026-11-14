@@ -5,11 +5,19 @@ import {
 import { TokenSource } from 'livekit-client';
 
 /**
+ * A new source of Room Tokens. It caches the last Room Token until a
+ * Conversation uses it, so each Conversation page creates its own.
+ */
+export function createRoomTokenSource() {
+  return TokenSource.custom(requestRoomToken);
+}
+
+/**
  * Gets a Room Token from the backend's standard token endpoint. The backend
  * chooses the room, the participant identity and the Agent dispatch itself,
  * so the request carries no fields.
  */
-export const roomTokenSource = TokenSource.custom(async () => {
+async function requestRoomToken() {
   const request: RoomTokenRequest = {};
   const response = await fetch('/api/token', {
     method: 'POST',
@@ -26,4 +34,4 @@ export const roomTokenSource = TokenSource.custom(async () => {
     serverUrl: roomToken.server_url,
     participantToken: roomToken.participant_token,
   };
-});
+}
