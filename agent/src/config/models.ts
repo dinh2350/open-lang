@@ -14,6 +14,36 @@ export const DEFAULT_REALTIME_VOICE = {
   openai: 'marin',
 } as const;
 
+/** Default speech-to-text model of each Provider in Pipeline mode. */
+export const DEFAULT_STT_MODEL = {
+  // OpenAI's recommended model for live transcription, and its replacement
+  // for the deprecated whisper-1 and gpt-4o(-mini)-transcribe. Realtime mode
+  // transcribes the User with it too.
+  // https://developers.openai.com/api/docs/guides/realtime-transcription
+  openai: 'gpt-live-transcribe',
+} as const;
+
+/** Default language model of each Provider in Pipeline mode. */
+export const DEFAULT_LLM_MODEL = {
+  // OpenAI's most efficient model, and its replacement for the plugin default
+  // gpt-4.1. https://developers.openai.com/api/docs/models/gpt-6-luna
+  openai: 'gpt-6-luna',
+} as const;
+
+/** Default text-to-speech model of each Provider in Pipeline mode. */
+export const DEFAULT_TTS_MODEL = {
+  // Deprecated, like every model of OpenAI's Speech API, which is the only API
+  // the plugin's TTS can call. See the TTS entry in DEPRECATIONS.
+  openai: 'gpt-4o-mini-tts',
+} as const;
+
+/** Default voice of each Provider's text-to-speech in Pipeline mode. */
+export const DEFAULT_TTS_VOICE = {
+  // The Realtime default too, so both Agent Modes sound alike. OpenAI
+  // recommends marin or cedar for the best quality.
+  openai: 'marin',
+} as const;
+
 interface Deprecation {
   /** The day the Provider shuts the models down, or did. */
   readonly shutdown: string;
