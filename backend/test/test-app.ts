@@ -12,9 +12,14 @@ export const testEnv = {
   AGENT_NAME: 'test-agent',
 } as const;
 
-/** Starts the real application module, configured as `main.ts` does, against `testEnv`. */
-export async function startTestApp(): Promise<INestApplication<App>> {
-  for (const [name, value] of Object.entries(testEnv)) {
+/**
+ * Starts the real application module, configured as `main.ts` does, against
+ * `testEnv`. An override of `undefined` removes that variable.
+ */
+export async function startTestApp(
+  envOverrides: Readonly<Record<string, string | undefined>> = {},
+): Promise<INestApplication<App>> {
+  for (const [name, value] of Object.entries({ ...testEnv, ...envOverrides })) {
     vi.stubEnv(name, value);
   }
   const moduleRef = await Test.createTestingModule({
