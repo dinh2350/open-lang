@@ -27,15 +27,21 @@ const failureMessages: Record<ConversationFailure, string> = {
     "The Agent can't hear you because microphone access is blocked. Allow microphone access for this site in your browser's site settings, then press Start.",
   'start-failed': "Couldn't start the Conversation. Press Start to try again.",
   'agent-unavailable':
-    "Agent unavailable: the Agent didn't join the Conversation in time. Press Start to try again.",
+    'Agent unavailable, so the Conversation has ended. Press Start to try again.',
 };
 
-/** Why Start failed: the microphone was denied, or anything else went wrong. */
+/**
+ * Why Start failed: the User denied the microphone, or something else went
+ * wrong, which is logged for developers.
+ */
 function startFailure(error: unknown): ConversationFailure {
-  return MediaDeviceFailure.getFailure(error) ===
-    MediaDeviceFailure.PermissionDenied
-    ? 'microphone-denied'
-    : 'start-failed';
+  if (
+    MediaDeviceFailure.getFailure(error) === MediaDeviceFailure.PermissionDenied
+  ) {
+    return 'microphone-denied';
+  }
+  console.error('The Conversation failed to start:', error);
+  return 'start-failed';
 }
 
 /** Start begins a Conversation in a new private room; End leaves it. */
