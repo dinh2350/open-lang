@@ -108,6 +108,12 @@ function UserRow({ user, isSignedInUser }: UserRowProps) {
   const errorId = useId();
   // Shows the Role being saved; a refused change goes back to the User's Role.
   const shownRole = roleChange.isPending ? roleChange.variables : user.role;
+  let description: string | undefined;
+  if (isSignedInUser) {
+    description = ownRoleHintId;
+  } else if (roleChange.error !== null) {
+    description = errorId;
+  }
 
   return (
     <TableRow>
@@ -116,7 +122,7 @@ function UserRow({ user, isSignedInUser }: UserRowProps) {
         <NativeSelect
           size="sm"
           aria-label={`Role of ${user.email}`}
-          aria-describedby={isSignedInUser ? ownRoleHintId : errorId}
+          aria-describedby={description}
           value={shownRole}
           disabled={isSignedInUser || roleChange.isPending}
           onChange={(event) => {

@@ -76,7 +76,7 @@ describe('Seeding the first Admin (pnpm db:seed)', () => {
       SEED_ADMIN_PASSWORD: PASSWORD,
     });
 
-    await expect(seed({})).resolves.not.toThrow();
+    await expect(seed({})).resolves.toEqual({ outcome: 'admin-exists' });
   });
 
   it.each([
