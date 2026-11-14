@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Anonymous Conversation tracer bullet)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Docker Compose has a SonarQube Community Build service, with its own Postgres database or embedded storage, under a separate Compose profile. A plain `docker compose up` for development doesn't start it.
 - [ ] `pnpm sonar:up` starts SonarQube and waits until it is healthy.

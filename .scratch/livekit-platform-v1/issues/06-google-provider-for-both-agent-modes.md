@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 (Pipeline mode (OpenAI))
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `google` is accepted for `REALTIME_PROVIDER` and for each of `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER`.
 - [ ] The factory maps Google to the Google plugin's classes:

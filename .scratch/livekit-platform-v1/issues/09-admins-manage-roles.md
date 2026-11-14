@@ -4,7 +4,7 @@
 
 **Blocked by:** 07 (Register and sign in; Conversations need a signed-in User)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The root script `db:seed` creates an Admin from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` when no Admin exists. It does nothing when one exists.
 - [ ] A Role guard restricts admin endpoints to Admins. A Member gets `403`.

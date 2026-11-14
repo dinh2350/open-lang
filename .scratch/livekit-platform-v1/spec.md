@@ -328,3 +328,34 @@ Every ticket's definition of done includes `pnpm check`, and from ticket 02 on a
   - Whether NestJS 12 works with Vitest 5; its template pins Vitest 4.
   - Whether Vite 8's decorator-metadata handling breaks any NestJS pattern used here. If it does, fall back to the `unplugin-swc` setup from the NestJS docs.
 - **Quality gates:** linting, formatting and static analysis were added after the first breakdown; see Implementation Decisions, Quality gates. SonarQube Community Build has no branch analysis or pull request decoration. If the team later gets a SonarQube server or SonarQube Cloud, switch the gate to new-code conditions and run it in CI.
+
+## Comments
+
+### 2026-11-14, implement-spec run
+
+All ten tickets are implemented and merged into `feat/livekit-platform-v1`. Code review ran on two axes, Standards and Spec.
+
+**Fixed and merged.** These findings were fixed on `fix/code-review` and merged:
+- Spec 1: no LiveKit Inference for interruption detection.
+- Spec 6: S2 asserts through public behavior.
+- Spec 7: the Agent join timeout is set by env.
+- Spec 8: the `fake` Provider rejects deprecated models.
+- Spec 9: a refresh that races a lock returns `401`.
+- Rate limits count per browser behind the dev proxy.
+- The Provider smells are refactored.
+- Backend and Agent duplication is removed.
+- Comments use glossary terms.
+
+**Checks.** On the merged result, `pnpm check` (430 tests), `pnpm sonar` (gate passed) and `test:e2e` (2 passed) all pass.
+
+**Stopped by the human.** The human stopped the rest of the review fixes. The remaining findings are follow-up tickets 11 to 16. Earlier follow-ups are tickets 17 to 20. Decisions waiting for a human are tickets 21 and 22.
+
+**Still waiting for human approval**, as `CODING_STANDARDS.md` requires (see each ticket's `## Comments`):
+- Ticket 01: the ESLint `no-extraneous-class` rule with `allowWithDecorator` for the backend.
+- Ticket 02: the Sonar analysis scope and exclusions, the admin `SONAR_TOKEN`, the committed local Sonar admin password, and the MQR gate conditions.
+- Ticket 06: Google models rejected on both APIs although they are deprecated on only one.
+- Ticket 07: ESLint ignores `**/generated/`, and the pnpm build-script allowlist.
+- Ticket 09: the seed refuses an email that already belongs to a Member.
+- Ticket 05 and ticket 06: `reasoningEffort: none` and low Gemini thinking.
+
+**Never run.** The live tier (`test:live`) and the manual voice checks have not run, because no Provider keys are available.

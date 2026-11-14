@@ -4,7 +4,7 @@
 
 **Blocked by:** 07 (Register and sign in; Conversations need a signed-in User)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A refresh token record stores the User, a hash of the token, an expiry 7 days out, a revoked-at time, and the token it replaced.
 - [ ] Register and sign in set an opaque refresh token in an httpOnly, `SameSite=Strict` cookie scoped to the auth routes.

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The pnpm workspace has five packages: frontend, backend, Agent, shared, and end-to-end tests. All are TypeScript.
 - [ ] Node 24 and pnpm 10 are pinned.

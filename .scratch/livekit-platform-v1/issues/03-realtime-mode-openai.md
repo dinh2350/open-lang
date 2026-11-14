@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Anonymous Conversation tracer bullet), 02 (SonarQube quality gate)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Agent's config module is a pure function from the environment to a validated configuration.
 - [ ] Supported variables: `AGENT_MODE` (only `realtime` for now), `REALTIME_PROVIDER` (`openai` or `fake`), `REALTIME_MODEL`, and an optional voice.

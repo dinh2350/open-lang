@@ -4,7 +4,7 @@
 
 **Blocked by:** 08 (Stay signed in across reloads, and sign out), 09 (Admins manage Users' Roles)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A User has a locked flag, false by default.
 - [ ] Admins can lock and unlock another User. Locking revokes all of that User's refresh tokens.

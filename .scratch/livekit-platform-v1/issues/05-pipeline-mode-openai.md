@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Talk with the Agent in Realtime mode (OpenAI))
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The config module accepts `AGENT_MODE=pipeline`, with `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER` (each `openai` or `fake`) and `STT_MODEL`, `LLM_MODEL` and `TTS_MODEL`.
 - [ ] The config module has default OpenAI models for each step that are generally available on the day you implement this.

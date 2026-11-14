@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Anonymous Conversation tracer bullet), 02 (SonarQube quality gate)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Microphone access denied: the page explains how to allow the microphone, and the Conversation doesn't start.
 - [ ] Room Token request fails (network error or non-2xx response): the page shows an error and the person can press Start again.

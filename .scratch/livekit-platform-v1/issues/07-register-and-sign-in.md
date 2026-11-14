@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Anonymous Conversation tracer bullet), 02 (SonarQube quality gate)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Docker Compose also runs Postgres. The backend reaches it through Prisma.
 - [ ] The root script `db:migrate` exists.
