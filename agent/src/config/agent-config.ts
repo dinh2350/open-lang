@@ -32,17 +32,88 @@ function modelVariable(name: string, defaultModel: string) {
 
 /** The error for a Provider variable that names no known Provider. */
 function unknownProvider(providerVariable: string) {
-  return { error: `${providerVariable} must be "openai" or "fake"` };
+  return {
+    error: `${providerVariable} must be "openai", "google" or "fake"`,
+  };
+}
+
+/** A variable that a chosen setup needs; its error says which setup. */
+function requiredVariable(name: string, requiredWhen: string) {
+  return z.preprocess(
+    unsetIfEmpty,
+    z.string({ error: `${name} is required when ${requiredWhen}` }),
+  );
 }
 
 /** The OpenAI API key, required whenever a Provider variable selects OpenAI. */
 function openAiApiKey(providerVariable: string) {
-  return z.preprocess(
-    unsetIfEmpty,
-    z.string({
-      error: `OPENAI_API_KEY is required when ${providerVariable} is "openai"`,
-    }),
+  return requiredVariable('OPENAI_API_KEY', `${providerVariable} is "openai"`);
+}
+
+/**
+ * Google's credentials, in the shape the plugin's options take: a Gemini API
+ * key, or Vertex AI in a project and location. Vertex AI authenticates with
+ * Google's Application Default Credentials. As in Google's own SDK,
+ * GOOGLE_GENAI_USE_VERTEXAI chooses between them.
+ */
+function googleCredentials(providerVariable: string) {
+  const selected = `${providerVariable} is "google"`;
+  return z.discriminatedUnion(
+    'GOOGLE_GENAI_USE_VERTEXAI',
+    [
+      z
+        .object({
+          GOOGLE_GENAI_USE_VERTEXAI: z.literal(['false', '']).optional(),
+          GOOGLE_API_KEY: requiredVariable(
+            'GOOGLE_API_KEY',
+            `${selected}, unless GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+        })
+        .transform((env) => ({
+          vertexai: false as const,
+          apiKey: env.GOOGLE_API_KEY,
+        })),
+      z
+        .object({
+          GOOGLE_GENAI_USE_VERTEXAI: z.literal('true'),
+          GOOGLE_CLOUD_PROJECT: requiredVariable(
+            'GOOGLE_CLOUD_PROJECT',
+            `${selected} and GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+          GOOGLE_CLOUD_LOCATION: requiredVariable(
+            'GOOGLE_CLOUD_LOCATION',
+            `${selected} and GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+        })
+        .transform((env) => ({
+          vertexai: true as const,
+          project: env.GOOGLE_CLOUD_PROJECT,
+          location: env.GOOGLE_CLOUD_LOCATION,
+        })),
+    ],
+    { error: 'GOOGLE_GENAI_USE_VERTEXAI must be "true" or "false"' },
   );
+}
+
+/**
+ * Parses the environment with another schema inside a transform, and reports
+ * its issues as the transform's own. zod rejects an intersection as a
+ * discriminated-union option, so an option that needs a second schema parses
+ * it here. On failure the result is never used.
+ */
+function parseWithin<T>(
+  schema: z.ZodType<T>,
+  env: unknown,
+  ctx: z.RefinementCtx,
+): T {
+  const result = schema.safeParse(env);
+  if (!result.success) {
+    for (const { message, path, input } of result.error.issues) {
+      ctx.addIssue({ code: 'custom', message, path, input });
+    }
+    return z.NEVER;
+  }
+  return result.data;
 }
 
 const realtimeMode = { AGENT_MODE: z.literal('realtime') };
@@ -71,6 +142,33 @@ const openAiRealtimeSchema = z
     },
   }));
 
+const googleRealtimeSchema = z
+  .looseObject({
+    ...realtimeMode,
+    REALTIME_PROVIDER: z.literal('google'),
+    REALTIME_MODEL: modelVariable(
+      'REALTIME_MODEL',
+      DEFAULT_REALTIME_MODEL.google,
+    ),
+    REALTIME_VOICE: z.preprocess(
+      unsetIfEmpty,
+      z.string().default(DEFAULT_REALTIME_VOICE.google),
+    ),
+  })
+  .transform((env, ctx) => ({
+    agentMode: env.AGENT_MODE,
+    realtime: {
+      provider: env.REALTIME_PROVIDER,
+      model: env.REALTIME_MODEL,
+      voice: env.REALTIME_VOICE,
+      credentials: parseWithin(
+        googleCredentials('REALTIME_PROVIDER'),
+        env,
+        ctx,
+      ),
+    },
+  }));
+
 const fakeRealtimeSchema = z
   .object({ ...realtimeMode, REALTIME_PROVIDER: z.literal('fake') })
   .transform((env) => ({
@@ -80,7 +178,7 @@ const fakeRealtimeSchema = z
 
 const realtimeSchema = z.discriminatedUnion(
   'REALTIME_PROVIDER',
-  [openAiRealtimeSchema, fakeRealtimeSchema],
+  [openAiRealtimeSchema, googleRealtimeSchema, fakeRealtimeSchema],
   unknownProvider('REALTIME_PROVIDER'),
 );
 
@@ -107,6 +205,18 @@ const speechToTextSchema = z.discriminatedUnion(
           apiKey: env.OPENAI_API_KEY,
         },
       })),
+    z
+      .looseObject({
+        STT_PROVIDER: z.literal('google'),
+        STT_MODEL: modelVariable('STT_MODEL', DEFAULT_STT_MODEL.google),
+      })
+      .transform((env, ctx) => ({
+        stt: {
+          provider: env.STT_PROVIDER,
+          model: env.STT_MODEL,
+          credentials: parseWithin(googleCredentials('STT_PROVIDER'), env, ctx),
+        },
+      })),
     z.object({ STT_PROVIDER: z.literal('fake') }).transform((env) => ({
       stt: { provider: env.STT_PROVIDER, model: FAKE_STEP_MODEL.stt },
     })),
@@ -128,6 +238,18 @@ const languageModelSchema = z.discriminatedUnion(
           provider: env.LLM_PROVIDER,
           model: env.LLM_MODEL,
           apiKey: env.OPENAI_API_KEY,
+        },
+      })),
+    z
+      .looseObject({
+        LLM_PROVIDER: z.literal('google'),
+        LLM_MODEL: modelVariable('LLM_MODEL', DEFAULT_LLM_MODEL.google),
+      })
+      .transform((env, ctx) => ({
+        llm: {
+          provider: env.LLM_PROVIDER,
+          model: env.LLM_MODEL,
+          credentials: parseWithin(googleCredentials('LLM_PROVIDER'), env, ctx),
         },
       })),
     z.object({ LLM_PROVIDER: z.literal('fake') }).transform((env) => ({
@@ -158,6 +280,23 @@ const textToSpeechSchema = z.discriminatedUnion(
           apiKey: env.OPENAI_API_KEY,
         },
       })),
+    z
+      .looseObject({
+        TTS_PROVIDER: z.literal('google'),
+        TTS_MODEL: modelVariable('TTS_MODEL', DEFAULT_TTS_MODEL.google),
+        TTS_VOICE: z.preprocess(
+          unsetIfEmpty,
+          z.string().default(DEFAULT_TTS_VOICE.google),
+        ),
+      })
+      .transform((env, ctx) => ({
+        tts: {
+          provider: env.TTS_PROVIDER,
+          model: env.TTS_MODEL,
+          voice: env.TTS_VOICE,
+          credentials: parseWithin(googleCredentials('TTS_PROVIDER'), env, ctx),
+        },
+      })),
     z.object({ TTS_PROVIDER: z.literal('fake') }).transform((env) => ({
       tts: { provider: env.TTS_PROVIDER, model: FAKE_STEP_MODEL.tts },
     })),
@@ -176,16 +315,10 @@ const pipelineStepsSchema = z.intersection(
 
 const pipelineSchema = z
   .looseObject({ AGENT_MODE: z.literal('pipeline') })
-  .transform((env, ctx) => {
-    const steps = pipelineStepsSchema.safeParse(env);
-    if (!steps.success) {
-      for (const { message, path, input } of steps.error.issues) {
-        ctx.addIssue({ code: 'custom', message, path, input });
-      }
-      return z.NEVER;
-    }
-    return { agentMode: env.AGENT_MODE, ...steps.data };
-  });
+  .transform((env, ctx) => ({
+    agentMode: env.AGENT_MODE,
+    ...parseWithin(pipelineStepsSchema, env, ctx),
+  }));
 
 const agentConfigSchema = z.discriminatedUnion(
   'AGENT_MODE',

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { inference, initializeLogger, llm, voice } from '@livekit/agents';
+import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
@@ -144,7 +145,7 @@ describe('Agent configuration in Pipeline mode refuses to start the Agent, namin
   ])('when %s %s', (variable, _, provider) => {
     expect(() =>
       loadAgentConfig({ ...pipelineWithOpenAi, [variable]: provider }),
-    ).toThrow(`${variable} must be "openai" or "fake"`);
+    ).toThrow(`${variable} must be "openai", "google" or "fake"`);
   });
 
   it.each(['STT_PROVIDER', 'LLM_PROVIDER', 'TTS_PROVIDER'])(
@@ -191,51 +192,73 @@ describe('Agent configuration in Pipeline mode refuses to start the Agent, namin
         TTS_PROVIDER: 'fake',
       }),
     ).toThrow(
-      /OPENAI_API_KEY is required when STT_PROVIDER is "openai"[\s\S]*LLM_PROVIDER must be "openai" or "fake"/,
+      /OPENAI_API_KEY is required when STT_PROVIDER is "openai"[\s\S]*LLM_PROVIDER must be "openai", "google" or "fake"/,
     );
   });
 });
 
-describe('Agent configuration in Pipeline mode with any mix of OpenAI and the fake Provider', () => {
-  /** What each step's Provider builds: a plugin class, or nothing at all. */
-  const builtBy = {
-    stt: { openai: openai.STT, fake: undefined },
-    llm: { openai: openai.LLM, fake: voice.testing.FakeLLM },
-    tts: { openai: openai.TTS, fake: undefined },
-  } as const;
-
-  it.each([
-    ['openai', 'openai', 'openai'],
-    ['openai', 'openai', 'fake'],
-    ['openai', 'fake', 'openai'],
-    ['openai', 'fake', 'fake'],
-    ['fake', 'openai', 'openai'],
-    ['fake', 'openai', 'fake'],
-    ['fake', 'fake', 'openai'],
-    ['fake', 'fake', 'fake'],
-  ] as const)(
-    'builds STT %s, LLM %s and TTS %s, with Silero and the v1-mini turn detector',
-    (sttProvider, llmProvider, ttsProvider) => {
-      const options = createSessionOptions(
-        loadAgentConfig({
-          ...pipelineWithOpenAi,
-          STT_PROVIDER: sttProvider,
-          LLM_PROVIDER: llmProvider,
-          TTS_PROVIDER: ttsProvider,
-        }),
-      );
-
-      expect(options.stt?.constructor).toBe(builtBy.stt[sttProvider]);
-      expect(options.llm?.constructor).toBe(builtBy.llm[llmProvider]);
-      expect(options.tts?.constructor).toBe(builtBy.tts[ttsProvider]);
-      expect(options.vad).toBeInstanceOf(inference.VAD);
-      expect(options.turnHandling?.turnDetection).toHaveProperty(
-        'model',
-        'turn-detector-v1-mini',
-      );
+describe.each([
+  ['a Gemini API key', { GOOGLE_API_KEY: 'test-google-key' }],
+  [
+    'Vertex AI',
+    {
+      GOOGLE_GENAI_USE_VERTEXAI: 'true',
+      GOOGLE_CLOUD_PROJECT: 'test-project',
+      GOOGLE_CLOUD_LOCATION: 'us',
     },
-  );
+  ],
+])(
+  'Agent configuration in Pipeline mode with any mix of OpenAI, Google with %s, and the fake Provider',
+  (_, googleCredentials) => {
+    /** What each step's Provider builds: a plugin class, or nothing at all. */
+    const builtBy = {
+      stt: {
+        openai: openai.STT,
+        google: google.beta.GeminiSTT,
+        fake: undefined,
+      },
+      llm: {
+        openai: openai.LLM,
+        google: google.LLM,
+        fake: voice.testing.FakeLLM,
+      },
+      tts: { openai: openai.TTS, google: google.beta.TTS, fake: undefined },
+    } as const;
 
+    const providers = ['openai', 'google', 'fake'] as const;
+    const everyMix = providers.flatMap((stt) =>
+      providers.flatMap((llm) =>
+        providers.map((tts) => [stt, llm, tts] as const),
+      ),
+    );
+
+    it.each(everyMix)(
+      'builds STT %s, LLM %s and TTS %s, with Silero and the v1-mini turn detector',
+      (sttProvider, llmProvider, ttsProvider) => {
+        const options = createSessionOptions(
+          loadAgentConfig({
+            ...pipelineWithOpenAi,
+            ...googleCredentials,
+            STT_PROVIDER: sttProvider,
+            LLM_PROVIDER: llmProvider,
+            TTS_PROVIDER: ttsProvider,
+          }),
+        );
+
+        expect(options.stt?.constructor).toBe(builtBy.stt[sttProvider]);
+        expect(options.llm?.constructor).toBe(builtBy.llm[llmProvider]);
+        expect(options.tts?.constructor).toBe(builtBy.tts[ttsProvider]);
+        expect(options.vad).toBeInstanceOf(inference.VAD);
+        expect(options.turnHandling?.turnDetection).toHaveProperty(
+          'model',
+          'turn-detector-v1-mini',
+        );
+      },
+    );
+  },
+);
+
+describe('Agent configuration in Pipeline mode with only the fake Provider', () => {
   it('needs no API key when every step uses the fake Provider', () => {
     expect(
       loadAgentConfig({

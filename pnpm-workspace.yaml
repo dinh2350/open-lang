@@ -27,6 +27,7 @@ onlyBuiltDependencies:
 
 # Their install scripts are no-ops (`node -e ""`); they ship prebuilt binaries.
 ignoredBuiltDependencies:
+  - '@google/genai'
   - '@livekit/blingfire'
   - '@livekit/local-inference'
   # Optional native speedups for SSH, which Testcontainers doesn't use here,
