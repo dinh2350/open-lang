@@ -30,7 +30,7 @@
 
 ### 2026-11-14, implementer (branch `ticket/03-realtime-openai`)
 
-**Result.** The Agent's config module (`agent/src/config/`) selects Realtime mode with the OpenAI or `fake` Provider. The Conversation page shows the Agent's state, a visualizer and a mute toggle. `pnpm check` passes. `pnpm sonar` passes the gate: coverage 94.1% (lines 93.5%, branches 95.7%), duplication 0.0%, A ratings, 0 issues. S4 (`pnpm test:e2e`) passes with the `fake` Provider selected through the config module. `pnpm test:live` skips cleanly without a key and exits 0.
+**Result.** The Agent's config module (`agent/src/config/`) selects Realtime mode with the OpenAI or `fake` Provider. The Conversation page shows the Agent's state, a visualizer and a mute toggle. After merging tickets 04 and 07: `pnpm check` passes (130 tests). `pnpm sonar` passes the gate: coverage 95.0% (lines 96.5%, branches 90.8%), duplication 0.0%, A ratings, 0 issues. S4 (`pnpm test:e2e`, which now registers a User first) passes with the `fake` Provider selected through the config module. `pnpm test:live` skips cleanly without a key and exits 0.
 
 **Security Hotspots: none.** SonarQube reported 0.
 
@@ -56,7 +56,7 @@
 6. **`test:live` layout.** The tests live in `agent/test/live/`, with their own Vitest project (`agent/test/live/vitest.config.ts`, not in the root `projects`). The fast `agent` project now excludes `test/live/**`, so `pnpm test` never runs them, even with a key in the shell. The agent script runs Vitest under `node --env-file-if-exists=.env`, like `dev` and `start`. No ESLint, Prettier, TypeScript or SonarQube configuration changed; the live project sits under `agent/test`, which `tsconfig` and `sonar.tests` already cover.
 7. **Frontend.** The status reads "The Agent is listening." / "thinking." / "speaking."; every other state shows "Waiting for the Agent…". The visualizer is components-react's `BarVisualizer` on the Agent's audio track, with `role="img"` and the label "The Agent's voice". jsdom has no audio, so S3 checks that the visualizer appears, not that it moves. The mute toggle is a "Mute microphone" button (`aria-pressed` when muted) built on `useTrackToggle`.
 8. **S3 harness.** `createUnconnectedRoom()` gains `agentIs(state)` and a fake microphone. `setMicrophoneEnabled` now records whether the microphone is on, `isMicrophoneEnabled` reports it, and the local participant emits `TrackMuted` / `TrackUnmuted`; leaving the room turns it off. `allowMicrophoneAccess()` (ticket 04) restores that fake microphone.
-9. **Merge with ticket 04.** `AgentStatus` takes its state from the page-level `useAgent(session)` instead of calling `useAgent()` itself, because every `useAgent` instance restarts the shared Agent join timer. Ticket 04's fresh-attempt test and S4 now expect "The Agent is listening." instead of "The Agent has joined.".
+9. **Merges with tickets 04 and 07.** `AgentStatus` takes its state from the page-level `useAgent(session)` instead of calling `useAgent()` itself, because every `useAgent` instance restarts the shared Agent join timer. Ticket 04's fresh-attempt test and S4 now expect "The Agent is listening." instead of "The Agent has joined.". From ticket 07, S4 keeps registering a User before Start, and the README keeps the Postgres setup next to the Agent config note.
 10. **New dependency:** `@livekit/agents-plugin-openai` 1.10.0, which matches `@livekit/agents` 1.10.0. Version 2.0.0 exists.
 
 **Open issues:**
