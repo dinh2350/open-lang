@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Room } from 'livekit-client';
 import { MemoryRouter } from 'react-router';
@@ -7,7 +7,11 @@ import { createUnconnectedRoom } from './unconnected-room';
 
 export const PASSWORD = 'correct horse battery staple';
 
-/** Renders the whole app, signed out, as if the browser opened `path`. */
+/**
+ * Renders the whole app as if the browser opened `path`. Like a page load,
+ * it starts with nothing in memory, so only a refresh cookie can sign the
+ * User in.
+ */
 export function renderApp(
   path: string,
   room: Room = createUnconnectedRoom().room,
@@ -17,6 +21,12 @@ export function renderApp(
       <App room={room} />
     </MemoryRouter>,
   );
+}
+
+/** Reloads the page at `path`: the app loses everything it kept in memory. */
+export function reloadApp(path: string): void {
+  cleanup();
+  renderApp(path);
 }
 
 /** Types an email and password into the sign-in or register form and submits it. */

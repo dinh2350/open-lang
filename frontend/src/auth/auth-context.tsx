@@ -4,10 +4,12 @@ import {
   type ReactNode,
   use,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { refresh as requestRefresh } from './auth-api';
 
 /** `fetch` for backend endpoints that need a signed-in User. */
 export type AuthorizedFetch = (
@@ -18,6 +20,11 @@ export type AuthorizedFetch = (
 interface Auth {
   /** The signed-in User, or `null` when nobody is signed in. */
   readonly user: User | null;
+  /**
+   * True on page load, until the app knows whether the browser's refresh
+   * cookie still signs a User in.
+   */
+  readonly restoringSignIn: boolean;
   /** Signs in the User of a register or sign-in response. */
   readonly signIn: (response: AuthResponse) => void;
   /** Sends the signed-in User's Auth Token with the request. */
@@ -30,6 +37,7 @@ interface Auth {
  */
 const signedOut: Auth = {
   user: null,
+  restoringSignIn: false,
   signIn: () => {
     throw new Error('Signing in needs an AuthProvider');
   },
@@ -39,19 +47,46 @@ const signedOut: Auth = {
 const AuthContext = createContext<Auth>(signedOut);
 
 /**
- * Keeps the signed-in User and their Auth Token in memory only, so a reload
- * signs the User out.
+ * Keeps the signed-in User and their Auth Token in memory only. On page
+ * load it asks the backend for a new Auth Token with the refresh cookie, so
+ * a User stays signed in across reloads.
  */
 export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [restoringSignIn, setRestoringSignIn] = useState(true);
   // A ref, so that a request made later, such as a Room Token request,
   // always sends the latest Auth Token.
   const authToken = useRef<string | null>(null);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
 
   const signIn = useCallback((response: AuthResponse) => {
     authToken.current = response.authToken;
     setUser(response.user);
   }, []);
+
+  /**
+   * Swaps the refresh cookie for a new Auth Token. Every refresh rotates
+   * the cookie, and the backend treats a rotated cookie sent again as
+   * stolen, so callers that ask at the same time share one request.
+   */
+  const refresh = useCallback(() => {
+    refreshInFlight.current ??= requestRefresh()
+      .then((response) => {
+        if (response !== null) {
+          signIn(response);
+        }
+      })
+      .finally(() => {
+        refreshInFlight.current = null;
+      });
+    return refreshInFlight.current;
+  }, [signIn]);
+
+  useEffect(() => {
+    void refresh().finally(() => {
+      setRestoringSignIn(false);
+    });
+  }, [refresh]);
 
   const authorizedFetch = useCallback<AuthorizedFetch>((input, init) => {
     const headers = new Headers(init?.headers);
@@ -62,8 +97,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
   }, []);
 
   const auth = useMemo(
-    () => ({ user, signIn, authorizedFetch }),
-    [user, signIn, authorizedFetch],
+    () => ({ user, restoringSignIn, signIn, authorizedFetch }),
+    [user, restoringSignIn, signIn, authorizedFetch],
   );
   return <AuthContext value={auth}>{children}</AuthContext>;
 }

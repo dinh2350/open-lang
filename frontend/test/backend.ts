@@ -1,7 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
-import { authHandlers, resetAuthBackend } from './auth-backend';
+import {
+  authHandlers,
+  holdsValidAuthToken,
+  resetAuthBackend,
+} from './auth-backend';
 
 export const TEST_LIVEKIT_URL = 'ws://livekit.test:7880';
 const TEST_AGENT_NAME = 'test-agent';
@@ -50,7 +54,16 @@ export function roomTokenRequestAuthorizations(): readonly (string | null)[] {
 export const backend = setupServer(
   ...authHandlers,
   http.post('/api/token', ({ request }) => {
-    roomTokenAuthorizations.push(request.headers.get('Authorization'));
+    const authorization = request.headers.get('Authorization');
+    roomTokenAuthorizations.push(authorization);
+    // The Conversation page's own specs render it without an AuthProvider,
+    // so a request without an Auth Token gets a Room Token here.
+    if (authorization !== null && !holdsValidAuthToken(authorization)) {
+      return HttpResponse.json(
+        { statusCode: 401, message: 'Unauthorized' },
+        { status: 401 },
+      );
+    }
     const participantToken = roomToken(
       `conversation-${String(issuedRoomTokens.length + 1)}`,
     );
