@@ -8,6 +8,7 @@ import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AgentStatus } from './agent-status';
+import { MicrophoneToggle } from './microphone-toggle';
 import { createRoomTokenSource } from './room-token-source';
 
 interface ConversationPageProps {
@@ -98,9 +99,12 @@ export function ConversationPage({
               agentState={agent.state}
               agentVoice={agent.microphoneTrack}
             />
-            <Button variant="outline" onClick={() => void session.end()}>
-              End
-            </Button>
+            <div className="flex gap-3">
+              <MicrophoneToggle />
+              <Button variant="outline" onClick={() => void session.end()}>
+                End
+              </Button>
+            </div>
           </>
         ) : (
           <Button onClick={() => void startConversation()}>Start</Button>

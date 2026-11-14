@@ -76,6 +76,30 @@ describe('Conversation page', () => {
     ).toBeVisible();
   });
 
+  it('mutes the microphone when the User presses Mute microphone, and unmutes it when they press it again', async () => {
+    const liveKit = createUnconnectedRoom();
+    render(<ConversationPage room={liveKit.room} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    act(() => {
+      liveKit.agentJoins();
+    });
+    const muteToggle = screen.getByRole('button', {
+      name: 'Mute microphone',
+      pressed: false,
+    });
+    expect(liveKit.room.localParticipant.isMicrophoneEnabled).toBe(true);
+
+    await userEvent.click(muteToggle);
+
+    expect(muteToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(liveKit.room.localParticipant.isMicrophoneEnabled).toBe(false);
+
+    await userEvent.click(muteToggle);
+
+    expect(muteToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(liveKit.room.localParticipant.isMicrophoneEnabled).toBe(true);
+  });
+
   it('ends the Conversation and leaves the room when the User presses End', async () => {
     const liveKit = createUnconnectedRoom();
     render(<ConversationPage room={liveKit.room} />);
