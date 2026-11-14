@@ -11,7 +11,9 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import {
   AuthService,
   type ValidRegisterRequest,
@@ -24,6 +26,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   register(
@@ -33,6 +36,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   signIn(

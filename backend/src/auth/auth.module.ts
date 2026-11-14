@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { minutes, ThrottlerModule } from '@nestjs/throttler';
 import { z } from 'zod';
 import { parseEnv } from '../config/parse-env.js';
 import { AuthTokenService } from './auth-token.service.js';
@@ -21,6 +22,12 @@ const authEnvSchema = z.object({
         signOptions: { algorithm: 'HS256', expiresIn: '15m' },
         verifyOptions: { algorithms: ['HS256'] },
       }),
+    }),
+    // Only the routes that use ThrottlerGuard are limited: register and
+    // sign-in, each to 5 requests a minute per IP, to slow password guessing.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: minutes(1), limit: 5 }],
+      errorMessage: 'Too many attempts. Wait a minute, then try again.',
     }),
   ],
   controllers: [AuthController],
