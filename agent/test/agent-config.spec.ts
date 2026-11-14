@@ -70,6 +70,15 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
     expect(options.llm).toHaveProperty('model', 'gpt-realtime-2.1-mini');
   });
 
+  it("transcribes the User with gpt-live-transcribe, Pipeline mode's default, instead of the plugin's deprecated gpt-4o-mini-transcribe", () => {
+    const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
+
+    // The plugin has no public getter for its session settings.
+    expect(options.llm).toHaveProperty('_options.inputAudioTranscription', {
+      model: 'gpt-live-transcribe',
+    });
+  });
+
   it("leaves turn detection to OpenAI's server, with no local VAD and no LiveKit Inference", () => {
     const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
 

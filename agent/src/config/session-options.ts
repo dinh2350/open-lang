@@ -8,6 +8,7 @@ import {
 import * as openai from '@livekit/agents-plugin-openai';
 import type { AgentConfig } from './agent-config.ts';
 import { fakeProviderSessionOptions } from './fake-provider.ts';
+import { DEFAULT_STT_MODEL } from './models.ts';
 
 type RealtimeConfig = Extract<AgentConfig, { agentMode: 'realtime' }>;
 type PipelineConfig = Extract<AgentConfig, { agentMode: 'pipeline' }>;
@@ -29,7 +30,13 @@ function realtimeSessionOptions({
   }
   const { model, voice, apiKey } = realtime;
   return {
-    llm: new openai.realtime.RealtimeModel({ model, voice, apiKey }),
+    llm: new openai.realtime.RealtimeModel({
+      model,
+      voice,
+      apiKey,
+      // The plugin's default, gpt-4o-mini-transcribe, is deprecated.
+      inputAudioTranscription: { model: DEFAULT_STT_MODEL.openai },
+    }),
     // OpenAI's server detects when the User has finished speaking. Left
     // unset, AgentSession would also load a local Silero VAD and a turn
     // detector that calls LiveKit Inference.
