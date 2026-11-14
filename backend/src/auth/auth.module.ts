@@ -1,9 +1,9 @@
+import { parseEnv } from '@livekit-platform/shared';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { minutes, ThrottlerModule } from '@nestjs/throttler';
 import { z } from 'zod';
-import { parseEnv } from '../config/parse-env.js';
 import { AuthTokenService } from './auth-token.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
@@ -19,7 +19,11 @@ const authEnvSchema = z.object({
   imports: [
     JwtModule.registerAsync({
       useFactory: () => ({
-        secret: parseEnv('Auth', authEnvSchema, process.env).JWT_SECRET,
+        secret: parseEnv(
+          authEnvSchema,
+          process.env,
+          'Invalid Auth settings in the backend environment',
+        ).JWT_SECRET,
         signOptions: { algorithm: 'HS256', expiresIn: '15m' },
         verifyOptions: { algorithms: ['HS256'] },
       }),

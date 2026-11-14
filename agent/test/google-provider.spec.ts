@@ -2,8 +2,17 @@ import assert from 'node:assert/strict';
 import { initializeLogger, llm } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
+import { startFakeRealtimeApi } from './fake-realtime-api.ts';
 
 beforeAll(() => {
   // A job initializes the logger, which Google's models need.
@@ -86,9 +95,33 @@ describe('Agent configuration in Realtime mode with Google', () => {
     expect(options.llm).toBeInstanceOf(google.realtime.RealtimeModel);
     expect(options.llm).toHaveProperty('model', 'gemini-3.8-live');
     expect(options.llm).toHaveProperty('provider', 'Gemini');
-    // The plugin has no public getter for its session settings.
-    expect(options.llm).toHaveProperty('_options.voice', 'Puck');
-    expect(options.llm).toHaveProperty('_options.apiKey', 'test-key');
+  });
+
+  it('connects to the Gemini Live API with the configured key, and asks for the configured voice', async () => {
+    const liveApi = await startFakeRealtimeApi();
+    onTestFinished(() => liveApi.close());
+    // Google's SDK reads it when a RealtimeSession connects.
+    vi.stubEnv('GOOGLE_GEMINI_BASE_URL', liveApi.baseUrl);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    const options = createSessionOptions(
+      loadAgentConfig({ ...realtimeWithGoogle, REALTIME_VOICE: 'Puck' }),
+    );
+
+    const connection = await liveApi.connect(options.llm);
+
+    expect(
+      new URL(connection.url, liveApi.baseUrl).searchParams.get('key'),
+    ).toBe('test-key');
+    expect(connection.firstMessage).toHaveProperty(
+      'setup.model',
+      'models/gemini-3.8-live',
+    );
+    expect(connection.firstMessage).toHaveProperty(
+      'setup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName',
+      'Puck',
+    );
   });
 
   it("leaves turn detection to Google's server, with no local VAD and no LiveKit Inference", () => {
@@ -125,9 +158,6 @@ describe('Agent configuration in Realtime mode with Google on Vertex AI', () => 
     expect(options.llm).toBeInstanceOf(google.realtime.RealtimeModel);
     expect(options.llm).toHaveProperty('model', 'gemini-3.8-live');
     expect(options.llm).toHaveProperty('provider', 'Vertex AI');
-    // The plugin has no public getter for its session settings.
-    expect(options.llm).toHaveProperty('_options.project', 'test-project');
-    expect(options.llm).toHaveProperty('_options.location', 'us');
   });
 });
 

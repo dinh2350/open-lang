@@ -7,6 +7,7 @@ import {
 import argon2 from 'argon2';
 import { Prisma, type User as UserRecord } from '../generated/prisma/client.js';
 import { RefreshTokenService } from '../auth/refresh-token.service.js';
+import { toUser } from '../auth/users.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
@@ -49,9 +50,7 @@ async function findUser(
 /** A User as an Admin sees them: never the password hash. */
 function toUserDetails(record: UserRecord): UserDetails {
   return {
-    id: record.id,
-    email: record.email,
-    role: record.role,
+    ...toUser(record),
     locked: record.locked,
     createdAt: record.createdAt.toISOString(),
   };
@@ -115,26 +114,26 @@ export class UsersService {
     return this.prisma.$transaction(async (transaction) => {
       const adminIds = await lockUnlockedAdmins(transaction);
       await findUser(transaction, userId);
+      if (locked && isTheOnlyAdmin(userId, adminIds)) {
+        throw new ConflictException("You can't lock the last unlocked Admin.");
+      }
+      // Changing the User's row first makes a concurrent refresh wait for
+      // this transaction, so the revocation below sees its new refresh token.
+      const user = await transaction.user.update({
+        where: { id: userId },
+        data: { locked },
+      });
       if (locked) {
-        if (isTheOnlyAdmin(userId, adminIds)) {
-          throw new ConflictException(
-            "You can't lock the last unlocked Admin.",
-          );
-        }
         await this.refreshTokens.revokeAllOf(userId, transaction);
       }
-      return toUserDetails(
-        await transaction.user.update({
-          where: { id: userId },
-          data: { locked },
-        }),
-      );
+      return toUserDetails(user);
     }, LOCKS_UNLOCKED_ADMINS);
   }
 
   /**
    * Sets a new password for a User who forgot theirs, and signs them out
-   * everywhere in the same transaction, so their old sessions stop working.
+   * everywhere in the same transaction, so no refresh token they hold from
+   * before keeps them signed in.
    */
   async setPassword(userId: string, password: string): Promise<void> {
     // Hashing is slow on purpose, so it happens before the transaction.

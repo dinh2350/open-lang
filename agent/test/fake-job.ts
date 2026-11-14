@@ -29,7 +29,7 @@ export async function dispatchToRoom(agent: AgentDefinition, roomName: string) {
   initializeLogger({ pretty: false, level: 'info' });
   const logLines: string[] = [];
   // Not restored after the job ends: the framework keeps logging for a while
-  // after a session closes. Vitest runs each test file in its own process.
+  // after an AgentSession closes. Vitest runs each test file in its own process.
   vi.spyOn(process.stdout, 'write').mockImplementation(
     (chunk: string | Uint8Array) => {
       logLines.push(String(chunk));

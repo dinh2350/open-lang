@@ -89,6 +89,26 @@ describe('Rate limits on register and sign-in', () => {
     expect(response.status).toBe(200);
   });
 
+  it('counts each browser behind the dev proxy on this host by the IP the proxy forwards', async () => {
+    const fromOneBrowser = (email: string) =>
+      register(email).set('X-Forwarded-For', '203.0.113.1');
+    const fromAnotherBrowser = (email: string) =>
+      register(email).set('X-Forwarded-For', '203.0.113.2');
+
+    const statuses = await statusesOf(
+      fiveTimes(
+        (attempt) => () =>
+          fromOneBrowser(`user${String(attempt)}@example.test`),
+      ),
+    );
+    const sixth = await fromOneBrowser('user6@example.test');
+    const fromAnother = await fromAnotherBrowser('user7@example.test');
+
+    expect(statuses).toEqual([201, 201, 201, 201, 201]);
+    expect(sixth.status).toBe(429);
+    expect(fromAnother.status).toBe(201);
+  });
+
   it('lets the IP try again a minute later', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     await registerFiveUsers();

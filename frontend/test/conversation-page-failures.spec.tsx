@@ -27,7 +27,12 @@ describe('Conversation page failures', () => {
   it('explains how to allow the microphone, and starts no Conversation, when microphone access is denied', async () => {
     const liveKit = createUnconnectedRoom();
     liveKit.denyMicrophoneAccess();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
@@ -53,7 +58,12 @@ describe('Conversation page failures', () => {
     async (_failure, respond) => {
       backend.use(http.post('/api/token', respond));
       const liveKit = createUnconnectedRoom();
-      render(<ConversationPage room={liveKit.room} />);
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+        />,
+      );
 
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
@@ -68,7 +78,12 @@ describe('Conversation page failures', () => {
   it('shows that the Agent is unavailable, and ends the Conversation, when the Agent has not joined 15 seconds after Start', async () => {
     const user = startFakeTimers();
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await screen.findByText('Waiting for the Agent…');
 
@@ -105,7 +120,12 @@ describe('Conversation page failures', () => {
     it('starts a fresh attempt with a new Room Token once the User allows the microphone', async () => {
       const liveKit = createUnconnectedRoom();
       liveKit.denyMicrophoneAccess();
-      render(<ConversationPage room={liveKit.room} />);
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+        />,
+      );
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
       await screen.findByRole('alert');
 
@@ -124,7 +144,12 @@ describe('Conversation page failures', () => {
     it('starts a fresh attempt with a new Room Token once the backend issues Room Tokens again', async () => {
       backend.use(http.post('/api/token', () => HttpResponse.error()));
       const liveKit = createUnconnectedRoom();
-      render(<ConversationPage room={liveKit.room} />);
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+        />,
+      );
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
       await screen.findByRole('alert');
 
@@ -141,7 +166,12 @@ describe('Conversation page failures', () => {
     it('starts a fresh attempt with a new Room Token, which the Agent can join, after the Agent was unavailable', async () => {
       const user = startFakeTimers();
       const liveKit = createUnconnectedRoom();
-      render(<ConversationPage room={liveKit.room} />);
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+        />,
+      );
       await user.click(screen.getByRole('button', { name: 'Start' }));
       await act(() => vi.advanceTimersByTimeAsync(15_000));
       expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');

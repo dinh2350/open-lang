@@ -1,6 +1,6 @@
 import { type llm, voice } from '@livekit/agents';
 
-/** What the Agent says first in a session. */
+/** What the Agent says first in an AgentSession. */
 export function firstAgentMessage(
   session: voice.AgentSession,
 ): Promise<llm.ChatMessage> {

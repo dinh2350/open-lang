@@ -1,12 +1,15 @@
 import { defineAgent, type JobContext, log, voice } from '@livekit/agents';
 import type { Room } from '@livekit/rtc-node';
 import {
-  type AgentConfig,
   createSessionOptions,
   loadAgentConfig,
+  modelsOf,
 } from './config/index.ts';
 
-/** The Agent: a general-purpose English assistant with no tools. */
+/**
+ * The Agent's instructions: it answers anything, in English, and has no
+ * tools. The model reads them, so they use the model's own words.
+ */
 const INSTRUCTIONS =
   'You are a helpful general-purpose voice assistant. Always answer in English, briefly and clearly, because your answers are spoken aloud.';
 
@@ -14,9 +17,10 @@ const GREETING_INSTRUCTIONS =
   'Greet the user by saying exactly: "Hello, how can I help?"';
 
 /**
- * Starts the Agent in a Conversation's session, joining the room if there is
- * one, and greets the User first, so they know it is listening. Without a
- * room, the session runs as in LiveKit's testing docs.
+ * Starts a Conversation: the Agent joins the room, if there is one, in the
+ * given AgentSession, and greets the User first, so they know it is
+ * listening. Without a room, the AgentSession runs as in LiveKit's testing
+ * docs.
  */
 export async function startConversation(
   session: voice.AgentSession,
@@ -33,8 +37,9 @@ export async function startConversation(
 }
 
 /**
- * The Agent's job: each dispatch into a Conversation's room runs one session
- * there. The agent server loads this module in its job processes.
+ * The Agent's job: each dispatch into a Conversation's room runs that
+ * Conversation in one AgentSession. The agent server loads this module in its
+ * job processes.
  */
 export default defineAgent({
   entry: async (ctx: JobContext) => {
@@ -51,24 +56,3 @@ export default defineAgent({
     logger.info({ roomName, ...modelsOf(config) }, 'Conversation started');
   },
 });
-
-/** One model of the Agent: who provides it, and which one. */
-function modelOf({ provider, model }: { provider: string; model: string }) {
-  return { provider, model };
-}
-
-/**
- * The Agent Mode, Providers and models to log, so a developer knows which
- * setup they are listening to. Picked field by field: never an API key.
- */
-function modelsOf(config: AgentConfig) {
-  if (config.agentMode === 'realtime') {
-    return { agentMode: config.agentMode, ...modelOf(config.realtime) };
-  }
-  return {
-    agentMode: config.agentMode,
-    stt: modelOf(config.stt),
-    llm: modelOf(config.llm),
-    tts: modelOf(config.tts),
-  };
-}

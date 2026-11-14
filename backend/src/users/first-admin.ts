@@ -1,7 +1,10 @@
-import { registerRequestSchema } from '@livekit-platform/shared';
+import {
+  type Environment,
+  parseEnv,
+  registerRequestSchema,
+} from '@livekit-platform/shared';
 import argon2 from 'argon2';
 import { z } from 'zod';
-import { parseEnv } from '../config/parse-env.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 
 // The same rules as registering: a valid email, stored lowercase, and a
@@ -22,16 +25,16 @@ export type FirstAdminSeed =
  */
 export async function seedFirstAdmin(
   prisma: PrismaClient,
-  env: NodeJS.ProcessEnv,
+  env: Environment,
 ): Promise<FirstAdminSeed> {
   const anAdmin = await prisma.user.findFirst({ where: { role: 'admin' } });
   if (anAdmin !== null) {
     return { outcome: 'admin-exists' };
   }
   const { SEED_ADMIN_EMAIL: email, SEED_ADMIN_PASSWORD: password } = parseEnv(
-    'seed',
     seedEnvSchema,
     env,
+    'Invalid seed settings in the backend environment',
   );
   // Promoting an existing account would hand Admin rights to whoever
   // registered this email first, with their own password.

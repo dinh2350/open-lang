@@ -91,17 +91,12 @@ export class AuthService {
   }
 
   /**
-   * Signs the User of a refresh token in again, without their password, and
-   * rotates the refresh token.
+   * Signs the User of a refresh token in again, without their password: a
+   * new Auth Token, and the refresh token rotated.
    */
   async refresh(refreshToken: string | undefined): Promise<SignedIn> {
     const rotated = await this.refreshTokens.rotate(refreshToken);
     return this.signedIn(toUser(rotated.user), rotated.refreshToken);
-  }
-
-  /** Signs out the browser that holds this refresh token. */
-  signOut(refreshToken: string | undefined): Promise<void> {
-    return this.refreshTokens.revoke(refreshToken);
   }
 
   private async signedIn(user: User, refreshToken: string): Promise<SignedIn> {

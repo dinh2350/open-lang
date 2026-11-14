@@ -1,9 +1,9 @@
 import { voice } from '@livekit/agents';
 
 /**
- * Session options for the `fake` Provider. It needs no API keys and makes no
+ * AgentSession options for the `fake` Provider. It needs no API keys and makes no
  * network calls, so the end-to-end smoke test runs without real AI calls.
- * The Agent joins the room and runs its session; it doesn't speak.
+ * The Agent joins the Conversation's room; it doesn't speak.
  */
 export function fakeProviderSessionOptions(): voice.AgentSessionOptions {
   return {

@@ -1,3 +1,4 @@
+import { type Environment, parseEnv } from '@livekit-platform/shared';
 import { z } from 'zod';
 import {
   DEFAULT_LLM_MODEL,
@@ -9,32 +10,101 @@ import {
   deprecationOf,
 } from './models.ts';
 
+/**
+ * Who serves the Agent's AI models: OpenAI or Google. The `fake` Provider
+ * makes no AI calls and needs no key, so end-to-end tests run without them.
+ */
+export type Provider = 'openai' | 'google' | 'fake';
+
+/** A Provider that makes AI calls. */
+type RealProvider = Exclude<Provider, 'fake'>;
+
+/**
+ * Google's credentials, in the shape the plugin's options take: a Gemini API
+ * key, or Vertex AI in a project and location.
+ */
+export type GoogleCredentials =
+  | { readonly vertexai: false; readonly apiKey: string }
+  | {
+      readonly vertexai: true;
+      readonly project: string;
+      readonly location: string;
+    };
+
+/** What each Provider needs, besides a model name, to serve a model. */
+interface ProviderSettings {
+  openai: { readonly apiKey: string };
+  google: { readonly credentials: GoogleCredentials };
+  fake: object;
+}
+
+/** One of the Agent's models, and the Provider that serves it. */
+export type ModelConfig<P extends Provider = Provider> = {
+  [K in P]: {
+    readonly provider: K;
+    readonly model: string;
+  } & ProviderSettings[K];
+}[P];
+
+/**
+ * One of the Agent's models that speaks, with its voice. The fake Provider
+ * says nothing, so it has no voice.
+ */
+export type SpeakingModelConfig<P extends Provider = Provider> = {
+  [K in P]: ModelConfig<K> &
+    (K extends RealProvider ? { readonly voice: string } : object);
+}[P];
+
+/** Realtime mode: one model listens and speaks. */
+export interface RealtimeConfig {
+  readonly agentMode: 'realtime';
+  readonly realtime: SpeakingModelConfig;
+}
+
+/** Pipeline mode: separate models transcribe, think and speak. */
+export interface PipelineConfig {
+  readonly agentMode: 'pipeline';
+  readonly stt: ModelConfig;
+  readonly llm: ModelConfig;
+  readonly tts: SpeakingModelConfig;
+}
+
+/** How the Agent talks: its Agent Mode, and each model with its Provider. */
+export type AgentConfig = RealtimeConfig | PipelineConfig;
+
+/** How the Agent turns the User's speech into its spoken reply. */
+export type AgentMode = AgentConfig['agentMode'];
+
 /** An empty variable, as copied from `.env.example`, counts as not set. */
 function unsetIfEmpty(value: unknown): unknown {
   return value === '' ? undefined : value;
 }
 
-/** A model variable: its default when not set, and never a deprecated model. */
-function modelVariable(name: string, defaultModel: string) {
-  return z
-    .preprocess(unsetIfEmpty, z.string().default(defaultModel))
-    .check((ctx) => {
-      const deprecation = deprecationOf(ctx.value);
-      if (deprecation) {
-        ctx.issues.push({
-          code: 'custom',
-          input: ctx.value,
-          message: `${name} "${ctx.value}" is deprecated by its Provider; use "${deprecation.replacement}" (shutdown: ${deprecation.shutdown})`,
-        });
-      }
-    });
+/** A model name that is never a deprecated model. */
+function notDeprecated(name: string) {
+  return z.string().check((ctx) => {
+    const deprecation = deprecationOf(ctx.value);
+    if (deprecation) {
+      ctx.issues.push({
+        code: 'custom',
+        input: ctx.value,
+        message: `${name} "${ctx.value}" is deprecated by its Provider; use "${deprecation.replacement}" (shutdown: ${deprecation.shutdown})`,
+      });
+    }
+  });
 }
 
-/** The error for a Provider variable that names no known Provider. */
-function unknownProvider(providerVariable: string) {
-  return {
-    error: `${providerVariable} must be "openai", "google" or "fake"`,
-  };
+/** A model variable: its default when not set, and never a deprecated model. */
+function modelVariable(name: string, defaultModel: string) {
+  return z.preprocess(unsetIfEmpty, notDeprecated(name).default(defaultModel));
+}
+
+/**
+ * A model variable the fake Provider ignores. It still never names a
+ * deprecated model, so switching to a real Provider never brings one in.
+ */
+function ignoredModelVariable(name: string) {
+  return z.preprocess(unsetIfEmpty, notDeprecated(name).optional());
 }
 
 /** A variable that a chosen setup needs; its error says which setup. */
@@ -51,10 +121,9 @@ function openAiApiKey(providerVariable: string) {
 }
 
 /**
- * Google's credentials, in the shape the plugin's options take: a Gemini API
- * key, or Vertex AI in a project and location. Vertex AI authenticates with
- * Google's Application Default Credentials. As in Google's own SDK,
- * GOOGLE_GENAI_USE_VERTEXAI chooses between them.
+ * Google's credentials. Vertex AI authenticates with Google's Application
+ * Default Credentials. As in Google's own SDK, GOOGLE_GENAI_USE_VERTEXAI
+ * chooses between them.
  */
 function googleCredentials(providerVariable: string) {
   const selected = `${providerVariable} is "google"`;
@@ -69,8 +138,8 @@ function googleCredentials(providerVariable: string) {
             `${selected}, unless GOOGLE_GENAI_USE_VERTEXAI is "true"`,
           ),
         })
-        .transform((env) => ({
-          vertexai: false as const,
+        .transform((env): GoogleCredentials => ({
+          vertexai: false,
           apiKey: env.GOOGLE_API_KEY,
         })),
       z
@@ -85,8 +154,8 @@ function googleCredentials(providerVariable: string) {
             `${selected} and GOOGLE_GENAI_USE_VERTEXAI is "true"`,
           ),
         })
-        .transform((env) => ({
-          vertexai: true as const,
+        .transform((env): GoogleCredentials => ({
+          vertexai: true,
           project: env.GOOGLE_CLOUD_PROJECT,
           location: env.GOOGLE_CLOUD_LOCATION,
         })),
@@ -116,208 +185,147 @@ function parseWithin<T>(
   return result.data;
 }
 
-const realtimeMode = { AGENT_MODE: z.literal('realtime') };
+/** The variables that choose one of the Agent's models. */
+interface ModelVariables {
+  /** The variables' prefix, such as `STT` for STT_PROVIDER and STT_MODEL. */
+  readonly prefix: string;
+  /** Each real Provider's default model. */
+  readonly defaultModels: Readonly<Record<RealProvider, string>>;
+  /**
+   * The model the fake Provider names in logs. Only the language model has a
+   * framework fake (FakeLLM); a fake STT or TTS is no model at all.
+   */
+  readonly fakeModel: string;
+}
 
-const openAiRealtimeSchema = z
-  .object({
-    ...realtimeMode,
-    REALTIME_PROVIDER: z.literal('openai'),
-    REALTIME_MODEL: modelVariable(
-      'REALTIME_MODEL',
-      DEFAULT_REALTIME_MODEL.openai,
-    ),
-    REALTIME_VOICE: z.preprocess(
-      unsetIfEmpty,
-      z.string().default(DEFAULT_REALTIME_VOICE.openai),
-    ),
-    OPENAI_API_KEY: openAiApiKey('REALTIME_PROVIDER'),
-  })
-  .transform((env) => ({
-    agentMode: env.AGENT_MODE,
-    realtime: {
-      provider: env.REALTIME_PROVIDER,
-      model: env.REALTIME_MODEL,
-      voice: env.REALTIME_VOICE,
-      apiKey: env.OPENAI_API_KEY,
-    },
-  }));
-
-const googleRealtimeSchema = z
-  .looseObject({
-    ...realtimeMode,
-    REALTIME_PROVIDER: z.literal('google'),
-    REALTIME_MODEL: modelVariable(
-      'REALTIME_MODEL',
-      DEFAULT_REALTIME_MODEL.google,
-    ),
-    REALTIME_VOICE: z.preprocess(
-      unsetIfEmpty,
-      z.string().default(DEFAULT_REALTIME_VOICE.google),
-    ),
-  })
-  .transform((env, ctx) => ({
-    agentMode: env.AGENT_MODE,
-    realtime: {
-      provider: env.REALTIME_PROVIDER,
-      model: env.REALTIME_MODEL,
-      voice: env.REALTIME_VOICE,
-      credentials: parseWithin(
-        googleCredentials('REALTIME_PROVIDER'),
-        env,
-        ctx,
-      ),
-    },
-  }));
-
-const fakeRealtimeSchema = z
-  .object({ ...realtimeMode, REALTIME_PROVIDER: z.literal('fake') })
-  .transform((env) => ({
-    agentMode: env.AGENT_MODE,
-    realtime: { provider: env.REALTIME_PROVIDER, model: 'fake-llm' as const },
-  }));
-
-const realtimeSchema = z.discriminatedUnion(
-  'REALTIME_PROVIDER',
-  [openAiRealtimeSchema, googleRealtimeSchema, fakeRealtimeSchema],
-  unknownProvider('REALTIME_PROVIDER'),
-);
+/** The variables that choose one of the Agent's models that speaks. */
+interface SpeakingModelVariables extends ModelVariables {
+  /** Each real Provider's default voice, for the `<prefix>_VOICE` variable. */
+  readonly defaultVoices: Readonly<Record<RealProvider, string>>;
+}
 
 /**
- * The fake Provider of a Pipeline step makes no AI calls and needs no key.
- * Only the language model has a framework fake (FakeLLM); a fake STT or TTS
- * is no model at all.
+ * One of the Agent's models: `<prefix>_PROVIDER` chooses the Provider, and
+ * `<prefix>_MODEL` the model, which defaults per Provider. Each model reads
+ * its variables from the whole environment, so every bad model is reported at
+ * once.
  */
-const FAKE_STEP_MODEL = { stt: 'none', llm: 'fake-llm', tts: 'none' } as const;
-
-const speechToTextSchema = z.discriminatedUnion(
-  'STT_PROVIDER',
-  [
-    z
-      .object({
-        STT_PROVIDER: z.literal('openai'),
-        STT_MODEL: modelVariable('STT_MODEL', DEFAULT_STT_MODEL.openai),
-        OPENAI_API_KEY: openAiApiKey('STT_PROVIDER'),
-      })
-      .transform((env) => ({
-        stt: {
-          provider: env.STT_PROVIDER,
-          model: env.STT_MODEL,
+function modelSchema({
+  prefix,
+  defaultModels,
+  fakeModel,
+}: ModelVariables): z.ZodType<ModelConfig> {
+  const providerVariable = `${prefix}_PROVIDER`;
+  const modelName = `${prefix}_MODEL`;
+  return z.discriminatedUnion(
+    providerVariable,
+    [
+      z
+        .object({
+          [providerVariable]: z.literal('openai'),
+          [modelName]: modelVariable(modelName, defaultModels.openai),
+          OPENAI_API_KEY: openAiApiKey(providerVariable),
+        })
+        .transform((env): ModelConfig<'openai'> => ({
+          provider: 'openai',
+          model: env[modelName],
           apiKey: env.OPENAI_API_KEY,
-        },
-      })),
-    z
-      .looseObject({
-        STT_PROVIDER: z.literal('google'),
-        STT_MODEL: modelVariable('STT_MODEL', DEFAULT_STT_MODEL.google),
-      })
-      .transform((env, ctx) => ({
-        stt: {
-          provider: env.STT_PROVIDER,
-          model: env.STT_MODEL,
-          credentials: parseWithin(googleCredentials('STT_PROVIDER'), env, ctx),
-        },
-      })),
-    z.object({ STT_PROVIDER: z.literal('fake') }).transform((env) => ({
-      stt: { provider: env.STT_PROVIDER, model: FAKE_STEP_MODEL.stt },
-    })),
-  ],
-  unknownProvider('STT_PROVIDER'),
-);
-
-const languageModelSchema = z.discriminatedUnion(
-  'LLM_PROVIDER',
-  [
-    z
-      .object({
-        LLM_PROVIDER: z.literal('openai'),
-        LLM_MODEL: modelVariable('LLM_MODEL', DEFAULT_LLM_MODEL.openai),
-        OPENAI_API_KEY: openAiApiKey('LLM_PROVIDER'),
-      })
-      .transform((env) => ({
-        llm: {
-          provider: env.LLM_PROVIDER,
-          model: env.LLM_MODEL,
-          apiKey: env.OPENAI_API_KEY,
-        },
-      })),
-    z
-      .looseObject({
-        LLM_PROVIDER: z.literal('google'),
-        LLM_MODEL: modelVariable('LLM_MODEL', DEFAULT_LLM_MODEL.google),
-      })
-      .transform((env, ctx) => ({
-        llm: {
-          provider: env.LLM_PROVIDER,
-          model: env.LLM_MODEL,
-          credentials: parseWithin(googleCredentials('LLM_PROVIDER'), env, ctx),
-        },
-      })),
-    z.object({ LLM_PROVIDER: z.literal('fake') }).transform((env) => ({
-      llm: { provider: env.LLM_PROVIDER, model: FAKE_STEP_MODEL.llm },
-    })),
-  ],
-  unknownProvider('LLM_PROVIDER'),
-);
-
-const textToSpeechSchema = z.discriminatedUnion(
-  'TTS_PROVIDER',
-  [
-    z
-      .object({
-        TTS_PROVIDER: z.literal('openai'),
-        TTS_MODEL: modelVariable('TTS_MODEL', DEFAULT_TTS_MODEL.openai),
-        TTS_VOICE: z.preprocess(
-          unsetIfEmpty,
-          z.string().default(DEFAULT_TTS_VOICE.openai),
-        ),
-        OPENAI_API_KEY: openAiApiKey('TTS_PROVIDER'),
-      })
-      .transform((env) => ({
-        tts: {
-          provider: env.TTS_PROVIDER,
-          model: env.TTS_MODEL,
-          voice: env.TTS_VOICE,
-          apiKey: env.OPENAI_API_KEY,
-        },
-      })),
-    z
-      .looseObject({
-        TTS_PROVIDER: z.literal('google'),
-        TTS_MODEL: modelVariable('TTS_MODEL', DEFAULT_TTS_MODEL.google),
-        TTS_VOICE: z.preprocess(
-          unsetIfEmpty,
-          z.string().default(DEFAULT_TTS_VOICE.google),
-        ),
-      })
-      .transform((env, ctx) => ({
-        tts: {
-          provider: env.TTS_PROVIDER,
-          model: env.TTS_MODEL,
-          voice: env.TTS_VOICE,
-          credentials: parseWithin(googleCredentials('TTS_PROVIDER'), env, ctx),
-        },
-      })),
-    z.object({ TTS_PROVIDER: z.literal('fake') }).transform((env) => ({
-      tts: { provider: env.TTS_PROVIDER, model: FAKE_STEP_MODEL.tts },
-    })),
-  ],
-  unknownProvider('TTS_PROVIDER'),
-);
+        })),
+      z
+        .looseObject({
+          [providerVariable]: z.literal('google'),
+          [modelName]: modelVariable(modelName, defaultModels.google),
+        })
+        .transform((env, ctx): ModelConfig<'google'> => ({
+          provider: 'google',
+          model: env[modelName],
+          credentials: parseWithin(
+            googleCredentials(providerVariable),
+            env,
+            ctx,
+          ),
+        })),
+      z
+        .object({
+          [providerVariable]: z.literal('fake'),
+          [modelName]: ignoredModelVariable(modelName),
+        })
+        .transform((): ModelConfig<'fake'> => ({
+          provider: 'fake',
+          model: fakeModel,
+        })),
+    ],
+    {
+      error: `${providerVariable} must be "openai", "google" or "fake"`,
+    },
+  );
+}
 
 /**
- * The steps of Pipeline mode. Each step reads its own variables from the
- * whole environment, so every bad step is reported at once.
+ * One of the Agent's models that speaks: a model, plus `<prefix>_VOICE`,
+ * which defaults per Provider.
  */
-const pipelineStepsSchema = z.intersection(
-  speechToTextSchema,
-  z.intersection(languageModelSchema, textToSpeechSchema),
-);
+function speakingModelSchema({
+  defaultVoices,
+  ...variables
+}: SpeakingModelVariables): z.ZodType<SpeakingModelConfig> {
+  const voiceName = `${variables.prefix}_VOICE`;
+  const model = modelSchema(variables);
+  return z
+    .looseObject({
+      [voiceName]: z.preprocess(unsetIfEmpty, z.string().optional()),
+    })
+    .transform((env, ctx): SpeakingModelConfig => {
+      const chosen = parseWithin(model, env, ctx);
+      return chosen.provider === 'fake'
+        ? chosen
+        : {
+            ...chosen,
+            voice: env[voiceName] ?? defaultVoices[chosen.provider],
+          };
+    });
+}
+
+const realtimeModelSchema = speakingModelSchema({
+  prefix: 'REALTIME',
+  defaultModels: DEFAULT_REALTIME_MODEL,
+  defaultVoices: DEFAULT_REALTIME_VOICE,
+  fakeModel: 'fake-llm',
+});
+
+const speechToTextSchema = modelSchema({
+  prefix: 'STT',
+  defaultModels: DEFAULT_STT_MODEL,
+  fakeModel: 'none',
+});
+
+const languageModelSchema = modelSchema({
+  prefix: 'LLM',
+  defaultModels: DEFAULT_LLM_MODEL,
+  fakeModel: 'fake-llm',
+});
+
+const textToSpeechSchema = speakingModelSchema({
+  prefix: 'TTS',
+  defaultModels: DEFAULT_TTS_MODEL,
+  defaultVoices: DEFAULT_TTS_VOICE,
+  fakeModel: 'none',
+});
+
+const realtimeSchema = z
+  .looseObject({ AGENT_MODE: z.literal('realtime') })
+  .transform((env, ctx): RealtimeConfig => ({
+    agentMode: env.AGENT_MODE,
+    realtime: parseWithin(realtimeModelSchema, env, ctx),
+  }));
 
 const pipelineSchema = z
   .looseObject({ AGENT_MODE: z.literal('pipeline') })
-  .transform((env, ctx) => ({
+  .transform((env, ctx): PipelineConfig => ({
     agentMode: env.AGENT_MODE,
-    ...parseWithin(pipelineStepsSchema, env, ctx),
+    stt: parseWithin(speechToTextSchema, env, ctx),
+    llm: parseWithin(languageModelSchema, env, ctx),
+    tts: parseWithin(textToSpeechSchema, env, ctx),
   }));
 
 const agentConfigSchema = z.discriminatedUnion(
@@ -326,19 +334,31 @@ const agentConfigSchema = z.discriminatedUnion(
   { error: 'AGENT_MODE must be "realtime" or "pipeline"' },
 );
 
-/** How the Agent talks: its Agent Mode, Provider and model. */
-export type AgentConfig = z.infer<typeof agentConfigSchema>;
-
 /**
  * Reads and validates the Agent's configuration from the environment. Throws
  * an error naming every bad variable, so the Agent refuses to start.
  */
-export function loadAgentConfig(env: NodeJS.ProcessEnv): AgentConfig {
-  const result = agentConfigSchema.safeParse(env);
-  if (!result.success) {
-    throw new Error(
-      `Invalid Agent configuration:\n${z.prettifyError(result.error)}`,
-    );
+export function loadAgentConfig(env: Environment): AgentConfig {
+  return parseEnv(agentConfigSchema, env, 'Invalid Agent configuration');
+}
+
+/** One model of the Agent, as logged: who provides it, and which one. */
+function modelOf({ provider, model }: ModelConfig) {
+  return { provider, model };
+}
+
+/**
+ * The Agent Mode, Providers and models to log, so a developer knows which
+ * setup they are listening to. Picked field by field: never an API key.
+ */
+export function modelsOf(config: AgentConfig) {
+  if (config.agentMode === 'realtime') {
+    return { agentMode: config.agentMode, ...modelOf(config.realtime) };
   }
-  return result.data;
+  return {
+    agentMode: config.agentMode,
+    stt: modelOf(config.stt),
+    llm: modelOf(config.llm),
+    tts: modelOf(config.tts),
+  };
 }

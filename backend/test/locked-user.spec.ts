@@ -4,12 +4,12 @@ import {
   errorResponseSchema,
 } from '@livekit-platform/shared';
 import type { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+import request, { type Response } from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { PrismaService } from '../src/prisma/prisma.service.js';
 import { adminApi } from './admin-api.js';
 import { signInFirstAdmin } from './admins.js';
+import { holdOldestRefreshTokenOf } from './database/user-changes.js';
 import { refresh, signInForRefreshToken } from './refresh-cookies.js';
 import { startTestApp, stopTestApp } from './test-app.js';
 import { PASSWORD, registerUser } from './users.js';
@@ -94,17 +94,35 @@ describe('A Locked User', () => {
       expect((await refresh(app, onAnotherDevice)).status).toBe(401);
     });
 
-    it('gets 401 even for a refresh token the lock missed, as when a refresh raced the lock', async () => {
+    it('gets 401 for a refresh that races the lock, and stays signed out after an unlock', async () => {
       const refreshToken = await signInForRefreshToken(app);
-      // The state a lock leaves behind when a concurrent refresh stored its
-      // new refresh token after the lock revoked the User's refresh tokens.
-      await app
-        .get(PrismaService)
-        .user.update({ where: { id: ada.user.id }, data: { locked: true } });
+      // Ada's refresh token from registering, which a slow sign-out on that
+      // device holds: the lock stops halfway through revoking her tokens.
+      const signingOut = await holdOldestRefreshTokenOf(ada.user.id);
+      let locking: Promise<Response> | undefined;
+      let refreshing: Promise<Response> | undefined;
+      try {
+        locking = Promise.resolve(
+          adminApi(app, admin.authToken).changeLocked(ada.user.id, {
+            locked: true,
+          }),
+        );
+        await signingOut.waitForQueuedQueries(1);
+        refreshing = Promise.resolve(refresh(app, refreshToken));
+        // The refresh either answers or waits for the lock to finish.
+        await Promise.race([refreshing, signingOut.waitForQueuedQueries(2)]);
+      } finally {
+        await signingOut.release();
+      }
+      const [lockResponse, refreshResponse] = await Promise.all([
+        locking,
+        refreshing,
+      ]);
 
-      const response = await refresh(app, refreshToken);
-
-      expect(response.status).toBe(401);
+      expect(lockResponse.status).toBe(200);
+      expect(refreshResponse.status).toBe(401);
+      await unlockAda();
+      expect((await refresh(app, refreshToken)).status).toBe(401);
     });
   });
 

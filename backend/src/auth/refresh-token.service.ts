@@ -68,15 +68,14 @@ export class RefreshTokenService {
     if (current === null) {
       throw new UnauthorizedException();
     }
-    if (current.replacedBy !== null || current.user.locked) {
+    if (current.replacedBy !== null) {
       return this.signOutEverywhere(current.userId);
     }
     if (current.revokedAt !== null || current.expiresAt <= new Date()) {
       throw new UnauthorizedException();
     }
     const next = newRefreshToken(current.userId);
-    if (!(await this.replace(current.id, next.record))) {
-      // Another request rotated it since it was read.
+    if (!(await this.replace(current, next.record))) {
       return this.signOutEverywhere(current.userId);
     }
     return { user: current.user, refreshToken: next.refreshToken };
@@ -113,14 +112,24 @@ export class RefreshTokenService {
   }
 
   /**
-   * Revokes a refresh token and stores the one that replaces it, unless the
-   * token was revoked in the meantime. Then it returns false.
+   * Revokes a refresh token and stores the one that replaces it. Returns
+   * false instead when its User is locked, or when another request rotated
+   * the token since it was read.
    */
   private replace(
-    id: string,
+    { id, userId }: { readonly id: string; readonly userId: string },
     replacement: ReturnType<typeof newRefreshToken>['record'],
   ): Promise<boolean> {
     return this.prisma.$transaction(async (transaction) => {
+      // Holds the User's row until this transaction ends. A lock changes that
+      // row before it revokes the User's refresh tokens, so either the lock
+      // waits and then revokes the new token too, or this waits for the lock
+      // and reads that the User is locked.
+      const users = await transaction.$queryRaw<{ locked: boolean }[]>`
+        SELECT locked FROM "User" WHERE id = ${userId}::uuid FOR SHARE`;
+      if (users.some(({ locked }) => locked)) {
+        return false;
+      }
       // Postgres makes a concurrent revocation of the same row wait for
       // this one and then match nothing, so only one request rotates it.
       const { count } = await transaction.refreshToken.updateMany({

@@ -28,6 +28,7 @@ import {
   RefreshTokenCookie,
   setRefreshCookie,
 } from './refresh-cookie.js';
+import { RefreshTokenService } from './refresh-token.service.js';
 
 /** Sets the refresh cookie and returns the body: the Auth Token and the User. */
 function respondSignedIn(
@@ -40,7 +41,10 @@ function respondSignedIn(
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly refreshTokens: RefreshTokenService,
+  ) {}
 
   @Public()
   @UseGuards(ThrottlerGuard)
@@ -76,8 +80,9 @@ export class AuthController {
   }
 
   /**
-   * Revokes the refresh token in the cookie and clears the cookie. It needs
-   * no Auth Token, so a User whose Auth Token expired can still sign out.
+   * Signs out this browser: revokes the refresh token in the cookie and
+   * clears the cookie. It needs no Auth Token, so a User whose Auth Token
+   * expired can still sign out.
    */
   @Public()
   @Post('sign-out')
@@ -86,7 +91,7 @@ export class AuthController {
     @RefreshTokenCookie() refreshToken: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    await this.auth.signOut(refreshToken);
+    await this.refreshTokens.revoke(refreshToken);
     clearRefreshCookie(response);
   }
 

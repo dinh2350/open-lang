@@ -15,7 +15,12 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       // The browser sees one origin; /api goes to the backend.
       proxy: {
-        '/api': env.BACKEND_URL || 'http://localhost:3000',
+        '/api': {
+          target: env.BACKEND_URL || 'http://localhost:3000',
+          // Sends the browser's IP in X-Forwarded-For, which the backend
+          // trusts from this host only, so rate limits count per browser.
+          xfwd: true,
+        },
       },
     },
   };

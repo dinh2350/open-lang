@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type { App } from 'supertest/types.js';
 import { vi } from 'vitest';
@@ -30,7 +31,7 @@ export async function startTestApp(
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
-  const app = moduleRef.createNestApplication<INestApplication<App>>({
+  const app = moduleRef.createNestApplication<NestExpressApplication>({
     logger: false,
   });
   configureApp(app);
