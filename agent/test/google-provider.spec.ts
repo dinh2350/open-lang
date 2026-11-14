@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { initializeLogger, llm } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
+import * as openai from '@livekit/agents-plugin-openai';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
 
@@ -217,6 +218,58 @@ describe('Agent configuration in Pipeline mode with Google for every step', () =
     expect(options.tts).toHaveProperty('opts.vertexai', true);
     expect(options.tts).toHaveProperty('opts.project', 'test-project');
     expect(options.tts).toHaveProperty('opts.location', 'us');
+  });
+});
+
+describe('Agent configuration in Pipeline mode with OpenAI transcribing and thinking, and Google speaking', () => {
+  // Every OpenAI text-to-speech model shuts down on 2027-01-06 (ticket 05).
+  const openAiWithGoogleSpeech = {
+    AGENT_MODE: 'pipeline',
+    STT_PROVIDER: 'openai',
+    LLM_PROVIDER: 'openai',
+    TTS_PROVIDER: 'google',
+    OPENAI_API_KEY: 'test-openai-key',
+    ...geminiApiKey,
+  };
+
+  it("gives each step its own Provider's default model and credentials", () => {
+    expect(loadAgentConfig(openAiWithGoogleSpeech)).toEqual({
+      agentMode: 'pipeline',
+      stt: {
+        provider: 'openai',
+        model: 'gpt-live-transcribe',
+        apiKey: 'test-openai-key',
+      },
+      llm: {
+        provider: 'openai',
+        model: 'gpt-6-luna',
+        apiKey: 'test-openai-key',
+      },
+      tts: {
+        provider: 'google',
+        model: 'gemini-3.8-flash-lite-tts',
+        voice: 'Kore',
+        credentials: { vertexai: false, apiKey: 'test-key' },
+      },
+    });
+  });
+
+  it("builds OpenAI's STT and LLM with Google's TTS", () => {
+    const options = createSessionOptions(
+      loadAgentConfig(openAiWithGoogleSpeech),
+    );
+
+    expect(options.stt).toBeInstanceOf(openai.STT);
+    expect(options.llm).toBeInstanceOf(openai.LLM);
+    expect(options.tts).toBeInstanceOf(google.beta.TTS);
+  });
+
+  it('needs the Google credentials only for the step that uses Google', () => {
+    expect(() =>
+      loadAgentConfig({ ...openAiWithGoogleSpeech, GOOGLE_API_KEY: undefined }),
+    ).toThrow(
+      /^Invalid Agent configuration:\n✖ GOOGLE_API_KEY is required when TTS_PROVIDER is "google", unless GOOGLE_GENAI_USE_VERTEXAI is "true"\n {2}→ at GOOGLE_API_KEY$/,
+    );
   });
 });
 
