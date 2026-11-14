@@ -1,20 +1,25 @@
+import { randomBytes } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { App } from 'supertest/types.js';
 import { vi } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
+import { testDatabaseUrl } from './database/test-database.js';
 
 export const testEnv = {
   LIVEKIT_URL: 'ws://livekit.test:7880',
   LIVEKIT_API_KEY: 'test-api-key',
   LIVEKIT_API_SECRET: 'test-api-secret-with-at-least-32-chars',
   AGENT_NAME: 'test-agent',
+  JWT_SECRET: randomBytes(32).toString('base64url'),
+  DATABASE_URL: testDatabaseUrl,
 } as const;
 
 /**
  * Starts the real application module, configured as `main.ts` does, against
- * `testEnv`. An override of `undefined` removes that variable.
+ * `testEnv` and this worker's test database. An override of `undefined`
+ * removes that variable.
  */
 export async function startTestApp(
   envOverrides: Readonly<Record<string, string | undefined>> = {},
