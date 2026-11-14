@@ -25,3 +25,36 @@ services:
       retries: 3
       start_period: 15s
       start_interval: 1s
+
+  # Quality layer 3 (docs/quality-gates.md). Only `pnpm sonar:up` starts it:
+  # a plain `docker compose up` skips services that have a profile.
+  sonarqube:
+    image: sonarqube:26.11.0.134175-community
+    profiles: [sonar]
+    # Embedded H2 storage in the data volume: fine for one local instance,
+    # and no database service to run.
+    environment:
+      SONAR_TELEMETRY_ENABLE: 'false'
+    ports:
+      # Local only: the admin password is a local default.
+      - '127.0.0.1:9000:9000'
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'curl --silent http://127.0.0.1:9000/api/system/status | grep --quiet "\"status\":\"UP\""',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5m
+      start_interval: 2s
+
+volumes:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
