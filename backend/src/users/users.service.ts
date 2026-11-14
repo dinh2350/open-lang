@@ -7,6 +7,7 @@ import {
 import argon2 from 'argon2';
 import { Prisma, type User as UserRecord } from '../generated/prisma/client.js';
 import { RefreshTokenService } from '../auth/refresh-token.service.js';
+import { toUser } from '../auth/users.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
@@ -49,9 +50,7 @@ async function findUser(
 /** A User as an Admin sees them: never the password hash. */
 function toUserDetails(record: UserRecord): UserDetails {
   return {
-    id: record.id,
-    email: record.email,
-    role: record.role,
+    ...toUser(record),
     locked: record.locked,
     createdAt: record.createdAt.toISOString(),
   };
@@ -133,7 +132,8 @@ export class UsersService {
 
   /**
    * Sets a new password for a User who forgot theirs, and signs them out
-   * everywhere in the same transaction, so their old sessions stop working.
+   * everywhere in the same transaction, so no refresh token they hold from
+   * before keeps them signed in.
    */
   async setPassword(userId: string, password: string): Promise<void> {
     // Hashing is slow on purpose, so it happens before the transaction.
