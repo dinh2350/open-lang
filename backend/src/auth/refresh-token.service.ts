@@ -81,7 +81,7 @@ export class RefreshTokenService {
     return { user: current.user, refreshToken: next.refreshToken };
   }
 
-  /** Revokes one refresh token, if it is a valid one. */
+  /** Revokes one refresh token. Does nothing for a missing or unknown one. */
   async revoke(refreshToken: string | undefined): Promise<void> {
     if (refreshToken === undefined) {
       return;
