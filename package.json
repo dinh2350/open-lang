@@ -1,0 +1,41 @@
+{
+  "name": "livekit-platform",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=10 <11"
+  },
+  "scripts": {
+    "prepare": "lefthook install",
+    "dev": "pnpm --recursive --parallel --stream run dev",
+    "test": "vitest run --coverage && node scripts/split-lcov-by-package.ts",
+    "test:e2e": "docker compose up --detach --wait && pnpm --filter @livekit-platform/e2e test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --recursive run typecheck",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^9.39.5",
+    "@types/eslint-plugin-jsx-a11y": "^6.10.1",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "^5.1.0",
+    "@vitest/eslint-plugin": "^1.6.28",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "globals": "^17.14.0",
+    "jiti": "^2.7.0",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.10.1",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "catalog:"
+  }
+}
