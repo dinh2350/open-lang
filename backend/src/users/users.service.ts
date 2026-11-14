@@ -115,20 +115,19 @@ export class UsersService {
     return this.prisma.$transaction(async (transaction) => {
       const adminIds = await lockUnlockedAdmins(transaction);
       await findUser(transaction, userId);
+      if (locked && isTheOnlyAdmin(userId, adminIds)) {
+        throw new ConflictException("You can't lock the last unlocked Admin.");
+      }
+      // Changing the User's row first makes a concurrent refresh wait for
+      // this transaction, so the revocation below sees its new refresh token.
+      const user = await transaction.user.update({
+        where: { id: userId },
+        data: { locked },
+      });
       if (locked) {
-        if (isTheOnlyAdmin(userId, adminIds)) {
-          throw new ConflictException(
-            "You can't lock the last unlocked Admin.",
-          );
-        }
         await this.refreshTokens.revokeAllOf(userId, transaction);
       }
-      return toUserDetails(
-        await transaction.user.update({
-          where: { id: userId },
-          data: { locked },
-        }),
-      );
+      return toUserDetails(user);
     }, LOCKS_UNLOCKED_ADMINS);
   }
 
