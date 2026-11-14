@@ -1,3 +1,4 @@
+import { ThinkingLevel } from '@google/genai';
 import {
   inference,
   type llm,
@@ -93,40 +94,72 @@ function speechToText(
   config: PipelineConfig['stt'],
   vad: inference.VAD,
 ): stt.STT | undefined {
-  if (config.provider === 'fake') {
-    return undefined;
+  switch (config.provider) {
+    case 'openai':
+      // OpenAI's live transcription models need a VAD to tell them when the
+      // User stopped speaking. Sharing this one stops the plugin creating its
+      // own.
+      return new openai.STT({
+        model: config.model,
+        apiKey: config.apiKey,
+        vad,
+      });
+    case 'google':
+      return new google.beta.GeminiSTT({
+        model: config.model,
+        ...config.credentials,
+      });
+    case 'fake':
+      return undefined;
   }
-  // OpenAI's live transcription models need a VAD to tell them when the User
-  // stopped speaking. Sharing this one stops the plugin creating its own.
-  return new openai.STT({ model: config.model, apiKey: config.apiKey, vad });
 }
 
 /** The fake Provider is the framework's FakeLLM, which answers nothing. */
 function languageModel(config: PipelineConfig['llm']): llm.LLM {
-  if (config.provider === 'fake') {
-    return new voice.testing.FakeLLM();
+  switch (config.provider) {
+    case 'openai':
+      return new openai.LLM({
+        model: config.model,
+        apiKey: config.apiKey,
+        // OpenAI's current models reason at medium effort unless told
+        // otherwise, which delays every spoken reply. The plugin turns
+        // reasoning off only for the models it knows; gpt-6 models are newer.
+        // Without reasoning, models such as gpt-6-luna can also call tools on
+        // Chat Completions.
+        reasoningEffort: 'none',
+      });
+    case 'google':
+      return new google.LLM({
+        model: config.model,
+        ...config.credentials,
+        // Gemini 3.8 Flash thinks at medium level unless told otherwise, which
+        // delays every spoken reply. Low is its lowest level, which Google
+        // suggests for fast chat.
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+      });
+    case 'fake':
+      return new voice.testing.FakeLLM();
   }
-  return new openai.LLM({
-    model: config.model,
-    apiKey: config.apiKey,
-    // OpenAI's current models reason at medium effort unless told otherwise,
-    // which delays every spoken reply. The plugin turns reasoning off only for
-    // the models it knows; gpt-6 models are newer. Without reasoning, models
-    // such as gpt-6-luna can also call tools on Chat Completions.
-    reasoningEffort: 'none',
-  });
 }
 
 /** The fake Provider speaks nothing: the Agent's replies stay text. */
 function textToSpeech(config: PipelineConfig['tts']): tts.TTS | undefined {
-  if (config.provider === 'fake') {
-    return undefined;
+  switch (config.provider) {
+    case 'openai':
+      return new openai.TTS({
+        model: config.model,
+        // The plugin's voice type predates voices such as marin and cedar,
+        // which OpenAI's Speech API accepts.
+        voice: config.voice as openai.TTSVoices,
+        apiKey: config.apiKey,
+      });
+    case 'google':
+      return new google.beta.TTS({
+        model: config.model,
+        voiceName: config.voice,
+        ...config.credentials,
+      });
+    case 'fake':
+      return undefined;
   }
-  return new openai.TTS({
-    model: config.model,
-    // The plugin's voice type predates voices such as marin and cedar, which
-    // OpenAI's Speech API accepts.
-    voice: config.voice as openai.TTSVoices,
-    apiKey: config.apiKey,
-  });
 }

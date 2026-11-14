@@ -28,6 +28,10 @@ export const DEFAULT_STT_MODEL = {
   // transcribes the User with it too.
   // https://developers.openai.com/api/docs/guides/realtime-transcription
   openai: 'gpt-live-transcribe',
+  // Google's streaming transcription model, GA since 2026-08-26, under the
+  // same name on Vertex AI. It is the plugin's default too.
+  // https://aistudio.google.com/docs/deprecations
+  google: 'gemini-3.5-transcribe-live',
 } as const;
 
 /** Default language model of each Provider in Pipeline mode. */
@@ -35,6 +39,10 @@ export const DEFAULT_LLM_MODEL = {
   // OpenAI's most efficient model, and its replacement for the plugin default
   // gpt-4.1. https://developers.openai.com/api/docs/models/gpt-6-luna
   openai: 'gpt-6-luna',
+  // GA since 2026-09-02 on the Gemini API and Vertex AI, and Google's
+  // replacement for most of its deprecated chat models. The plugin's fallback
+  // gemini-2.0-flash-001 has shut down. https://aistudio.google.com/docs/models
+  google: 'gemini-3.8-flash',
 } as const;
 
 /** Default text-to-speech model of each Provider in Pipeline mode. */
@@ -42,6 +50,11 @@ export const DEFAULT_TTS_MODEL = {
   // Deprecated, like every model of OpenAI's Speech API, which is the only API
   // the plugin's TTS can call. See the text-to-speech entry in DEPRECATIONS.
   openai: 'gpt-4o-mini-tts',
+  // GA since 2026-09-22. Google built it to replace the plugin's default,
+  // gemini-3.1-flash-tts-preview, which shuts down on 2026-12-18, and
+  // recommends it for conversational voice agents.
+  // https://aistudio.google.com/docs/speech-generation
+  google: 'gemini-3.8-flash-lite-tts',
 } as const;
 
 /** Default voice of each Provider's text-to-speech in Pipeline mode. */
@@ -49,6 +62,8 @@ export const DEFAULT_TTS_VOICE = {
   // The Realtime default too, so both Agent Modes sound alike. OpenAI
   // recommends marin or cedar for the best quality.
   openai: 'marin',
+  // The plugin's default, and the Realtime default too.
+  google: 'Kore',
 } as const;
 
 interface Deprecation {

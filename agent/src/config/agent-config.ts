@@ -210,6 +210,18 @@ const speechToTextSchema = z.discriminatedUnion(
           apiKey: env.OPENAI_API_KEY,
         },
       })),
+    z
+      .looseObject({
+        STT_PROVIDER: z.literal('google'),
+        STT_MODEL: modelVariable('STT_MODEL', DEFAULT_STT_MODEL.google),
+      })
+      .transform((env, ctx) => ({
+        stt: {
+          provider: env.STT_PROVIDER,
+          model: env.STT_MODEL,
+          credentials: parseWithin(googleCredentials('STT_PROVIDER'), env, ctx),
+        },
+      })),
     z.object({ STT_PROVIDER: z.literal('fake') }).transform((env) => ({
       stt: { provider: env.STT_PROVIDER, model: FAKE_STEP_MODEL.stt },
     })),
@@ -231,6 +243,18 @@ const languageModelSchema = z.discriminatedUnion(
           provider: env.LLM_PROVIDER,
           model: env.LLM_MODEL,
           apiKey: env.OPENAI_API_KEY,
+        },
+      })),
+    z
+      .looseObject({
+        LLM_PROVIDER: z.literal('google'),
+        LLM_MODEL: modelVariable('LLM_MODEL', DEFAULT_LLM_MODEL.google),
+      })
+      .transform((env, ctx) => ({
+        llm: {
+          provider: env.LLM_PROVIDER,
+          model: env.LLM_MODEL,
+          credentials: parseWithin(googleCredentials('LLM_PROVIDER'), env, ctx),
         },
       })),
     z.object({ LLM_PROVIDER: z.literal('fake') }).transform((env) => ({
@@ -259,6 +283,23 @@ const textToSpeechSchema = z.discriminatedUnion(
           model: env.TTS_MODEL,
           voice: env.TTS_VOICE,
           apiKey: env.OPENAI_API_KEY,
+        },
+      })),
+    z
+      .looseObject({
+        TTS_PROVIDER: z.literal('google'),
+        TTS_MODEL: modelVariable('TTS_MODEL', DEFAULT_TTS_MODEL.google),
+        TTS_VOICE: z.preprocess(
+          unsetIfEmpty,
+          z.string().default(DEFAULT_TTS_VOICE.google),
+        ),
+      })
+      .transform((env, ctx) => ({
+        tts: {
+          provider: env.TTS_PROVIDER,
+          model: env.TTS_MODEL,
+          voice: env.TTS_VOICE,
+          credentials: parseWithin(googleCredentials('TTS_PROVIDER'), env, ctx),
         },
       })),
     z.object({ TTS_PROVIDER: z.literal('fake') }).transform((env) => ({

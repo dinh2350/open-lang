@@ -1,12 +1,54 @@
-import { initializeLogger } from '@livekit/agents';
+import assert from 'node:assert/strict';
+import { initializeLogger, llm } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
 
 beforeAll(() => {
-  // A job initializes the logger, which Google's realtime model needs.
+  // A job initializes the logger, which Google's models need.
   initializeLogger({ pretty: false, level: 'error' });
 });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+interface GeminiRequest {
+  url: string;
+  apiKey: string | null;
+  body: unknown;
+}
+
+/**
+ * Stands in for the Gemini API: records each request and answers with a
+ * one-word streamed reply.
+ */
+function fakeGeminiApi(): GeminiRequest[] {
+  const requests: GeminiRequest[] = [];
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
+    const body = init?.body;
+    assert(typeof body === 'string', 'The Gemini client sends JSON text');
+    requests.push({
+      url: url instanceof Request ? url.url : url.toString(),
+      apiKey: new Headers(init?.headers).get('x-goog-api-key'),
+      body: JSON.parse(body),
+    });
+    const reply = {
+      candidates: [
+        {
+          content: { role: 'model', parts: [{ text: 'Hello' }] },
+          finishReason: 'STOP',
+        },
+      ],
+    };
+    return Promise.resolve(
+      new Response(`data: ${JSON.stringify(reply)}\n\n`, {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+    );
+  });
+  return requests;
+}
 
 const geminiApiKey = { GOOGLE_API_KEY: 'test-key' };
 
@@ -85,6 +127,96 @@ describe('Agent configuration in Realtime mode with Google on Vertex AI', () => 
     // The plugin has no public getter for its session settings.
     expect(options.llm).toHaveProperty('_options.project', 'test-project');
     expect(options.llm).toHaveProperty('_options.location', 'us');
+  });
+});
+
+const pipelineWithGoogle = {
+  AGENT_MODE: 'pipeline',
+  STT_PROVIDER: 'google',
+  LLM_PROVIDER: 'google',
+  TTS_PROVIDER: 'google',
+  ...geminiApiKey,
+};
+
+describe('Agent configuration in Pipeline mode with Google for every step', () => {
+  it('uses gemini-3.5-transcribe-live, gemini-3.8-flash and gemini-3.8-flash-lite-tts with the Kore voice when no model is set', () => {
+    const credentials = { vertexai: false, apiKey: 'test-key' };
+
+    expect(loadAgentConfig(pipelineWithGoogle)).toEqual({
+      agentMode: 'pipeline',
+      stt: {
+        provider: 'google',
+        model: 'gemini-3.5-transcribe-live',
+        credentials,
+      },
+      llm: { provider: 'google', model: 'gemini-3.8-flash', credentials },
+      tts: {
+        provider: 'google',
+        model: 'gemini-3.8-flash-lite-tts',
+        voice: 'Kore',
+        credentials,
+      },
+    });
+  });
+
+  it("builds the Google plugin's STT, LLM and TTS on the Gemini API, without connecting to Google", () => {
+    const options = createSessionOptions(
+      loadAgentConfig({ ...pipelineWithGoogle, TTS_VOICE: 'Puck' }),
+    );
+
+    expect(options.stt).toBeInstanceOf(google.beta.GeminiSTT);
+    expect(options.stt).toHaveProperty('model', 'gemini-3.5-transcribe-live');
+    expect(options.llm).toBeInstanceOf(google.LLM);
+    expect(options.llm).toHaveProperty('model', 'gemini-3.8-flash');
+    expect(options.llm).toHaveProperty('provider', 'Gemini');
+    expect(options.tts).toBeInstanceOf(google.beta.TTS);
+    expect(options.tts).toHaveProperty(
+      'opts.model',
+      'gemini-3.8-flash-lite-tts',
+    );
+    expect(options.tts).toHaveProperty('opts.voiceName', 'Puck');
+    expect(options.tts).toHaveProperty('opts.vertexai', false);
+  });
+
+  it('asks the Gemini API, with the configured key, to think only a little, so spoken replies start quickly', async () => {
+    const requests = fakeGeminiApi();
+    const languageModel = createSessionOptions(
+      loadAgentConfig(pipelineWithGoogle),
+    ).llm;
+    assert(languageModel instanceof llm.LLM);
+    const chatCtx = llm.ChatContext.empty();
+    chatCtx.addMessage({ role: 'user', content: 'Hello' });
+
+    // Draining the reply sends the request.
+    for await (const chunk of languageModel.chat({ chatCtx })) {
+      expect(chunk).toBeDefined();
+    }
+
+    expect(requests).toHaveLength(1);
+    const [request] = requests;
+    expect(request.url).toMatch(
+      /^https:\/\/generativelanguage\.googleapis\.com\/.*\/models\/gemini-3\.8-flash:/,
+    );
+    expect(request.apiKey).toBe('test-key');
+    expect(request.body).toHaveProperty(
+      'generationConfig.thinkingConfig.thinkingLevel',
+      'LOW',
+    );
+  });
+
+  it('builds the LLM and TTS on Vertex AI, in the configured project and location', () => {
+    const options = createSessionOptions(
+      loadAgentConfig({
+        ...pipelineWithGoogle,
+        GOOGLE_API_KEY: undefined,
+        ...vertexAi,
+      }),
+    );
+
+    expect(options.llm).toHaveProperty('provider', 'Vertex AI');
+    expect(options.tts).toHaveProperty('opts.vertexai', true);
+    expect(options.tts).toHaveProperty('opts.project', 'test-project');
+    expect(options.tts).toHaveProperty('opts.location', 'us');
   });
 });
 
