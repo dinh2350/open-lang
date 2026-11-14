@@ -21,12 +21,17 @@
 
 ### 2026-11-14, implementer (branch `ticket/05-pipeline-openai`)
 
-**Result.** `AGENT_MODE=pipeline` works with `openai` or `fake` for each step. After merging the integration tip (ticket 09, 1ead97b):
+**Result.** `AGENT_MODE=pipeline` works with `openai` or `fake` for each step. After merging the integration tip (tickets 08 and 09, 2e54d95):
 
-- `pnpm check` passes (200 tests).
-- `pnpm sonar` passes the gate: coverage 94.5% (lines 95.7%, branches 91.4%), duplication 0.0%, A ratings, 0 issues. Every file under `agent/src` has 100% coverage except the entrypoint `main.ts`, as before.
-- `pnpm test:e2e` passes. S4 still uses Realtime mode with the `fake` Provider.
+- `pnpm check` passes (225 tests).
+- `pnpm sonar` passes the gate: coverage 95.5% (lines 96.2%, branches 93.4%), duplication 0.0%, A ratings, 0 issues. Every file under `agent/src` has 100% coverage except the entrypoint `main.ts`, as before.
+- `pnpm test:e2e` passes both tests. S4 still uses Realtime mode with the `fake` Provider.
 - `pnpm test:live` skips both live tests and exits 0, because there is no key.
+
+Two first runs failed on host load (load average 14 on 12 cores), and both reruns passed:
+
+- `test:e2e`: the agent server registered but never received the job, the known load-threshold flake.
+- `pnpm sonar`: Testcontainers timed out waiting for Docker to bind ports, before any test ran.
 
 **Security Hotspots: none.** SonarQube reported 0.
 
