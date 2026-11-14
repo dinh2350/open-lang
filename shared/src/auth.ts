@@ -54,3 +54,16 @@ export type AuthResponse = z.infer<typeof authResponseSchema>;
 export const errorResponseSchema = z.object({
   message: z.union([z.string(), z.array(z.string())]),
 });
+
+/**
+ * The `errorCode` of the `403` a Locked User gets, on sign-in and on every
+ * request that needs a signed-in User. Other `403`s, such as a Member calling
+ * the Admin API, don't have it.
+ */
+export const ACCOUNT_LOCKED = 'ACCOUNT_LOCKED';
+
+/** Body of the `403` a Locked User gets. */
+export const accountLockedResponseSchema = z.object({
+  errorCode: z.literal(ACCOUNT_LOCKED),
+  message: z.string(),
+});

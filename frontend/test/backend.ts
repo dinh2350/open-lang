@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 import { adminHandlers, resetAdminBackend } from './admin-backend';
 import {
   authHandlers,
-  holdsValidAuthToken,
+  refusalOfAuthorization,
   resetAuthBackend,
 } from './auth-backend';
 
@@ -60,11 +60,12 @@ export const backend = setupServer(
     roomTokenAuthorizations.push(authorization);
     // The Conversation page's own specs render it without an AuthProvider,
     // so a request without an Auth Token gets a Room Token here.
-    if (authorization !== null && !holdsValidAuthToken(authorization)) {
-      return HttpResponse.json(
-        { statusCode: 401, message: 'Unauthorized' },
-        { status: 401 },
-      );
+    const refusal =
+      authorization === null
+        ? undefined
+        : refusalOfAuthorization(authorization);
+    if (refusal !== undefined) {
+      return refusal;
     }
     const participantToken = roomToken(
       `conversation-${String(issuedRoomTokens.length + 1)}`,

@@ -10,6 +10,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { adminApi } from './admin-api.js';
 import { signInFirstAdmin, signInUser } from './admins.js';
 import { holdUserChanges } from './database/user-changes.js';
 import { startTestApp, stopTestApp } from './test-app.js';
@@ -53,7 +54,7 @@ describe('Admin Users API', () => {
       );
     });
 
-    it("shows an Admin every User's email, Role and creation date, oldest first", async () => {
+    it("shows an Admin every User's email, Role, locked state and creation date, oldest first", async () => {
       const beforeRegistering = Date.now();
       const member = await registerUser(app, 'ada@example.test');
       const afterRegistering = Date.now();
@@ -63,8 +64,16 @@ describe('Admin Users API', () => {
       expect(response.status).toBe(200);
       const { users } = usersResponseSchema.parse(response.body);
       expect(users).toEqual([
-        { ...admin.user, createdAt: expect.any(String) as unknown },
-        { ...member.user, createdAt: expect.any(String) as unknown },
+        {
+          ...admin.user,
+          locked: false,
+          createdAt: expect.any(String) as unknown,
+        },
+        {
+          ...member.user,
+          locked: false,
+          createdAt: expect.any(String) as unknown,
+        },
       ]);
       const memberCreatedAt = Date.parse(users[1]?.createdAt ?? '');
       expect(memberCreatedAt).toBeGreaterThanOrEqual(beforeRegistering);
@@ -110,6 +119,7 @@ describe('Admin Users API', () => {
       expect(userDetailsSchema.parse(response.body)).toEqual({
         ...member.user,
         role: 'admin',
+        locked: false,
         createdAt: expect.any(String) as unknown,
       });
       expect(await roleOf(member.user.id)).toBe('admin');
@@ -164,7 +174,7 @@ describe('Admin Users API', () => {
       ).toEqual([200, 409]);
       const refused = responses.find((response) => response.status === 409);
       expect(errorResponseSchema.parse(refused?.body).message).toBe(
-        "You can't demote the last Admin.",
+        "You can't demote the last unlocked Admin.",
       );
       const rolesNow = await Promise.all(
         [admin, member].map(async ({ authToken }) => {
@@ -175,6 +185,35 @@ describe('Admin Users API', () => {
         }),
       );
       expect(new Set(rolesNow)).toEqual(new Set(['admin', 'member']));
+    });
+
+    it('counts only unlocked Admins: returns 409 to the second of two Admins demoting each other, even when a Locked Admin remains', async () => {
+      const locked = await registerUser(app, 'alan@example.test');
+      await changeRole(admin.authToken, locked.user.id, { role: 'admin' });
+      await adminApi(app, admin.authToken).changeLocked(locked.user.id, {
+        locked: true,
+      });
+      await changeRole(admin.authToken, member.user.id, { role: 'admin' });
+      const userChanges = await holdUserChanges();
+      const demotions = Promise.all([
+        changeRole(admin.authToken, member.user.id, { role: 'member' }),
+        changeRole(member.authToken, admin.user.id, { role: 'member' }),
+      ]);
+      try {
+        await userChanges.waitForQueuedQueries(2);
+      } finally {
+        await userChanges.release();
+      }
+
+      const responses = await demotions;
+
+      expect(
+        responses.map((response) => response.status).toSorted((a, b) => a - b),
+      ).toEqual([200, 409]);
+      const refused = responses.find((response) => response.status === 409);
+      expect(errorResponseSchema.parse(refused?.body).message).toBe(
+        "You can't demote the last unlocked Admin.",
+      );
     });
 
     it('returns 403 to a Member', async () => {
