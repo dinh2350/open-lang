@@ -8,8 +8,7 @@ import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { verifyAuthToken } from './auth-tokens.js';
 import { startTestApp, stopTestApp } from './test-app.js';
-
-const PASSWORD = 'correct horse battery staple';
+import { PASSWORD } from './users.js';
 
 describe('POST /api/auth/register', () => {
   let app: INestApplication<App>;

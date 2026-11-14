@@ -1,5 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { parseEnv } from 'node:util';
 import { defineConfig, devices } from '@playwright/test';
 
 // Expects the Docker Compose stack to be up; the root `test:e2e` script starts it.
@@ -7,6 +9,16 @@ const LIVEKIT_URL = 'ws://localhost:7880';
 const BACKEND_URL = 'http://localhost:3000';
 const FRONTEND_URL = 'http://localhost:5173';
 const AGENT_HEALTH_URL = 'http://localhost:8081';
+
+// Compose publishes Postgres on POSTGRES_PORT, from the shell or else the
+// root .env. The end-to-end tests use a database of their own on it.
+const rootEnvFile = path.join(import.meta.dirname, '..', '.env');
+const rootEnv = existsSync(rootEnvFile)
+  ? parseEnv(readFileSync(rootEnvFile, 'utf8'))
+  : {};
+const postgresPort =
+  process.env.POSTGRES_PORT ?? rootEnv.POSTGRES_PORT ?? '5432';
+const DATABASE_URL = `postgresql://livekit_platform:livekit_platform@localhost:${postgresPort}/livekit_platform_e2e`;
 
 // Several git worktrees share one LiveKit server, and a developer's own Agent
 // may be registered with it too. A run-unique Agent name makes sure the Agent
@@ -54,9 +66,17 @@ export default defineConfig({
   webServer: [
     {
       name: 'backend',
-      command: 'pnpm --filter @livekit-platform/backend start',
+      // Migrating creates the database on the first run.
+      command:
+        'pnpm --filter @livekit-platform/backend db:migrate:deploy && pnpm --filter @livekit-platform/backend start',
       url: `${BACKEND_URL}/api/health`,
-      env: { ...liveKitEnv, PORT: '3000' },
+      env: {
+        ...liveKitEnv,
+        PORT: '3000',
+        DATABASE_URL,
+        // A new secret every run: no Auth Token outlives it.
+        JWT_SECRET: randomBytes(32).toString('base64url'),
+      },
       reuseExistingServer: false,
       timeout: 60_000,
     },
