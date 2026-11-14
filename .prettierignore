@@ -1,0 +1,5 @@
+# Prettier also reads .gitignore, so build output, coverage and env files are skipped already.
+pnpm-lock.yaml
+
+# Issues and specs are hand-written records; formatting would rewrite their history.
+.scratch/
