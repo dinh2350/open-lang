@@ -9,7 +9,7 @@ import {
   loadAgentConfig,
 } from '../../src/config/index.ts';
 import { startConversation } from '../../src/conversation-agent.ts';
-import { assertAgentMessage, firstAgentMessage } from './agent-messages.ts';
+import { assertAgentMessage, firstAgentMessage } from '../agent-messages.ts';
 
 describe.skipIf(!process.env.OPENAI_API_KEY)(
   'Agent in Pipeline mode with OpenAI (live)',

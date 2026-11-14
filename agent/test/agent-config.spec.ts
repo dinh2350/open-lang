@@ -1,7 +1,8 @@
-import { voice } from '@livekit/agents';
+import { initializeLogger, voice } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
+import { startFakeRealtimeApi } from './fake-realtime-api.ts';
 
 const realtimeWithOpenAi = {
   AGENT_MODE: 'realtime',
@@ -70,13 +71,30 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
     expect(options.llm).toHaveProperty('model', 'gpt-realtime-2.1-mini');
   });
 
-  it("transcribes the User with gpt-live-transcribe, Pipeline mode's default, instead of the plugin's deprecated gpt-4o-mini-transcribe", () => {
+  it("asks OpenAI, with the configured key, model and voice, to transcribe the User with gpt-live-transcribe, Pipeline mode's default, instead of the plugin's deprecated gpt-4o-mini-transcribe", async () => {
+    initializeLogger({ pretty: false, level: 'error' });
+    const realtimeApi = await startFakeRealtimeApi();
+    onTestFinished(() => realtimeApi.close());
+    // The plugin reads it when the model is built.
+    vi.stubEnv('OPENAI_BASE_URL', `${realtimeApi.baseUrl}/v1`);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
     const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
 
-    // The plugin has no public getter for its session settings.
-    expect(options.llm).toHaveProperty('_options.inputAudioTranscription', {
-      model: 'gpt-live-transcribe',
-    });
+    const connection = await realtimeApi.connect(options.llm);
+
+    expect(connection.url).toBe('/v1/realtime?model=gpt-realtime-2.1');
+    expect(connection.headers.authorization).toBe('Bearer test-key');
+    expect(connection.firstMessage).toHaveProperty('type', 'session.update');
+    expect(connection.firstMessage).toHaveProperty(
+      'session.audio.input.transcription',
+      { model: 'gpt-live-transcribe' },
+    );
+    expect(connection.firstMessage).toHaveProperty(
+      'session.audio.output.voice',
+      'marin',
+    );
   });
 
   it("leaves turn detection to OpenAI's server, with no local VAD and no LiveKit Inference", () => {

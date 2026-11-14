@@ -120,12 +120,18 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
         version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@24.19.2)(@vitest/coverage-v8@5.1.0)(jsdom@31.0.1(@noble/hashes@1.8.0))(msw@3.0.5(@types/node@24.19.2)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
+      ws:
+        specifier: ^8.23.0
+        version: 8.23.0
 
   backend:
     dependencies:
@@ -3033,6 +3039,9 @@ packages:
 
   '@types/validate-npm-package-name@4.0.2':
     resolution: {integrity: sha512-lrpDziQipxCEeK5kWxvljWYhUvOiB2A9izZd9B2AFarYAkqZshb4lPbRs7zKEic6eGtH8V/2qJW+dPp9OtF6bw==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@typescript-eslint/eslint-plugin@8.72.2':
     resolution: {integrity: sha512-222PKFXKihmFpi/pS5njoBgdAqsPhj2/GBmFbrNw8Tq8gEG9Sv+kSlKFy4u2q+mJv9ZzJgM2Gkv/bUzRZwZw5g==}
@@ -9858,6 +9867,10 @@ snapshots:
       '@types/superagent': 8.1.11
 
   '@types/validate-npm-package-name@4.0.2': {}
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 24.19.2
 
   '@typescript-eslint/eslint-plugin@8.72.2(@typescript-eslint/parser@8.72.2(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
