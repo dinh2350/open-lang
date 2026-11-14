@@ -4,6 +4,7 @@
 import { fileURLToPath } from 'node:url';
 import { cli, ServerOptions } from '@livekit/agents';
 import { loadAgentEnvironment } from './agent-environment.ts';
+import { loadAgentConfig } from './config/index.ts';
 
 // Node's watch mode (the `dev` script) sets this variable. The Agent's job and
 // inference processes would inherit it and send Node's dependency reports over
@@ -11,6 +12,9 @@ import { loadAgentEnvironment } from './agent-environment.ts';
 delete process.env.WATCH_REPORT_DEPENDENCIES;
 
 const { AGENT_NAME } = loadAgentEnvironment(process.env);
+// Refuses to start on a bad Agent Mode, Provider, API key or model, before
+// the agent server registers with LiveKit. Each job reads it again.
+loadAgentConfig(process.env);
 cli.runApp(
   new ServerOptions({
     agent: fileURLToPath(new URL('conversation-agent.ts', import.meta.url)),
