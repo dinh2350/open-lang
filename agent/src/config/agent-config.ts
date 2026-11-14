@@ -37,22 +37,17 @@ function unknownProvider(providerVariable: string) {
   };
 }
 
-/** The OpenAI API key, required whenever a Provider variable selects OpenAI. */
-function openAiApiKey(providerVariable: string) {
-  return z.preprocess(
-    unsetIfEmpty,
-    z.string({
-      error: `OPENAI_API_KEY is required when ${providerVariable} is "openai"`,
-    }),
-  );
-}
-
 /** A variable that a chosen setup needs; its error says which setup. */
 function requiredVariable(name: string, requiredWhen: string) {
   return z.preprocess(
     unsetIfEmpty,
     z.string({ error: `${name} is required when ${requiredWhen}` }),
   );
+}
+
+/** The OpenAI API key, required whenever a Provider variable selects OpenAI. */
+function openAiApiKey(providerVariable: string) {
+  return requiredVariable('OPENAI_API_KEY', `${providerVariable} is "openai"`);
 }
 
 /**
@@ -320,16 +315,10 @@ const pipelineStepsSchema = z.intersection(
 
 const pipelineSchema = z
   .looseObject({ AGENT_MODE: z.literal('pipeline') })
-  .transform((env, ctx) => {
-    const steps = pipelineStepsSchema.safeParse(env);
-    if (!steps.success) {
-      for (const { message, path, input } of steps.error.issues) {
-        ctx.addIssue({ code: 'custom', message, path, input });
-      }
-      return z.NEVER;
-    }
-    return { agentMode: env.AGENT_MODE, ...steps.data };
-  });
+  .transform((env, ctx) => ({
+    agentMode: env.AGENT_MODE,
+    ...parseWithin(pipelineStepsSchema, env, ctx),
+  }));
 
 const agentConfigSchema = z.discriminatedUnion(
   'AGENT_MODE',
