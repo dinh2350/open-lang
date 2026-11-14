@@ -7,22 +7,32 @@ import {
 import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { roomTokenSource } from './room-token-source';
+import { createRoomTokenSource } from './room-token-source';
 
 interface ConversationPageProps {
   /** The LiveKit Room each Conversation connects through, one at a time. */
   readonly room: Room;
 }
 
-type ConversationFailure = 'microphone-denied';
+type ConversationFailure = 'microphone-denied' | 'start-failed';
 
 const failureMessages: Record<ConversationFailure, string> = {
   'microphone-denied':
     "The Agent can't hear you because microphone access is blocked. Allow microphone access for this site in your browser's site settings, then press Start.",
+  'start-failed': "Couldn't start the Conversation. Press Start to try again.",
 };
+
+/** Why Start failed: the microphone was denied, or anything else went wrong. */
+function startFailure(error: unknown): ConversationFailure {
+  return MediaDeviceFailure.getFailure(error) ===
+    MediaDeviceFailure.PermissionDenied
+    ? 'microphone-denied'
+    : 'start-failed';
+}
 
 /** Start begins a Conversation in a new private room; End leaves it. */
 export function ConversationPage({ room }: ConversationPageProps) {
+  const [roomTokenSource] = useState(createRoomTokenSource);
   const session = useSession(roomTokenSource, { room });
   const [failure, setFailure] = useState<ConversationFailure | null>(null);
   const inConversation =
@@ -43,13 +53,7 @@ export function ConversationPage({ room }: ConversationPageProps) {
     try {
       await session.start();
     } catch (error) {
-      if (
-        MediaDeviceFailure.getFailure(error) !==
-        MediaDeviceFailure.PermissionDenied
-      ) {
-        throw error;
-      }
-      setFailure('microphone-denied');
+      setFailure(startFailure(error));
     }
   }
 
