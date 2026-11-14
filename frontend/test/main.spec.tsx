@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { PASSWORD } from './app';
 import { browserIsSignedInAs, refreshesRequested } from './auth-backend';
 import { backend, TEST_LIVEKIT_URL } from './backend';
@@ -42,6 +42,18 @@ describe('The app', () => {
     // StrictMode runs effects twice; a second refresh would send a cookie
     // the first one already rotated, which signs the User out everywhere.
     expect(refreshesRequested()).toBe(1);
+  });
+
+  it('refuses to start, naming the variable, when VITE_AGENT_JOIN_TIMEOUT_MS is not a number of milliseconds', async () => {
+    vi.stubEnv('VITE_AGENT_JOIN_TIMEOUT_MS', 'soon');
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    document.body.innerHTML = '<div id="root"></div>';
+
+    await expect(import('@/main')).rejects.toThrow(
+      /Invalid frontend settings:[\s\S]*VITE_AGENT_JOIN_TIMEOUT_MS/,
+    );
   });
 
   it('refuses to start when index.html has no #root element', async () => {

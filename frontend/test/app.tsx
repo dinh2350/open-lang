@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { Room } from 'livekit-client';
 import { MemoryRouter } from 'react-router';
 import { App } from '@/app';
+import { loadFrontendConfig } from '@/config';
 import { backendHasUser } from './auth-backend';
 import { createUnconnectedRoom } from './unconnected-room';
 
@@ -11,15 +12,20 @@ export const PASSWORD = 'correct horse battery staple';
 /**
  * Renders the whole app as if the browser opened `path`. Like a page load,
  * it starts with nothing in memory, so only a refresh cookie can sign the
- * User in.
+ * User in. The app's settings are its defaults, as with an empty
+ * `frontend/.env`, unless the test sets them.
  */
 export function renderApp(
   path: string,
   room: Room = createUnconnectedRoom().room,
+  { agentJoinTimeoutMilliseconds } = loadFrontendConfig({}),
 ): void {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <App room={room} />
+      <App
+        room={room}
+        agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
+      />
     </MemoryRouter>,
   );
 }

@@ -15,10 +15,12 @@ import { ConversationPage } from './conversation/conversation-page';
 interface AppProps {
   /** The LiveKit Room the Conversation page connects through. */
   readonly room: Room;
+  /** How long a Conversation waits for the Agent to join. */
+  readonly agentJoinTimeoutMilliseconds: number;
 }
 
 /** Every page of the app, inside the router that `main.tsx` or a test provides. */
-export function App({ room }: AppProps) {
+export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
@@ -30,7 +32,15 @@ export function App({ room }: AppProps) {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<RequireSignedIn />}>
-            <Route path="/" element={<ConversationPage room={room} />} />
+            <Route
+              path="/"
+              element={
+                <ConversationPage
+                  room={room}
+                  agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
+                />
+              }
+            />
             <Route element={<RequireAdmin />}>
               <Route path="/admin/users" element={<UsersPage />} />
             </Route>

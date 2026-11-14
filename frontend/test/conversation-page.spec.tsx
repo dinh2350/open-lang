@@ -9,7 +9,12 @@ import { createUnconnectedRoom } from './unconnected-room';
 describe('Conversation page', () => {
   it('starts a Conversation in the room of a Room Token from the backend when the User presses Start', async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
@@ -26,7 +31,12 @@ describe('Conversation page', () => {
 
   it('shows that the Agent is listening once it joins the room', async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
     await screen.findByText('Waiting for the Agent…');
 
@@ -43,7 +53,12 @@ describe('Conversation page', () => {
     'shows that the Agent is %s',
     async (agentState) => {
       const liveKit = createUnconnectedRoom();
-      render(<ConversationPage room={liveKit.room} />);
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+        />,
+      );
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
       act(() => {
         liveKit.agentJoins();
@@ -61,7 +76,12 @@ describe('Conversation page', () => {
 
   it("shows a visualizer of the Agent's voice during a Conversation", async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     expect(
       screen.queryByRole('img', { name: "The Agent's voice" }),
     ).not.toBeInTheDocument();
@@ -78,7 +98,12 @@ describe('Conversation page', () => {
 
   it('mutes the microphone when the User presses Mute microphone, and unmutes it when they press it again', async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
     act(() => {
       liveKit.agentJoins();
@@ -102,7 +127,12 @@ describe('Conversation page', () => {
 
   it('ends the Conversation and leaves the room when the User presses End', async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
     act(() => {
       liveKit.agentJoins();
@@ -117,7 +147,12 @@ describe('Conversation page', () => {
 
   it('starts the next Conversation with a new Room Token', async () => {
     const liveKit = createUnconnectedRoom();
-    render(<ConversationPage room={liveKit.room} />);
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
     await userEvent.click(screen.getByRole('button', { name: 'End' }));
 
