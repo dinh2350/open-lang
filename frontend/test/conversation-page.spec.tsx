@@ -59,6 +59,23 @@ describe('Conversation page', () => {
     },
   );
 
+  it("shows a visualizer of the Agent's voice during a Conversation", async () => {
+    const liveKit = createUnconnectedRoom();
+    render(<ConversationPage room={liveKit.room} />);
+    expect(
+      screen.queryByRole('img', { name: "The Agent's voice" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    act(() => {
+      liveKit.agentJoins();
+    });
+
+    expect(
+      screen.getByRole('img', { name: "The Agent's voice" }),
+    ).toBeVisible();
+  });
+
   it('ends the Conversation and leaves the room when the User presses End', async () => {
     const liveKit = createUnconnectedRoom();
     render(<ConversationPage room={liveKit.room} />);

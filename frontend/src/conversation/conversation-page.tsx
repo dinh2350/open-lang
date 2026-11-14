@@ -94,7 +94,10 @@ export function ConversationPage({
       <SessionProvider session={session}>
         {inConversation ? (
           <>
-            <AgentStatus agentState={agent.state} />
+            <AgentStatus
+              agentState={agent.state}
+              agentVoice={agent.microphoneTrack}
+            />
             <Button variant="outline" onClick={() => void session.end()}>
               End
             </Button>
