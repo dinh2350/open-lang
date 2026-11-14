@@ -23,7 +23,7 @@ export async function startConversation(
     agent: new voice.Agent({ instructions: INSTRUCTIONS }),
     room,
   });
-  // Greeting only once the room is connected: the Agent's state changes
+  // Greets only once the room is connected: the Agent's state changes
   // before that never reach the User's browser.
   session.generateReply({ instructions: GREETING_INSTRUCTIONS });
 }
