@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionState } from 'livekit-client';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
 import { backend } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
@@ -48,4 +48,27 @@ describe('Conversation page failures', () => {
       expect(liveKit.connections()).toEqual([]);
     },
   );
+
+  it('shows that the Agent is unavailable, and ends the Conversation, when the Agent has not joined 15 seconds after Start', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const liveKit = createUnconnectedRoom();
+    render(<ConversationPage room={liveKit.room} />);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await screen.findByText('Waiting for the Agent…');
+
+    await act(() => vi.advanceTimersByTimeAsync(14_000));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Waiting for the Agent',
+    );
+
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+    expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+  });
 });

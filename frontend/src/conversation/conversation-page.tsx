@@ -14,12 +14,17 @@ interface ConversationPageProps {
   readonly room: Room;
 }
 
-type ConversationFailure = 'microphone-denied' | 'start-failed';
+const AGENT_JOIN_TIMEOUT_MILLISECONDS = 15_000;
+
+type ConversationFailure =
+  'microphone-denied' | 'start-failed' | 'agent-unavailable';
 
 const failureMessages: Record<ConversationFailure, string> = {
   'microphone-denied':
     "The Agent can't hear you because microphone access is blocked. Allow microphone access for this site in your browser's site settings, then press Start.",
   'start-failed': "Couldn't start the Conversation. Press Start to try again.",
+  'agent-unavailable':
+    "Agent unavailable: the Agent didn't join the Conversation in time. Press Start to try again.",
 };
 
 /** Why Start failed: the microphone was denied, or anything else went wrong. */
@@ -33,8 +38,16 @@ function startFailure(error: unknown): ConversationFailure {
 /** Start begins a Conversation in a new private room; End leaves it. */
 export function ConversationPage({ room }: ConversationPageProps) {
   const [roomTokenSource] = useState(createRoomTokenSource);
-  const session = useSession(roomTokenSource, { room });
+  const session = useSession(roomTokenSource, {
+    room,
+    agentConnectTimeoutMilliseconds: AGENT_JOIN_TIMEOUT_MILLISECONDS,
+  });
+  const agent = useAgent(session);
   const [failure, setFailure] = useState<ConversationFailure | null>(null);
+  // The Agent's failed state clears once the room disconnects, so keep it.
+  if (agent.state === 'failed' && failure === null) {
+    setFailure('agent-unavailable');
+  }
   const inConversation =
     failure === null &&
     session.connectionState !== ConnectionState.Disconnected;
