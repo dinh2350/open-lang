@@ -84,7 +84,8 @@ export default defineConfig({
       name: 'agent',
       command: 'pnpm --filter @livekit-platform/agent start',
       url: AGENT_HEALTH_URL,
-      env: liveKitEnv,
+      // The fake Provider needs no API key and makes no AI calls.
+      env: { ...liveKitEnv, AGENT_MODE: 'realtime', REALTIME_PROVIDER: 'fake' },
       // Shows the Agent's Conversation start and end logs in the test output.
       stdout: 'pipe',
       reuseExistingServer: false,

@@ -98,6 +98,9 @@ importers:
       '@livekit/agents':
         specifier: ^1.10.0
         version: 1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7)
+      '@livekit/agents-plugin-openai':
+        specifier: ^1.10.0
+        version: 1.10.0(@livekit/agents@1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7))(@livekit/rtc-node@1.2.2)(zod@4.6.7)
       '@livekit/rtc-node':
         specifier: ^1.2.2
         version: 1.2.2
@@ -963,6 +966,13 @@ packages:
 
   '@kwsites/file-exists@1.1.1':
     resolution: {integrity: sha512-m9/5YGR18lIwxSFDwfE3oA7bWuq9kdau6ugN4H2rJeyhFQZcG9AgSHkQtSD15a8WvTgfz9aikZMrKPHvbpqFiw==}
+
+  '@livekit/agents-plugin-openai@1.10.0':
+    resolution: {integrity: sha512-HMZbqKl1+v4N8bIv2XhJzAmvN1LGpi4vKzDGGnfGR9+Cw9HgCrxg9T4njQAQdP17Jcqk7p1az23xc8xrK/Uv8A==}
+    peerDependencies:
+      '@livekit/agents': 1.10.0
+      '@livekit/rtc-node': ^1.2.2
+      zod: ^3.25.76 || ^4.1.8
 
   '@livekit/agents@1.10.0':
     resolution: {integrity: sha512-sxKJ5zg1JaQVBxw0exARmPmfRxLTz+Cby1ysxUROk7NSAjgIgoXIsS1sLmkbrWVVqDOu4sIMcdiaakDET6R/RA==}
@@ -7649,6 +7659,20 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+
+  '@livekit/agents-plugin-openai@1.10.0(@livekit/agents@1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7))(@livekit/rtc-node@1.2.2)(zod@4.6.7)':
+    dependencies:
+      '@livekit/agents': 1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7)
+      '@livekit/rtc-node': 1.2.2
+      openai: 6.49.0(ws@8.23.0)(zod@4.6.7)
+      ws: 8.23.0
+      zod: 4.6.7
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - bufferutil
+      - utf-8-validate
 
   '@livekit/agents@1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7)':
     dependencies:

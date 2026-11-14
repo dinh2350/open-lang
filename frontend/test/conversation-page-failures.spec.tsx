@@ -153,7 +153,7 @@ describe('Conversation page failures', () => {
       });
 
       expect(screen.getByRole('status')).toHaveTextContent(
-        'The Agent has joined.',
+        'The Agent is listening.',
       );
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);

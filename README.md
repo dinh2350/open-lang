@@ -19,6 +19,8 @@ pnpm dev                            # frontend, backend and Agent
 
 Open http://localhost:5173 and register. If another Postgres already uses port 5432, set `POSTGRES_PORT` in `.env` and the same port in `DATABASE_URL` in `backend/.env`.
 
+The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER=openai` and `OPENAI_API_KEY` in `agent/.env`. The Agent refuses to start, naming the variable, when its configuration is invalid.
+
 ## Commands
 
 | Command                                 | What it does                                                                                                                                              |
@@ -26,6 +28,7 @@ Open http://localhost:5173 and register. If another Postgres already uses port 5
 | `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.                                                                                                     |
 | `pnpm test`                             | Runs every fast test with coverage. Needs Docker for the backend's Postgres (Testcontainers), but no keys and no LiveKit.                                 |
 | `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.                                                                                                    |
+| `pnpm test:live`                        | Runs live Agent tests against real Providers; skipped without keys.                                                                                       |
 | `pnpm db:migrate`                       | Regenerates the Prisma client and runs `prisma migrate dev`: applies migrations, and creates one after a schema change (`pnpm db:migrate --name <name>`). |
 | `pnpm check`                            | Format check, lint, typecheck and tests.                                                                                                                  |
 | `pnpm sonar:up`, `sonar:setup`, `sonar` | The local SonarQube quality gate.                                                                                                                         |

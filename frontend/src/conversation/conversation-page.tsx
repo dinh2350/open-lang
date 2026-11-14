@@ -8,6 +8,8 @@ import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/auth-context';
 import { Button } from '@/components/ui/button';
+import { AgentStatus } from './agent-status';
+import { MicrophoneToggle } from './microphone-toggle';
 import { createRoomTokenSource } from './room-token-source';
 
 interface ConversationPageProps {
@@ -97,10 +99,16 @@ export function ConversationPage({
       <SessionProvider session={session}>
         {inConversation ? (
           <>
-            <AgentPresence />
-            <Button variant="outline" onClick={() => void session.end()}>
-              End
-            </Button>
+            <AgentStatus
+              agentState={agent.state}
+              agentVoice={agent.microphoneTrack}
+            />
+            <div className="flex gap-3">
+              <MicrophoneToggle />
+              <Button variant="outline" onClick={() => void session.end()}>
+                End
+              </Button>
+            </div>
           </>
         ) : (
           <Button onClick={() => void startConversation()}>Start</Button>
@@ -108,14 +116,5 @@ export function ConversationPage({
         <RoomAudioRenderer />
       </SessionProvider>
     </main>
-  );
-}
-
-function AgentPresence() {
-  const agent = useAgent();
-  return (
-    <p role="status" className="text-muted-foreground">
-      {agent.isConnected ? 'The Agent has joined.' : 'Waiting for the Agent…'}
-    </p>
   );
 }

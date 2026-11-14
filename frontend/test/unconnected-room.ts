@@ -1,10 +1,13 @@
 import {
   ConnectionState,
   DisconnectReason,
+  ParticipantEvent,
   ParticipantKind,
   RemoteParticipant,
   Room,
   RoomEvent,
+  Track,
+  TrackPublication,
 } from 'livekit-client';
 import { onTestFinished, vi } from 'vitest';
 
@@ -16,6 +19,11 @@ interface RoomConnection {
 function changeConnectionState(room: Room, state: ConnectionState): void {
   room.state = state;
   room.emit(RoomEvent.ConnectionStateChanged, state);
+}
+
+/** The User's microphone as the Room publishes it, without a media track. */
+class LocalMicrophonePublication extends TrackPublication {
+  readonly isLocal = true;
 }
 
 /** Gives the browser a microphone for the current test; jsdom has none. */
@@ -50,20 +58,43 @@ export function createUnconnectedRoom() {
       return Promise.resolve();
     },
   );
+  const { localParticipant } = room;
+  // A fake microphone: it publishes nothing, but the Room reports whether it
+  // is on and tells listeners when it is muted or unmuted.
+  let microphoneOn = false;
+  const microphone = new LocalMicrophonePublication(
+    Track.Kind.Audio,
+    'TR_microphone',
+    'microphone',
+  );
+  vi.spyOn(localParticipant, 'isMicrophoneEnabled', 'get').mockImplementation(
+    () => microphoneOn,
+  );
+  const switchFakeMicrophone = (enabled: boolean) => {
+    microphoneOn = enabled;
+    localParticipant.emit(
+      enabled ? ParticipantEvent.TrackUnmuted : ParticipantEvent.TrackMuted,
+      microphone,
+    );
+    return Promise.resolve(undefined);
+  };
+  const askBrowserForMicrophone =
+    localParticipant.setMicrophoneEnabled.bind(localParticipant);
+  const setMicrophoneEnabled = vi
+    .spyOn(localParticipant, 'setMicrophoneEnabled')
+    .mockImplementation(switchFakeMicrophone);
+
   vi.spyOn(room, 'disconnect').mockImplementation(() => {
     if (room.state !== ConnectionState.Disconnected) {
+      microphoneOn = false;
       room.remoteParticipants.clear();
       changeConnectionState(room, ConnectionState.Disconnected);
       room.emit(RoomEvent.Disconnected, DisconnectReason.CLIENT_INITIATED);
     }
     return Promise.resolve();
   });
-  const { localParticipant } = room;
-  const askBrowserForMicrophone =
-    localParticipant.setMicrophoneEnabled.bind(localParticipant);
-  const setMicrophoneEnabled = vi
-    .spyOn(localParticipant, 'setMicrophoneEnabled')
-    .mockResolvedValue(undefined);
+
+  let agent: RemoteParticipant | undefined;
 
   return {
     room,
@@ -85,13 +116,13 @@ export function createUnconnectedRoom() {
           }),
       );
     },
-    /** The User allows the microphone again; it publishes nothing. */
+    /** The User allows the microphone again: the fake microphone. */
     allowMicrophoneAccess(): void {
-      setMicrophoneEnabled.mockResolvedValue(undefined);
+      setMicrophoneEnabled.mockImplementation(switchFakeMicrophone);
     },
     /** The Agent joins the room and reports that it is listening. */
     agentJoins(): void {
-      const agent = new RemoteParticipant(
+      agent = new RemoteParticipant(
         room.engine.client,
         'PA_agent',
         'agent',
@@ -103,6 +134,20 @@ export function createUnconnectedRoom() {
       );
       room.remoteParticipants.set(agent.identity, agent);
       room.emit(RoomEvent.ParticipantConnected, agent);
+    },
+    /**
+     * The Agent reports a new state through its `lk.agent.state` attribute,
+     * as LiveKit's agent framework does.
+     */
+    agentIs(state: 'listening' | 'thinking' | 'speaking'): void {
+      if (!agent) {
+        throw new Error('The Agent has not joined the room');
+      }
+      const attributes = { 'lk.agent.state': state };
+      vi.spyOn(agent, 'attributes', 'get').mockReturnValue(attributes);
+      // A connected Room forwards its participants' events; this one isn't.
+      agent.emit(ParticipantEvent.AttributesChanged, attributes);
+      room.emit(RoomEvent.ParticipantAttributesChanged, attributes, agent);
     },
   };
 }
