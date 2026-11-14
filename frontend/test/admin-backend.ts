@@ -27,7 +27,7 @@ export function createdAtOfNthUser(n: number): string {
 
 function withDetails(user: User): UserDetails {
   const n = backendUsers().findIndex((other) => other.id === user.id) + 1;
-  return { ...user, createdAt: createdAtOfNthUser(n) };
+  return { ...user, locked: false, createdAt: createdAtOfNthUser(n) };
 }
 
 /**

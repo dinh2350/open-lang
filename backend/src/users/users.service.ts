@@ -5,25 +5,44 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, type User as UserRecord } from '../generated/prisma/client.js';
+import { RefreshTokenService } from '../auth/refresh-token.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
- * Locks the row of every Admin until the transaction ends, and returns their
- * ids. Every change that could leave the app without an Admin takes these
- * locks first, so two Admins demoting each other at the same moment can't
- * both count the other as the remaining Admin: the second one waits, then
- * counts again.
+ * Locks the row of every unlocked Admin until the transaction ends, and
+ * returns their ids. Every change that could leave the app without an
+ * unlocked Admin takes these locks first, so two Admins demoting or locking
+ * each other at the same moment can't both count the other as the remaining
+ * Admin: the second one waits, then counts again.
  */
-async function lockAdmins(
+async function lockUnlockedAdmins(
   transaction: Prisma.TransactionClient,
 ): Promise<string[]> {
   const admins = await transaction.$queryRaw<{ id: string }[]>`
-    SELECT id FROM "User" WHERE role = 'admin' FOR UPDATE`;
+    SELECT id FROM "User" WHERE role = 'admin' AND NOT locked FOR UPDATE`;
   return admins.map((admin) => admin.id);
 }
 
+// lockUnlockedAdmins relies on READ COMMITTED: a query that waited for a
+// lock re-reads the rows that changed meanwhile.
+const LOCKS_UNLOCKED_ADMINS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+};
+
 function isTheOnlyAdmin(userId: string, adminIds: readonly string[]): boolean {
   return adminIds.length === 1 && adminIds[0] === userId;
+}
+
+/** The User with this id. `404` when nobody has it. */
+async function findUser(
+  transaction: Prisma.TransactionClient,
+  userId: string,
+): Promise<UserRecord> {
+  const user = await transaction.user.findUnique({ where: { id: userId } });
+  if (user === null) {
+    throw new NotFoundException('No User has this id.');
+  }
+  return user;
 }
 
 /** A User as an Admin sees them: never the password hash. */
@@ -32,6 +51,7 @@ function toUserDetails(record: UserRecord): UserDetails {
     id: record.id,
     email: record.email,
     role: record.role,
+    locked: record.locked,
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -39,7 +59,10 @@ function toUserDetails(record: UserRecord): UserDetails {
 /** What Admins do with Users. */
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly refreshTokens: RefreshTokenService,
+  ) {}
 
   /** Every User, oldest first. */
   async listUsers(): Promise<UserDetails[]> {
@@ -58,28 +81,53 @@ export class UsersService {
     if (userId === admin.id) {
       throw new ConflictException("You can't change your own Role.");
     }
-    return this.prisma.$transaction(
-      async (transaction) => {
-        const adminIds = await lockAdmins(transaction);
-        const user = await transaction.user.findUnique({
-          where: { id: userId },
-        });
-        if (user === null) {
-          throw new NotFoundException('No User has this id.');
-        }
-        if (role === 'member' && isTheOnlyAdmin(userId, adminIds)) {
-          throw new ConflictException("You can't demote the last Admin.");
-        }
-        return toUserDetails(
-          await transaction.user.update({
-            where: { id: userId },
-            data: { role },
-          }),
+    return this.prisma.$transaction(async (transaction) => {
+      const adminIds = await lockUnlockedAdmins(transaction);
+      await findUser(transaction, userId);
+      if (role === 'member' && isTheOnlyAdmin(userId, adminIds)) {
+        throw new ConflictException(
+          "You can't demote the last unlocked Admin.",
         );
-      },
-      // lockAdmins relies on READ COMMITTED: a query that waited for a lock
-      // re-reads the rows that changed meanwhile.
-      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
-    );
+      }
+      return toUserDetails(
+        await transaction.user.update({
+          where: { id: userId },
+          data: { role },
+        }),
+      );
+    }, LOCKS_UNLOCKED_ADMINS);
+  }
+
+  /**
+   * Locks or unlocks another User. Locking also signs them out everywhere,
+   * in the same transaction, so a Locked User never keeps a refresh token.
+   * An Admin may not lock themselves.
+   */
+  async changeLocked(
+    admin: User,
+    userId: string,
+    locked: boolean,
+  ): Promise<UserDetails> {
+    if (locked && userId === admin.id) {
+      throw new ConflictException("You can't lock yourself.");
+    }
+    return this.prisma.$transaction(async (transaction) => {
+      const adminIds = await lockUnlockedAdmins(transaction);
+      await findUser(transaction, userId);
+      if (locked) {
+        if (isTheOnlyAdmin(userId, adminIds)) {
+          throw new ConflictException(
+            "You can't lock the last unlocked Admin.",
+          );
+        }
+        await this.refreshTokens.revokeAllOf(userId, transaction);
+      }
+      return toUserDetails(
+        await transaction.user.update({
+          where: { id: userId },
+          data: { locked },
+        }),
+      );
+    }, LOCKS_UNLOCKED_ADMINS);
   }
 }
