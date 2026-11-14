@@ -12,6 +12,7 @@
     "dev": "pnpm --recursive --parallel --stream run dev",
     "test": "vitest run --coverage && node scripts/split-lcov-by-package.ts",
     "test:e2e": "docker compose up --detach --wait && pnpm --filter @livekit-platform/e2e test:e2e",
+    "test:live": "pnpm --filter @livekit-platform/agent test:live",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node --watch-path=src --env-file-if-exists=.env src/main.ts dev",
     "start": "node --env-file-if-exists=.env src/main.ts start",
+    "test:live": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config test/live/vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
