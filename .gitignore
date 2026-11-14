@@ -1,9 +1,11 @@
 response-language-vietnamese.md
 
-# Dependencies and build output
+# Dependencies, build output and generated code
 node_modules/
 dist/
 *.tsbuildinfo
+# The Prisma client: `prisma generate` writes it on install.
+backend/src/generated/
 
 # Test output
 coverage/

@@ -1,0 +1,31 @@
+// The backend's data (ADR 0002). After a change, run `pnpm db:migrate` to
+// create and apply a migration and regenerate the client.
+
+generator client {
+  provider            = "prisma-client"
+  // Generated on install and by `pnpm db:migrate`; git-ignored.
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// What a User may do (GLOSSARY.md).
+enum Role {
+  member
+  admin
+}
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  /// Stored lowercase, so it is unique whatever case the User types.
+  email        String   @unique
+  /// argon2id hash; the password itself is never stored.
+  passwordHash String
+  role         Role     @default(member)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

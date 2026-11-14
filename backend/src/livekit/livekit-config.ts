@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseEnv } from '../config/parse-env.js';
 
 const liveKitEnvSchema = z.object({
   LIVEKIT_URL: z.url({ protocol: /^wss?$/ }),
@@ -19,16 +20,11 @@ export interface LiveKitConfig {
 export const LIVEKIT_CONFIG = Symbol('LiveKitConfig');
 
 export function loadLiveKitConfig(env: NodeJS.ProcessEnv): LiveKitConfig {
-  const result = liveKitEnvSchema.safeParse(env);
-  if (!result.success) {
-    throw new Error(
-      `Invalid LiveKit settings in the backend environment:\n${z.prettifyError(result.error)}`,
-    );
-  }
+  const liveKitEnv = parseEnv('LiveKit', liveKitEnvSchema, env);
   return {
-    url: result.data.LIVEKIT_URL,
-    apiKey: result.data.LIVEKIT_API_KEY,
-    apiSecret: result.data.LIVEKIT_API_SECRET,
-    agentName: result.data.AGENT_NAME,
+    url: liveKitEnv.LIVEKIT_URL,
+    apiKey: liveKitEnv.LIVEKIT_API_KEY,
+    apiSecret: liveKitEnv.LIVEKIT_API_SECRET,
+    agentName: liveKitEnv.AGENT_NAME,
   };
 }
