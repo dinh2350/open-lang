@@ -23,7 +23,11 @@ import {
   type ValidSignInRequest,
 } from './auth.service.js';
 import { CurrentUser, Public } from './authentication.guard.js';
-import { RefreshTokenCookie, setRefreshCookie } from './refresh-cookie.js';
+import {
+  clearRefreshCookie,
+  RefreshTokenCookie,
+  setRefreshCookie,
+} from './refresh-cookie.js';
 
 /** Sets the refresh cookie and returns the body: the Auth Token and the User. */
 function respondSignedIn(
@@ -69,6 +73,21 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponse> {
     return respondSignedIn(response, await this.auth.refresh(refreshToken));
+  }
+
+  /**
+   * Revokes the refresh token in the cookie and clears the cookie. It needs
+   * no Auth Token, so a User whose Auth Token expired can still sign out.
+   */
+  @Public()
+  @Post('sign-out')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async signOut(
+    @RefreshTokenCookie() refreshToken: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.auth.signOut(refreshToken);
+    clearRefreshCookie(response);
   }
 
   /** The current User. */

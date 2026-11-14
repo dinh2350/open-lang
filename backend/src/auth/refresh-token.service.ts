@@ -81,6 +81,17 @@ export class RefreshTokenService {
     return { user: current.user, refreshToken: next.refreshToken };
   }
 
+  /** Revokes one refresh token, if it is a valid one. */
+  async revoke(refreshToken: string | undefined): Promise<void> {
+    if (refreshToken === undefined) {
+      return;
+    }
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenHash: hashOf(refreshToken), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   /** Revokes every refresh token of a User, which signs them out everywhere. */
   async revokeAllOf(userId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({

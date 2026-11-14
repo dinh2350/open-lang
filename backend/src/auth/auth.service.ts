@@ -93,6 +93,11 @@ export class AuthService {
     return this.signedIn(toUser(rotated.user), rotated.refreshToken);
   }
 
+  /** Signs out the browser that holds this refresh token. */
+  signOut(refreshToken: string | undefined): Promise<void> {
+    return this.refreshTokens.revoke(refreshToken);
+  }
+
   private async signedIn(user: User, refreshToken: string): Promise<SignedIn> {
     return {
       authToken: await this.authTokens.issueAuthToken(user),

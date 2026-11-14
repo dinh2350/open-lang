@@ -26,6 +26,17 @@ export function setRefreshCookie(
   });
 }
 
+/** Tells the browser to delete the refresh cookie. */
+export function clearRefreshCookie(response: Response): void {
+  // The browser only deletes a cookie set with the same attributes.
+  response.clearCookie(REFRESH_COOKIE, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: AUTH_ROUTES,
+  });
+}
+
 /** The refresh token in the request's refresh cookie, if it has one. */
 export const RefreshTokenCookie = createParamDecorator(
   (_data: unknown, context: ExecutionContext): string | undefined =>
