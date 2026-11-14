@@ -1,0 +1,34 @@
+import type { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import type { App } from 'supertest/types.js';
+import { vi } from 'vitest';
+import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/configure-app.js';
+
+export const testEnv = {
+  LIVEKIT_URL: 'ws://livekit.test:7880',
+  LIVEKIT_API_KEY: 'test-api-key',
+  LIVEKIT_API_SECRET: 'test-api-secret-with-at-least-32-chars',
+  AGENT_NAME: 'test-agent',
+} as const;
+
+/** Starts the real application module, configured as `main.ts` does, against `testEnv`. */
+export async function startTestApp(): Promise<INestApplication<App>> {
+  for (const [name, value] of Object.entries(testEnv)) {
+    vi.stubEnv(name, value);
+  }
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+  const app = moduleRef.createNestApplication<INestApplication<App>>({
+    logger: false,
+  });
+  configureApp(app);
+  await app.init();
+  return app;
+}
+
+export async function stopTestApp(app: INestApplication<App>): Promise<void> {
+  await app.close();
+  vi.unstubAllEnvs();
+}
