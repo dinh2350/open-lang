@@ -23,7 +23,7 @@
 
 ### 2026-11-14, implementer (branch `ticket/08-stay-signed-in`)
 
-**Result.** Every acceptance criterion is met, on top of the integration branch with tickets 03 and 09 merged (`1ead97b`). Results of `pnpm check`, `pnpm sonar` and `pnpm test:e2e` on the final commit are in the last paragraph.
+**Result.** Every acceptance criterion is met, on top of the integration branch with tickets 03 and 09 merged (`1ead97b`). Results of `pnpm check`, `pnpm sonar` and `pnpm test:e2e` are in the final paragraph.
 
 **Security Hotspots: none.** SonarQube reported 0. The cookie is set with `httpOnly`, `secure` and `sameSite` explicitly, so Sonar's cookie rules have nothing to flag.
 
@@ -50,3 +50,5 @@
 - **Ticket 10.** Refresh must answer `401` for a Locked User, and locking or resetting a password must call `RefreshTokenService.revokeAllOf(userId)`. AuthModule doesn't export the service yet; ticket 10 adds `exports: [RefreshTokenService]`.
 - **Refresh-token rows are never deleted.** An active User adds one row about every 15 minutes, since the app refreshes on the first `401` after the Auth Token expires. A periodic delete of expired rows can come later.
 - **No proactive refresh.** The app refreshes only on a `401`, so the first request after 15 minutes costs one extra round trip.
+
+**Final results** (code at `4547cb5`, with ticket 09 merged): `pnpm check` passes with 190 tests. `pnpm sonar` passes the gate: coverage 95.2% (lines 96.0%, conditions 93.0%), duplication 0.0%, A/A/A, 0 issues, 0 Security Hotspots. `pnpm test:e2e` passes both tests: the smoke test, and staying signed in across a reload and then signing out.
