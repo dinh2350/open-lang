@@ -1,4 +1,6 @@
-import type { Response } from 'express';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
+import { parseCookie } from 'cookie';
+import type { Request, Response } from 'express';
 import { REFRESH_TOKEN_LIFETIME_MILLISECONDS } from './refresh-token.service.js';
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -23,3 +25,11 @@ export function setRefreshCookie(
     maxAge: REFRESH_TOKEN_LIFETIME_MILLISECONDS,
   });
 }
+
+/** The refresh token in the request's refresh cookie, if it has one. */
+export const RefreshTokenCookie = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): string | undefined =>
+    parseCookie(
+      context.switchToHttp().getRequest<Request>().headers.cookie ?? '',
+    )[REFRESH_COOKIE],
+);

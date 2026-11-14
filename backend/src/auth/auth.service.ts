@@ -61,7 +61,10 @@ export class AuthService {
           ? new ConflictException('An account with this email already exists.')
           : error;
       });
-    return this.signedIn(toUser(record));
+    return this.signedIn(
+      toUser(record),
+      await this.refreshTokens.issue(record.id),
+    );
   }
 
   async signIn(request: ValidSignInRequest): Promise<SignedIn> {
@@ -75,14 +78,26 @@ export class AuthService {
     if (record === null || !passwordMatches) {
       throw new UnauthorizedException(WRONG_CREDENTIALS);
     }
-    return this.signedIn(toUser(record));
+    return this.signedIn(
+      toUser(record),
+      await this.refreshTokens.issue(record.id),
+    );
   }
 
-  private async signedIn(user: User): Promise<SignedIn> {
+  /**
+   * Signs the User of a refresh token in again, without their password, and
+   * rotates the refresh token.
+   */
+  async refresh(refreshToken: string | undefined): Promise<SignedIn> {
+    const rotated = await this.refreshTokens.rotate(refreshToken);
+    return this.signedIn(toUser(rotated.user), rotated.refreshToken);
+  }
+
+  private async signedIn(user: User, refreshToken: string): Promise<SignedIn> {
     return {
       authToken: await this.authTokens.issueAuthToken(user),
       user,
-      refreshToken: await this.refreshTokens.issue(user.id),
+      refreshToken,
     };
   }
 }

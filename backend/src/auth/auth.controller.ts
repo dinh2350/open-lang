@@ -23,7 +23,7 @@ import {
   type ValidSignInRequest,
 } from './auth.service.js';
 import { CurrentUser, Public } from './authentication.guard.js';
-import { setRefreshCookie } from './refresh-cookie.js';
+import { RefreshTokenCookie, setRefreshCookie } from './refresh-cookie.js';
 
 /** Sets the refresh cookie and returns the body: the Auth Token and the User. */
 function respondSignedIn(
@@ -58,6 +58,17 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponse> {
     return respondSignedIn(response, await this.auth.signIn(request));
+  }
+
+  /** Signs the User in again with the refresh cookie instead of a password. */
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(
+    @RefreshTokenCookie() refreshToken: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthResponse> {
+    return respondSignedIn(response, await this.auth.refresh(refreshToken));
   }
 
   /** The current User. */
