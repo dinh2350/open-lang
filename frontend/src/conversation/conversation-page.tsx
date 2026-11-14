@@ -12,9 +12,12 @@ import { createRoomTokenSource } from './room-token-source';
 interface ConversationPageProps {
   /** The LiveKit Room each Conversation connects through, one at a time. */
   readonly room: Room;
+  /**
+   * How long a Conversation waits for the Agent to join and start listening
+   * before it shows "Agent unavailable" and ends. Defaults to 15 seconds.
+   */
+  readonly agentJoinTimeoutMilliseconds?: number;
 }
-
-const AGENT_JOIN_TIMEOUT_MILLISECONDS = 15_000;
 
 type ConversationFailure =
   'microphone-denied' | 'start-failed' | 'agent-unavailable';
@@ -36,11 +39,14 @@ function startFailure(error: unknown): ConversationFailure {
 }
 
 /** Start begins a Conversation in a new private room; End leaves it. */
-export function ConversationPage({ room }: ConversationPageProps) {
+export function ConversationPage({
+  room,
+  agentJoinTimeoutMilliseconds = 15_000,
+}: ConversationPageProps) {
   const [roomTokenSource] = useState(createRoomTokenSource);
   const session = useSession(roomTokenSource, {
     room,
-    agentConnectTimeoutMilliseconds: AGENT_JOIN_TIMEOUT_MILLISECONDS,
+    agentConnectTimeoutMilliseconds: agentJoinTimeoutMilliseconds,
   });
   const agent = useAgent(session);
   const [failure, setFailure] = useState<ConversationFailure | null>(null);

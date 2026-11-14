@@ -7,6 +7,15 @@ import { ConversationPage } from '@/conversation/conversation-page';
 import { backend } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
 
+/** Fake timers for the current test, and a User whose typing follows them. */
+function startFakeTimers() {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
 describe('Conversation page failures', () => {
   it('explains how to allow the microphone, and starts no Conversation, when microphone access is denied', async () => {
     const liveKit = createUnconnectedRoom();
@@ -50,11 +59,7 @@ describe('Conversation page failures', () => {
   );
 
   it('shows that the Agent is unavailable, and ends the Conversation, when the Agent has not joined 15 seconds after Start', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    onTestFinished(() => {
-      vi.useRealTimers();
-    });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = startFakeTimers();
     const liveKit = createUnconnectedRoom();
     render(<ConversationPage room={liveKit.room} />);
     await user.click(screen.getByRole('button', { name: 'Start' }));
@@ -70,5 +75,22 @@ describe('Conversation page failures', () => {
     expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+  });
+
+  it('waits for the Agent as long as the frontend configures', async () => {
+    const user = startFakeTimers();
+    const liveKit = createUnconnectedRoom();
+    render(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={5_000}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await screen.findByText('Waiting for the Agent…');
+
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
   });
 });
