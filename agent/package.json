@@ -13,7 +13,9 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@livekit/protocol": "^1.54.0",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
