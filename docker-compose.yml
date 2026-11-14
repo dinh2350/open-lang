@@ -26,6 +26,31 @@ services:
       start_period: 15s
       start_interval: 1s
 
+  # The backend's database (ADR 0002). `pnpm dev` uses the database
+  # `livekit_platform`; the end-to-end tests use their own,
+  # `livekit_platform_e2e`, on the same server.
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      # Local defaults, like LiveKit's devkey/secret. The port is published
+      # on 127.0.0.1 only.
+      POSTGRES_USER: livekit_platform
+      POSTGRES_PASSWORD: livekit_platform
+      POSTGRES_DB: livekit_platform
+    ports:
+      # POSTGRES_PORT (root .env) moves it off 5432 when another Postgres
+      # already listens there. Then change DATABASE_URL in backend/.env too.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD', 'pg_isready', '--username=livekit_platform']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+      start_interval: 1s
+
   # Quality layer 3 (docs/quality-gates.md). Only `pnpm sonar:up` starts it:
   # a plain `docker compose up` skips services that have a profile.
   sonarqube:
@@ -55,6 +80,7 @@ services:
       start_interval: 2s
 
 volumes:
+  postgres-data:
   sonarqube-data:
   sonarqube-extensions:
   sonarqube-logs:
