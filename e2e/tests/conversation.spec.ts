@@ -50,7 +50,7 @@ async function microphoneBytesSent(page: Page): Promise<number> {
     .reduce((total, report) => total + (report.bytesSent ?? 0), 0);
 }
 
-test('a person starts a Conversation, the Agent joins its room, and End leaves it', async ({
+test('a person starts a Conversation, the Agent joins its room and shows its state, and End leaves it', async ({
   page,
 }) => {
   await recordPeerConnections(page);
@@ -58,7 +58,7 @@ test('a person starts a Conversation, the Agent joins its room, and End leaves i
 
   await page.getByRole('button', { name: 'Start' }).click();
 
-  await expect(page.getByRole('status')).toHaveText('The Agent has joined.', {
+  await expect(page.getByRole('status')).toHaveText('The Agent is listening.', {
     timeout: 30_000,
   });
   await expect.poll(() => microphoneBytesSent(page)).toBeGreaterThan(0);
