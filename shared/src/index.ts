@@ -27,6 +27,12 @@ export {
   type UsersResponse,
 } from './admin-users.ts';
 export {
+  liveKitEnvSchema,
+  parseEnv,
+  type Environment,
+  type LiveKitEnv,
+} from './environment.ts';
+export {
   roomTokenRequestSchema,
   roomTokenResponseSchema,
   type RoomTokenRequest,

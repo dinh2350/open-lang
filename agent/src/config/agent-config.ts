@@ -1,3 +1,4 @@
+import { type Environment, parseEnv } from '@livekit-platform/shared';
 import { z } from 'zod';
 import {
   DEFAULT_LLM_MODEL,
@@ -337,14 +338,8 @@ const agentConfigSchema = z.discriminatedUnion(
  * Reads and validates the Agent's configuration from the environment. Throws
  * an error naming every bad variable, so the Agent refuses to start.
  */
-export function loadAgentConfig(env: NodeJS.ProcessEnv): AgentConfig {
-  const result = agentConfigSchema.safeParse(env);
-  if (!result.success) {
-    throw new Error(
-      `Invalid Agent configuration:\n${z.prettifyError(result.error)}`,
-    );
-  }
-  return result.data;
+export function loadAgentConfig(env: Environment): AgentConfig {
+  return parseEnv(agentConfigSchema, env, 'Invalid Agent configuration');
 }
 
 /** One model of the Agent, as logged: who provides it, and which one. */

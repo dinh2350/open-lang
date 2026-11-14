@@ -1,12 +1,8 @@
-import { z } from 'zod';
-import { parseEnv } from '../config/parse-env.js';
-
-const liveKitEnvSchema = z.object({
-  LIVEKIT_URL: z.url({ protocol: /^wss?$/ }),
-  LIVEKIT_API_KEY: z.string().min(1),
-  LIVEKIT_API_SECRET: z.string().min(1),
-  AGENT_NAME: z.string().min(1),
-});
+import {
+  type Environment,
+  liveKitEnvSchema,
+  parseEnv,
+} from '@livekit-platform/shared';
 
 export interface LiveKitConfig {
   /** URL the browser uses to reach the LiveKit server. */
@@ -19,8 +15,12 @@ export interface LiveKitConfig {
 
 export const LIVEKIT_CONFIG = Symbol('LiveKitConfig');
 
-export function loadLiveKitConfig(env: NodeJS.ProcessEnv): LiveKitConfig {
-  const liveKitEnv = parseEnv('LiveKit', liveKitEnvSchema, env);
+export function loadLiveKitConfig(env: Environment): LiveKitConfig {
+  const liveKitEnv = parseEnv(
+    liveKitEnvSchema,
+    env,
+    'Invalid LiveKit settings in the backend environment',
+  );
   return {
     url: liveKitEnv.LIVEKIT_URL,
     apiKey: liveKitEnv.LIVEKIT_API_KEY,

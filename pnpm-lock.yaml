@@ -98,6 +98,9 @@ importers:
       '@google/genai':
         specifier: ^2.32.0
         version: 2.32.0
+      '@livekit-platform/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@livekit/agents':
         specifier: ^1.10.0
         version: 1.10.0(@livekit/rtc-node@1.2.2)(@types/node@24.19.2)(typescript@6.0.3)(zod@4.6.7)

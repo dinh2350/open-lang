@@ -1,7 +1,7 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { parseEnv } from '@livekit-platform/shared';
 import { z } from 'zod';
-import { parseEnv } from '../config/parse-env.js';
 import { PrismaClient } from '../generated/prisma/client.js';
 
 const databaseEnvSchema = z.object({
@@ -13,9 +13,9 @@ const databaseEnvSchema = z.object({
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor() {
     const { DATABASE_URL } = parseEnv(
-      'database',
       databaseEnvSchema,
       process.env,
+      'Invalid database settings in the backend environment',
     );
     super({ adapter: new PrismaPg({ connectionString: DATABASE_URL }) });
   }
