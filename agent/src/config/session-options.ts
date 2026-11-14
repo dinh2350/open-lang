@@ -15,13 +15,27 @@ import { DEFAULT_STT_MODEL } from './models.ts';
 type RealtimeConfig = Extract<AgentConfig, { agentMode: 'realtime' }>;
 type PipelineConfig = Extract<AgentConfig, { agentMode: 'pipeline' }>;
 
-/** Turns the Agent's configuration into the models of its AgentSession. */
+/**
+ * Turns the Agent's configuration into the models of its AgentSession. No
+ * Agent Mode or Provider uses LiveKit Inference.
+ */
 export function createSessionOptions(
   config: AgentConfig,
 ): voice.AgentSessionOptions {
-  return config.agentMode === 'realtime'
-    ? realtimeSessionOptions(config)
-    : pipelineSessionOptions(config);
+  const options =
+    config.agentMode === 'realtime'
+      ? realtimeSessionOptions(config)
+      : pipelineSessionOptions(config);
+  return {
+    ...options,
+    turnHandling: {
+      ...options.turnHandling,
+      // Interruptions are detected from voice activity. Left unset, a session
+      // with a VAD, a speech-to-text model and a turn detector uses adaptive
+      // interruption detection in dev mode, which calls LiveKit Inference.
+      interruption: { mode: 'vad' },
+    },
+  };
 }
 
 function realtimeSessionOptions({
