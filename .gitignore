@@ -7,6 +7,7 @@ dist/
 
 # Test output
 coverage/
+.scannerwork/
 test-results/
 playwright-report/
 blob-report/

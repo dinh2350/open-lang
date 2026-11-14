@@ -1,3 +1,4 @@
+import { Room } from 'livekit-client';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConversationPage } from './conversation/conversation-page';
@@ -10,6 +11,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ConversationPage />
+    <ConversationPage room={new Room()} />
   </StrictMode>,
 );

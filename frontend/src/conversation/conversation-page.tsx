@@ -4,13 +4,18 @@ import {
   useAgent,
   useSession,
 } from '@livekit/components-react';
-import { ConnectionState } from 'livekit-client';
+import { ConnectionState, type Room } from 'livekit-client';
 import { Button } from '@/components/ui/button';
 import { roomTokenSource } from './room-token-source';
 
+interface ConversationPageProps {
+  /** The LiveKit Room each Conversation connects through, one at a time. */
+  readonly room: Room;
+}
+
 /** Start begins a Conversation in a new private room; End leaves it. */
-export function ConversationPage() {
-  const session = useSession(roomTokenSource);
+export function ConversationPage({ room }: ConversationPageProps) {
+  const session = useSession(roomTokenSource, { room });
   const inConversation =
     session.connectionState !== ConnectionState.Disconnected;
 

@@ -16,11 +16,15 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --recursive run typecheck",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "sonar:up": "docker compose --profile sonar up --detach --wait sonarqube",
+    "sonar:setup": "node --env-file-if-exists=.env scripts/sonar/cli.ts setup",
+    "sonar": "node --env-file-if-exists=.env scripts/sonar/cli.ts preflight && pnpm test && node --env-file-if-exists=.env scripts/sonar/cli.ts scan"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
     "@eslint/js": "^9.39.5",
+    "@sonar/scan": "^5.1.0",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "^5.1.0",
@@ -33,9 +37,11 @@
     "globals": "^17.14.0",
     "jiti": "^2.7.0",
     "lefthook": "^2.2.2",
+    "msw": "^3.0.5",
     "prettier": "^3.10.1",
     "typescript": "catalog:",
     "typescript-eslint": "^8.72.2",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }
