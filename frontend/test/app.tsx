@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { Room } from 'livekit-client';
 import { MemoryRouter } from 'react-router';
 import { App } from '@/app';
+import { backendHasUser } from './auth-backend';
 import { createUnconnectedRoom } from './unconnected-room';
 
 export const PASSWORD = 'correct horse battery staple';
@@ -43,4 +44,15 @@ export async function submitCredentials(
     await user.type(screen.getByLabelText('Password'), password);
   }
   await user.click(screen.getByRole('button', { name: submitButton }));
+}
+
+/** A User signs in through the sign-in page and lands on the Conversation page. */
+export async function signInAs(
+  email: string,
+  room: Room = createUnconnectedRoom().room,
+): Promise<void> {
+  backendHasUser(email, PASSWORD);
+  renderApp('/sign-in', room);
+  await submitCredentials(email, PASSWORD, 'Sign in');
+  await screen.findByRole('heading', { name: 'Talk to the Agent' });
 }

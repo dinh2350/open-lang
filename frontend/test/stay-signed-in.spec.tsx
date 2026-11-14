@@ -2,11 +2,10 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
-import { PASSWORD, reloadApp, renderApp, submitCredentials } from './app';
+import { reloadApp, renderApp, signInAs } from './app';
 import {
   authRequestsReceived,
   authTokensIssued,
-  backendHasUser,
   refreshesRequested,
 } from './auth-backend';
 import { backend, roomTokenRequestAuthorizations } from './backend';
@@ -21,13 +20,6 @@ function travelForward(milliseconds: number): void {
     vi.useRealTimers();
   });
   vi.setSystemTime(Date.now() + milliseconds);
-}
-
-async function signInAs(email: string): Promise<void> {
-  backendHasUser(email, PASSWORD);
-  renderApp('/sign-in');
-  await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Talk to the Agent' });
 }
 
 describe('Staying signed in', () => {

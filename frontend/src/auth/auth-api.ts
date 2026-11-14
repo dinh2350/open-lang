@@ -53,3 +53,13 @@ export async function refresh(): Promise<AuthResponse | null> {
     ? authResponseSchema.parse(await response.json())
     : null;
 }
+
+/** Revokes the refresh cookie on the backend, which also clears it. */
+export async function signOut(): Promise<void> {
+  const response = await fetch('/api/auth/sign-out', { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(
+      `Signing out failed with status ${String(response.status)}`,
+    );
+  }
+}

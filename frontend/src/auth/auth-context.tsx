@@ -9,7 +9,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import { refresh as requestRefresh } from './auth-api';
+import {
+  refresh as requestRefresh,
+  signOut as requestSignOut,
+} from './auth-api';
 
 const UNAUTHORIZED = 401;
 
@@ -33,6 +36,11 @@ interface Auth {
   readonly restoringSignIn: boolean;
   /** Signs in the User of a register or sign-in response. */
   readonly signIn: (response: AuthResponse) => void;
+  /**
+   * Revokes the User's refresh cookie on the backend, then forgets the
+   * User. Rejects, and keeps the User signed in, when the backend fails.
+   */
+  readonly signOut: () => Promise<void>;
   /** Sends the signed-in User's Auth Token with the request. */
   readonly authorizedFetch: AuthorizedFetch;
 }
@@ -47,6 +55,7 @@ const signedOut: Auth = {
   signIn: () => {
     throw new Error('Signing in needs an AuthProvider');
   },
+  signOut: () => Promise.resolve(),
   authorizedFetch: (input, init) => fetch(input, init),
 };
 
@@ -70,6 +79,11 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     setUser(response.user);
   }, []);
 
+  const forgetUser = useCallback(() => {
+    authToken.current = null;
+    setUser(null);
+  }, []);
+
   /**
    * Swaps the refresh cookie for a new Auth Token, and resolves to whether
    * a User is signed in afterwards. When the cookie no longer works, it
@@ -83,8 +97,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     refreshInFlight.current ??= requestRefresh()
       .then((response) => {
         if (response === null) {
-          authToken.current = null;
-          setUser(null);
+          forgetUser();
           return false;
         }
         signIn(response);
@@ -94,7 +107,12 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
         refreshInFlight.current = null;
       });
     return refreshInFlight.current;
-  }, [signIn]);
+  }, [signIn, forgetUser]);
+
+  const signOut = useCallback(async () => {
+    await requestSignOut();
+    forgetUser();
+  }, [forgetUser]);
 
   useEffect(() => {
     void refresh().finally(() => {
@@ -122,8 +140,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
   );
 
   const auth = useMemo(
-    () => ({ user, restoringSignIn, signIn, authorizedFetch }),
-    [user, restoringSignIn, signIn, authorizedFetch],
+    () => ({ user, restoringSignIn, signIn, signOut, authorizedFetch }),
+    [user, restoringSignIn, signIn, signOut, authorizedFetch],
   );
   return <AuthContext value={auth}>{children}</AuthContext>;
 }
