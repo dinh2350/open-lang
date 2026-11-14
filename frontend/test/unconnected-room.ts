@@ -30,20 +30,19 @@ export function createUnconnectedRoom() {
 
   vi.spyOn(room, 'prepareConnection').mockResolvedValue(undefined);
   vi.spyOn(room, 'connect').mockImplementation(
-    async (serverUrl, participantToken) => {
+    (serverUrl, participantToken) => {
       connections.push({ serverUrl, participantToken });
       changeConnectionState(room, ConnectionState.Connected);
       room.emit(RoomEvent.Connected);
       return Promise.resolve();
     },
   );
-  vi.spyOn(room, 'disconnect').mockImplementation(async () => {
-    if (room.state === ConnectionState.Disconnected) {
-      return Promise.resolve();
+  vi.spyOn(room, 'disconnect').mockImplementation(() => {
+    if (room.state !== ConnectionState.Disconnected) {
+      room.remoteParticipants.clear();
+      changeConnectionState(room, ConnectionState.Disconnected);
+      room.emit(RoomEvent.Disconnected, DisconnectReason.CLIENT_INITIATED);
     }
-    room.remoteParticipants.clear();
-    changeConnectionState(room, ConnectionState.Disconnected);
-    room.emit(RoomEvent.Disconnected, DisconnectReason.CLIENT_INITIATED);
     return Promise.resolve();
   });
   vi.spyOn(room.localParticipant, 'setMicrophoneEnabled').mockResolvedValue(
