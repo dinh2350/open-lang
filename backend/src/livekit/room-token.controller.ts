@@ -14,14 +14,15 @@ export class RoomTokenController {
 
   /**
    * LiveKit's standard token endpoint, called by the frontend's token source
-   * with the Auth Token of a signed-in User.
+   * with the Auth Token of a signed-in User. The body must have the standard
+   * request shape, but the backend chooses every field itself.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   issueRoomToken(
+    @Body({ schema: roomTokenRequestSchema }) ignoredRequest: RoomTokenRequest,
     @CurrentUser() user: User,
-    @Body({ schema: roomTokenRequestSchema }) request: RoomTokenRequest,
   ): Promise<RoomTokenResponse> {
-    return this.roomTokens.issueRoomToken(user, request);
+    return this.roomTokens.issueRoomToken(user);
   }
 }

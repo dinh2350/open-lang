@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  RoomTokenRequest,
-  RoomTokenResponse,
-  User,
-} from '@livekit-platform/shared';
+import type { RoomTokenResponse, User } from '@livekit-platform/shared';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AccessToken,
@@ -24,14 +20,11 @@ export class RoomTokenService {
 
   /**
    * Issues a Room Token for a new Conversation of the User: a new room, the
-   * User id as the participant identity, and a dispatch of the Agent. Every
-   * field of the client's request is ignored, so a client can't join
-   * another room, pose as someone else or call another agent.
+   * User id as the participant identity, and a dispatch of the Agent. It
+   * takes nothing from the client's request, so a client can't join another
+   * room, pose as someone else or dispatch another agent.
    */
-  async issueRoomToken(
-    user: User,
-    request: RoomTokenRequest,
-  ): Promise<RoomTokenResponse> {
+  async issueRoomToken(user: User): Promise<RoomTokenResponse> {
     const roomName = `conversation-${randomUUID()}`;
 
     const roomToken = new AccessToken(
@@ -53,7 +46,6 @@ export class RoomTokenService {
       message: 'Issued Room Token',
       userId: user.id,
       roomName,
-      ignoredClientFields: Object.keys(request),
     });
     return {
       server_url: this.liveKit.url,
