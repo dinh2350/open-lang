@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import argon2 from 'argon2';
 import { Prisma, type User as UserRecord } from '../generated/prisma/client.js';
 import { RefreshTokenService } from '../auth/refresh-token.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -129,5 +130,22 @@ export class UsersService {
         }),
       );
     }, LOCKS_UNLOCKED_ADMINS);
+  }
+
+  /**
+   * Sets a new password for a User who forgot theirs, and signs them out
+   * everywhere in the same transaction, so their old sessions stop working.
+   */
+  async setPassword(userId: string, password: string): Promise<void> {
+    // Hashing is slow on purpose, so it happens before the transaction.
+    const passwordHash = await argon2.hash(password);
+    await this.prisma.$transaction(async (transaction) => {
+      await findUser(transaction, userId);
+      await transaction.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+      await this.refreshTokens.revokeAllOf(userId, transaction);
+    });
   }
 }

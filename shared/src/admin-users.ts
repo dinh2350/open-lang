@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { roleSchema, userSchema } from './auth.ts';
+import { MINIMUM_PASSWORD_LENGTH, roleSchema, userSchema } from './auth.ts';
 
 /** A User as an Admin sees them on the admin Users page. */
 export const userDetailsSchema = userSchema.extend({
@@ -31,3 +31,15 @@ export const changeLockedRequestSchema = z.object({
 });
 
 export type ChangeLockedRequest = z.infer<typeof changeLockedRequestSchema>;
+
+/**
+ * Body of a request that sets a new password for a User who forgot theirs.
+ * The same minimum as registering: 12 characters, no composition rules.
+ */
+export const setPasswordRequestSchema = z.object({
+  password: z.string().min(MINIMUM_PASSWORD_LENGTH, {
+    error: `Use at least ${String(MINIMUM_PASSWORD_LENGTH)} characters for the new password.`,
+  }),
+});
+
+export type SetPasswordRequest = z.infer<typeof setPasswordRequestSchema>;

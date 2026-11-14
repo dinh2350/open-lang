@@ -17,10 +17,12 @@ export {
 export {
   changeLockedRequestSchema,
   changeRoleRequestSchema,
+  setPasswordRequestSchema,
   userDetailsSchema,
   usersResponseSchema,
   type ChangeLockedRequest,
   type ChangeRoleRequest,
+  type SetPasswordRequest,
   type UserDetails,
   type UsersResponse,
 } from './admin-users.ts';
