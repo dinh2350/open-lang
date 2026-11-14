@@ -10,6 +10,7 @@ import {
   useState,
 } from 'react';
 import {
+  accountLockedMessageOf,
   refresh as requestRefresh,
   signOut as requestSignOut,
 } from './auth-api';
@@ -34,6 +35,11 @@ interface Auth {
    * cookie still signs a User in.
    */
   readonly restoringSignIn: boolean;
+  /**
+   * The account locked message, when the backend signed the User out
+   * because an Admin locked them. Cleared when someone signs in.
+   */
+  readonly accountLockedMessage: string | null;
   /** Signs in the User of a register or sign-in response. */
   readonly signIn: (response: AuthResponse) => void;
   /**
@@ -41,7 +47,11 @@ interface Auth {
    * User. Rejects, and keeps the User signed in, when the backend fails.
    */
   readonly signOut: () => Promise<void>;
-  /** Sends the signed-in User's Auth Token with the request. */
+  /**
+   * Sends the signed-in User's Auth Token with the request. When the
+   * backend answers that the User is locked, it forgets the User, which
+   * sends them to sign-in with the account locked message.
+   */
   readonly authorizedFetch: AuthorizedFetch;
 }
 
@@ -52,6 +62,7 @@ interface Auth {
 const signedOut: Auth = {
   user: null,
   restoringSignIn: false,
+  accountLockedMessage: null,
   signIn: () => {
     throw new Error('Signing in needs an AuthProvider');
   },
@@ -69,6 +80,9 @@ const AuthContext = createContext<Auth>(signedOut);
 export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [restoringSignIn, setRestoringSignIn] = useState(true);
+  const [accountLockedMessage, setAccountLockedMessage] = useState<
+    string | null
+  >(null);
   // A ref, so that a request made later, such as a Room Token request,
   // always sends the latest Auth Token.
   const authToken = useRef<string | null>(null);
@@ -76,6 +90,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
 
   const signIn = useCallback((response: AuthResponse) => {
     authToken.current = response.authToken;
+    setAccountLockedMessage(null);
     setUser(response.user);
   }, []);
 
@@ -129,19 +144,38 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
         }
         return fetch(input, { ...init, headers });
       };
-      const response = await send();
-      if (response.status !== UNAUTHORIZED) {
-        return response;
-      }
+      let response = await send();
       // The Auth Token has expired: get a new one, and try once more.
-      return (await refresh()) ? send() : response;
+      if (response.status === UNAUTHORIZED && (await refresh())) {
+        response = await send();
+      }
+      const lockedMessage = await accountLockedMessageOf(response);
+      if (lockedMessage !== null) {
+        setAccountLockedMessage(lockedMessage);
+        forgetUser();
+      }
+      return response;
     },
-    [refresh],
+    [refresh, forgetUser],
   );
 
   const auth = useMemo(
-    () => ({ user, restoringSignIn, signIn, signOut, authorizedFetch }),
-    [user, restoringSignIn, signIn, signOut, authorizedFetch],
+    () => ({
+      user,
+      restoringSignIn,
+      accountLockedMessage,
+      signIn,
+      signOut,
+      authorizedFetch,
+    }),
+    [
+      user,
+      restoringSignIn,
+      accountLockedMessage,
+      signIn,
+      signOut,
+      authorizedFetch,
+    ],
   );
   return <AuthContext value={auth}>{children}</AuthContext>;
 }

@@ -10,6 +10,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AccountLockedException } from './account-locked.exception.js';
 import { AuthTokenService } from './auth-token.service.js';
 import { toUser } from './users.js';
 
@@ -34,7 +35,8 @@ const BEARER = /^Bearer (\S+)$/i;
  * Applies to every route that isn't `@Public()`. It verifies the Auth Token
  * in the `Authorization: Bearer` header, then loads the User from the
  * database on every request, so the User's current Role always comes from
- * the database rather than from the token.
+ * the database rather than from the token, and a User who was locked gets
+ * `403` on their next request, even with an Auth Token issued before.
  */
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
@@ -62,6 +64,9 @@ export class AuthenticationGuard implements CanActivate {
     });
     if (record === null) {
       throw new UnauthorizedException();
+    }
+    if (record.locked) {
+      throw new AccountLockedException();
     }
     request.user = toUser(record);
     return true;

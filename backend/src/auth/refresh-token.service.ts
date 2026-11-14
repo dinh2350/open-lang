@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { User as UserRecord } from '../generated/prisma/client.js';
+import type { Prisma, User as UserRecord } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /** How long a refresh token keeps a User signed in. */
@@ -50,7 +50,8 @@ export class RefreshTokenService {
 
   /**
    * Revokes a refresh token and issues the one that replaces it. A missing,
-   * unknown, revoked or expired refresh token gets `401`.
+   * unknown, revoked or expired refresh token gets `401`, and so does any
+   * refresh token of a Locked User, which also revokes the rest of theirs.
    *
    * A refresh token that was already rotated has been used twice, so
    * someone else has a copy of it. That revokes every refresh token of its
@@ -67,7 +68,7 @@ export class RefreshTokenService {
     if (current === null) {
       throw new UnauthorizedException();
     }
-    if (current.replacedBy !== null) {
+    if (current.replacedBy !== null || current.user.locked) {
       return this.signOutEverywhere(current.userId);
     }
     if (current.revokedAt !== null || current.expiresAt <= new Date()) {
@@ -92,9 +93,15 @@ export class RefreshTokenService {
     });
   }
 
-  /** Revokes every refresh token of a User, which signs them out everywhere. */
-  async revokeAllOf(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
+  /**
+   * Revokes every refresh token of a User, which signs them out everywhere.
+   * Pass a transaction to revoke them together with another change.
+   */
+  async revokeAllOf(
+    userId: string,
+    transaction: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await transaction.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });

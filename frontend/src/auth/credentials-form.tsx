@@ -25,6 +25,8 @@ interface CredentialsFormProps {
   readonly send: (credentials: Credentials) => Promise<AuthResponse>;
   readonly passwordAutoComplete: 'current-password' | 'new-password';
   readonly passwordHint?: string;
+  /** An error to show until the person submits the form, such as why they were signed out. */
+  readonly initialError?: string | null;
   /** A link to the other way in. */
   readonly children: ReactNode;
 }
@@ -46,6 +48,7 @@ export function CredentialsForm({
   send,
   passwordAutoComplete,
   passwordHint,
+  initialError = null,
   children,
 }: CredentialsFormProps) {
   const { signIn } = useAuth();
@@ -83,7 +86,8 @@ export function CredentialsForm({
 
   const error =
     invalidCredentials ??
-    (request.error === null ? null : errorMessage(request.error));
+    (request.error === null ? null : errorMessage(request.error)) ??
+    (request.isIdle ? initialError : null);
 
   return (
     <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">

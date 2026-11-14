@@ -39,5 +39,7 @@ const authEnvSchema = z.object({
     // Every route needs a signed-in User unless it is marked @Public().
     { provide: APP_GUARD, useClass: AuthenticationGuard },
   ],
+  // Locking a User and setting their password sign them out everywhere.
+  exports: [RefreshTokenService],
 })
 export class AuthModule {}

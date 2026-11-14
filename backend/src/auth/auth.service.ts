@@ -14,6 +14,7 @@ import argon2 from 'argon2';
 import type { z } from 'zod';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AccountLockedException } from './account-locked.exception.js';
 import { AuthTokenService } from './auth-token.service.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 import { toUser } from './users.js';
@@ -77,6 +78,11 @@ export class AuthService {
     const passwordMatches = await argon2.verify(passwordHash, request.password);
     if (record === null || !passwordMatches) {
       throw new UnauthorizedException(WRONG_CREDENTIALS);
+    }
+    // Only after the password matched, so that it reveals nothing to anyone
+    // who doesn't know it.
+    if (record.locked) {
+      throw new AccountLockedException();
     }
     return this.signedIn(
       toUser(record),

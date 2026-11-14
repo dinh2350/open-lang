@@ -26,6 +26,8 @@ model User {
   /// argon2id hash; the password itself is never stored.
   passwordHash String
   role          Role           @default(member)
+  /// A Locked User can't sign in or call the backend (GLOSSARY.md).
+  locked        Boolean        @default(false)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]

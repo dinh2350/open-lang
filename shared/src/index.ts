@@ -1,4 +1,6 @@
 export {
+  ACCOUNT_LOCKED,
+  accountLockedResponseSchema,
   authResponseSchema,
   errorResponseSchema,
   MINIMUM_PASSWORD_LENGTH,
@@ -13,10 +15,14 @@ export {
   type User,
 } from './auth.ts';
 export {
+  changeLockedRequestSchema,
   changeRoleRequestSchema,
+  setPasswordRequestSchema,
   userDetailsSchema,
   usersResponseSchema,
+  type ChangeLockedRequest,
   type ChangeRoleRequest,
+  type SetPasswordRequest,
   type UserDetails,
   type UsersResponse,
 } from './admin-users.ts';
