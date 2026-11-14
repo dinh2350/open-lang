@@ -7,23 +7,28 @@ A web app where a person talks out loud with an AI voice Agent from the browser.
 Use Node 24 (`.nvmrc`) and pnpm 10 (`corepack enable pnpm`), then:
 
 ```sh
-pnpm install
-cp backend/.env.example backend/.env
+pnpm install                        # also generates the Prisma client
+cp .env.example .env
+cp backend/.env.example backend/.env   # then set JWT_SECRET: openssl rand -base64 48
 cp agent/.env.example agent/.env
 cp frontend/.env.example frontend/.env
-docker compose up --detach --wait   # the LiveKit server
+docker compose up --detach --wait   # the LiveKit server and Postgres
+pnpm db:migrate                     # creates the tables
 pnpm dev                            # frontend, backend and Agent
 ```
 
+Open http://localhost:5173 and register. If another Postgres already uses port 5432, set `POSTGRES_PORT` in `.env` and the same port in `DATABASE_URL` in `backend/.env`.
+
 ## Commands
 
-| Command                                 | What it does                                                      |
-| --------------------------------------- | ----------------------------------------------------------------- |
-| `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.             |
-| `pnpm test`                             | Runs every fast test with coverage. Needs no keys and no LiveKit. |
-| `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.            |
-| `pnpm check`                            | Format check, lint, typecheck and tests.                          |
-| `pnpm sonar:up`, `sonar:setup`, `sonar` | The local SonarQube quality gate.                                 |
+| Command                                 | What it does                                                                                                                                              |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.                                                                                                     |
+| `pnpm test`                             | Runs every fast test with coverage. Needs Docker for the backend's Postgres (Testcontainers), but no keys and no LiveKit.                                 |
+| `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.                                                                                                    |
+| `pnpm db:migrate`                       | Regenerates the Prisma client and runs `prisma migrate dev`: applies migrations, and creates one after a schema change (`pnpm db:migrate --name <name>`). |
+| `pnpm check`                            | Format check, lint, typecheck and tests.                                                                                                                  |
+| `pnpm sonar:up`, `sonar:setup`, `sonar` | The local SonarQube quality gate.                                                                                                                         |
 
 ## Quality gates
 
