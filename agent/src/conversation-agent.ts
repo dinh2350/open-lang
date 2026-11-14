@@ -1,6 +1,8 @@
 import { defineAgent, type JobContext, log, voice } from '@livekit/agents';
+import type { Room } from '@livekit/rtc-node';
 import { createSessionOptions, loadAgentConfig } from './config/index.ts';
 
+/** The Agent: a general-purpose English assistant with no tools. */
 const INSTRUCTIONS =
   'You are a helpful general-purpose voice assistant. Always answer in English, briefly and clearly, because your answers are spoken aloud.';
 
@@ -8,18 +10,22 @@ const GREETING_INSTRUCTIONS =
   'Greet the user by saying exactly: "Hello, how can I help?"';
 
 /**
- * The Agent: a general-purpose English assistant with no tools. It speaks
- * first, so the User knows it has joined and is listening.
+ * Starts the Agent in a Conversation's session, joining the room if there is
+ * one, and greets the User first, so they know it is listening. Without a
+ * room, the session runs as in LiveKit's testing docs.
  */
-export class ConversationAgent extends voice.Agent {
-  constructor() {
-    super({ instructions: INSTRUCTIONS });
-  }
-
-  override onEnter(): Promise<void> {
-    this.session.generateReply({ instructions: GREETING_INSTRUCTIONS });
-    return Promise.resolve();
-  }
+export async function startConversation(
+  session: voice.AgentSession,
+  room?: Room,
+): Promise<void> {
+  // In a job, start() also connects to the room.
+  await session.start({
+    agent: new voice.Agent({ instructions: INSTRUCTIONS }),
+    room,
+  });
+  // Greeting only once the room is connected: the Agent's state changes
+  // before that never reach the User's browser.
+  session.generateReply({ instructions: GREETING_INSTRUCTIONS });
 }
 
 /**
@@ -37,8 +43,7 @@ export default defineAgent({
       logger.info({ roomName, reason: event.reason }, 'Conversation ended');
     });
 
-    await session.start({ agent: new ConversationAgent(), room: ctx.room });
-    await ctx.connect();
+    await startConversation(session, ctx.room);
     logger.info(
       {
         roomName,

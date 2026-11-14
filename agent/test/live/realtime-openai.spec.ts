@@ -7,7 +7,7 @@ import {
   createSessionOptions,
   loadAgentConfig,
 } from '../../src/config/index.ts';
-import { ConversationAgent } from '../../src/conversation-agent.ts';
+import { startConversation } from '../../src/conversation-agent.ts';
 
 /** What the Agent says first in a session, as text. */
 function firstAgentMessage(session: voice.AgentSession): Promise<string> {
@@ -38,7 +38,7 @@ describe.skipIf(!process.env.OPENAI_API_KEY)(
 
       try {
         // Without a room, as LiveKit's testing docs do: the User says nothing.
-        await session.start({ agent: new ConversationAgent() });
+        await startConversation(session);
 
         expect(await greeting).toMatch(/hello\W+how can i help/i);
       } finally {
