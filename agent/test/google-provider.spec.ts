@@ -100,7 +100,7 @@ describe('Agent configuration in Realtime mode with Google', () => {
   it('connects to the Gemini Live API with the configured key, and asks for the configured voice', async () => {
     const liveApi = await startFakeRealtimeApi();
     onTestFinished(() => liveApi.close());
-    // Google's SDK reads it when a session connects.
+    // Google's SDK reads it when a RealtimeSession connects.
     vi.stubEnv('GOOGLE_GEMINI_BASE_URL', liveApi.baseUrl);
     onTestFinished(() => {
       vi.unstubAllEnvs();

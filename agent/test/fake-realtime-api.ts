@@ -21,7 +21,7 @@ export interface RealtimeConnection {
 export interface FakeRealtimeApi {
   /** The URL to give the plugin instead of the Provider's, over plain HTTP. */
   readonly baseUrl: string;
-  /** Opens a session on the realtime model, and returns what it sent. */
+  /** Opens a RealtimeSession on the realtime model, and returns what it sent. */
   connect(realtimeModel: unknown): Promise<RealtimeConnection>;
   close(): Promise<void>;
 }

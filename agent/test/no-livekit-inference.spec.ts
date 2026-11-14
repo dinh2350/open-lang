@@ -37,7 +37,7 @@ const pipelineConfigurations = providers.flatMap((stt) =>
 );
 
 /**
- * What the session's turn detection runs on: the realtime model's server,
+ * What the AgentSession's turn detection runs on: the realtime model's server,
  * nothing, or a turn detector model.
  */
 function turnDetectionOf(options: voice.AgentSessionOptions): unknown {

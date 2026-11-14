@@ -10,8 +10,8 @@ import {
 } from './models.ts';
 
 /**
- * The AI vendor whose models the Agent uses. The `fake` Provider makes no AI
- * calls and needs no key, so end-to-end tests run without real AI calls.
+ * Who serves the Agent's AI models: OpenAI or Google. The `fake` Provider
+ * makes no AI calls and needs no key, so end-to-end tests run without them.
  */
 export type Provider = 'openai' | 'google' | 'fake';
 

@@ -34,8 +34,8 @@ export function createSessionOptions(
     ...options,
     turnHandling: {
       ...options.turnHandling,
-      // Interruptions are detected from voice activity. Left unset, a session
-      // with a VAD, a speech-to-text model and a turn detector uses adaptive
+      // Interruptions are detected from voice activity. Left unset, an
+      // AgentSession with a VAD, a speech-to-text model and a turn detector uses adaptive
       // interruption detection in dev mode, which calls LiveKit Inference.
       interruption: { mode: 'vad' },
     },
@@ -73,7 +73,7 @@ function pipelineSessionOptions(
 
 /** What a Provider's plugin builds for each of the Agent's models. */
 interface Plugin<P extends Provider> {
-  /** Realtime mode's session options, around one model that listens and speaks. */
+  /** Realtime mode's AgentSession options, around one model that listens and speaks. */
   realtime(config: SpeakingModelConfig<P>): voice.AgentSessionOptions;
   stt(config: ModelConfig<P>, vad: inference.VAD): stt.STT | undefined;
   llm(config: ModelConfig<P>): llm.LLM;
