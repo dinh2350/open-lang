@@ -1,9 +1,9 @@
 import { defineAgent, type JobContext, log, voice } from '@livekit/agents';
 import type { Room } from '@livekit/rtc-node';
 import {
-  type AgentConfig,
   createSessionOptions,
   loadAgentConfig,
+  modelsOf,
 } from './config/index.ts';
 
 /** The Agent: a general-purpose English assistant with no tools. */
@@ -51,24 +51,3 @@ export default defineAgent({
     logger.info({ roomName, ...modelsOf(config) }, 'Conversation started');
   },
 });
-
-/** One model of the Agent: who provides it, and which one. */
-function modelOf({ provider, model }: { provider: string; model: string }) {
-  return { provider, model };
-}
-
-/**
- * The Agent Mode, Providers and models to log, so a developer knows which
- * setup they are listening to. Picked field by field: never an API key.
- */
-function modelsOf(config: AgentConfig) {
-  if (config.agentMode === 'realtime') {
-    return { agentMode: config.agentMode, ...modelOf(config.realtime) };
-  }
-  return {
-    agentMode: config.agentMode,
-    stt: modelOf(config.stt),
-    llm: modelOf(config.llm),
-    tts: modelOf(config.tts),
-  };
-}
