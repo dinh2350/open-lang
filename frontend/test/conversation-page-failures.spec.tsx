@@ -4,8 +4,15 @@ import { ConnectionState } from 'livekit-client';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
-import { backend } from './backend';
+import { backend, roomTokensIssued } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
+
+/** The Room Tokens of every room the Room connected to, oldest first. */
+function roomTokensUsed(
+  liveKit: ReturnType<typeof createUnconnectedRoom>,
+): string[] {
+  return liveKit.connections().map((connection) => connection.participantToken);
+}
 
 /** Fake timers for the current test, and a User whose typing follows them. */
 function startFakeTimers() {
@@ -92,5 +99,66 @@ describe('Conversation page failures', () => {
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+  });
+
+  describe('pressing Start again', () => {
+    it('starts a fresh attempt with a new Room Token once the User allows the microphone', async () => {
+      const liveKit = createUnconnectedRoom();
+      liveKit.denyMicrophoneAccess();
+      render(<ConversationPage room={liveKit.room} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await screen.findByRole('alert');
+
+      liveKit.allowMicrophoneAccess();
+      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Waiting for the Agent',
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
+      expect(freshAttempt).toBe(roomTokensIssued().at(-1));
+      expect(freshAttempt).not.toBe(failedAttempt);
+    });
+
+    it('starts a fresh attempt with a new Room Token once the backend issues Room Tokens again', async () => {
+      backend.use(http.post('/api/token', () => HttpResponse.error()));
+      const liveKit = createUnconnectedRoom();
+      render(<ConversationPage room={liveKit.room} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await screen.findByRole('alert');
+
+      backend.resetHandlers();
+      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Waiting for the Agent',
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(roomTokensUsed(liveKit)).toEqual([roomTokensIssued().at(-1)]);
+    });
+
+    it('starts a fresh attempt with a new Room Token, which the Agent can join, after the Agent was unavailable', async () => {
+      const user = startFakeTimers();
+      const liveKit = createUnconnectedRoom();
+      render(<ConversationPage room={liveKit.room} />);
+      await user.click(screen.getByRole('button', { name: 'Start' }));
+      await act(() => vi.advanceTimersByTimeAsync(15_000));
+      expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+
+      await user.click(screen.getByRole('button', { name: 'Start' }));
+      await screen.findByText('Waiting for the Agent…');
+      act(() => {
+        liveKit.agentJoins();
+      });
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'The Agent has joined.',
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
+      expect(freshAttempt).toBe(roomTokensIssued().at(-1));
+      expect(freshAttempt).not.toBe(failedAttempt);
+    });
   });
 });

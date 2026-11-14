@@ -58,8 +58,11 @@ export function createUnconnectedRoom() {
     }
     return Promise.resolve();
   });
+  const { localParticipant } = room;
+  const askBrowserForMicrophone =
+    localParticipant.setMicrophoneEnabled.bind(localParticipant);
   const setMicrophoneEnabled = vi
-    .spyOn(room.localParticipant, 'setMicrophoneEnabled')
+    .spyOn(localParticipant, 'setMicrophoneEnabled')
     .mockResolvedValue(undefined);
 
   return {
@@ -72,7 +75,7 @@ export function createUnconnectedRoom() {
      * once the room has connected, when a person would answer the prompt.
      */
     denyMicrophoneAccess(): void {
-      setMicrophoneEnabled.mockRestore();
+      setMicrophoneEnabled.mockImplementation(askBrowserForMicrophone);
       stubBrowserMicrophone(
         () =>
           new Promise((_resolve, reject) => {
@@ -81,6 +84,10 @@ export function createUnconnectedRoom() {
             });
           }),
       );
+    },
+    /** The User allows the microphone again; it publishes nothing. */
+    allowMicrophoneAccess(): void {
+      setMicrophoneEnabled.mockResolvedValue(undefined);
     },
     /** The Agent joins the room and reports that it is listening. */
     agentJoins(): void {
