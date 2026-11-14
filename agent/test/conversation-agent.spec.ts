@@ -39,6 +39,27 @@ describe('Agent dispatched into a Conversation room', () => {
     );
   });
 
+  it('logs each step of Pipeline mode with its Provider and model when the Conversation starts', async () => {
+    vi.stubEnv('AGENT_MODE', 'pipeline');
+    vi.stubEnv('STT_PROVIDER', 'fake');
+    vi.stubEnv('LLM_PROVIDER', 'fake');
+    vi.stubEnv('TTS_PROVIDER', 'fake');
+
+    const job = await dispatchToRoom(conversationAgent, 'conversation-321');
+    await job.end();
+
+    expect(job.logs()).toContainEqual(
+      expect.objectContaining({
+        msg: 'Conversation started',
+        roomName: 'conversation-321',
+        agentMode: 'pipeline',
+        stt: { provider: 'fake', model: 'none' },
+        llm: { provider: 'fake', model: 'fake-llm' },
+        tts: { provider: 'fake', model: 'none' },
+      }),
+    );
+  });
+
   it('logs that the Conversation ended, with the room name and the reason, when its job ends', async () => {
     const job = await dispatchToRoom(conversationAgent, 'conversation-456');
 
