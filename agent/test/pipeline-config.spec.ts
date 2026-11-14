@@ -1,7 +1,32 @@
-import { inference, voice } from '@livekit/agents';
+import assert from 'node:assert/strict';
+import { inference, initializeLogger, llm, voice } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+/**
+ * Stands in for OpenAI's API: records the body of each request and answers
+ * with an empty stream. Stub it before building the models: the OpenAI
+ * client picks up `fetch` when it is created.
+ */
+function fakeOpenAiApi(): unknown[] {
+  const requestBodies: unknown[] = [];
+  vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
+    const body = init?.body;
+    assert(typeof body === 'string', 'The OpenAI client sends JSON text');
+    requestBodies.push(JSON.parse(body));
+    return Promise.resolve(
+      new Response('data: [DONE]\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+    );
+  });
+  return requestBodies;
+}
 
 const pipelineWithOpenAi = {
   AGENT_MODE: 'pipeline',
@@ -39,6 +64,29 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
     expect(options.llm).toHaveProperty('model', 'gpt-6-luna');
     expect(options.tts).toBeInstanceOf(openai.TTS);
     expect(options.tts).toHaveProperty('model', 'gpt-4o-mini-tts');
+  });
+
+  it('asks OpenAI to answer without reasoning, so spoken replies start quickly', async () => {
+    initializeLogger({ pretty: false, level: 'error' });
+    const requestBodies = fakeOpenAiApi();
+    const languageModel = createSessionOptions(
+      loadAgentConfig(pipelineWithOpenAi),
+    ).llm;
+    assert(languageModel instanceof llm.LLM);
+    const chatCtx = llm.ChatContext.empty();
+    chatCtx.addMessage({ role: 'user', content: 'Hello' });
+
+    // Draining the reply sends the request.
+    for await (const chunk of languageModel.chat({ chatCtx })) {
+      expect(chunk).toBeDefined();
+    }
+
+    expect(requestBodies).toContainEqual(
+      expect.objectContaining({
+        model: 'gpt-6-luna',
+        reasoning_effort: 'none',
+      }),
+    );
   });
 
   it('detects speech with Silero and turns with the local v1-mini turn detector, never LiveKit Inference', () => {

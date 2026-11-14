@@ -86,7 +86,15 @@ function languageModel(config: PipelineConfig['llm']): llm.LLM {
   if (config.provider === 'fake') {
     return new voice.testing.FakeLLM();
   }
-  return new openai.LLM({ model: config.model, apiKey: config.apiKey });
+  return new openai.LLM({
+    model: config.model,
+    apiKey: config.apiKey,
+    // OpenAI's current models reason at medium effort unless told otherwise,
+    // which delays every spoken reply. The plugin turns reasoning off only for
+    // the models it knows; gpt-6 models are newer. Without reasoning, models
+    // such as gpt-6-luna can also call tools on Chat Completions.
+    reasoningEffort: 'none',
+  });
 }
 
 /** The fake Provider speaks nothing: the Agent's replies stay text. */
