@@ -15,10 +15,16 @@ import type { z } from 'zod';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthTokenService } from './auth-token.service.js';
+import { RefreshTokenService } from './refresh-token.service.js';
 import { toUser } from './users.js';
 
 export type ValidRegisterRequest = z.output<typeof registerRequestSchema>;
 export type ValidSignInRequest = z.output<typeof signInRequestSchema>;
+
+/** A signed-in User: the response body, plus the refresh token for the cookie. */
+export interface SignedIn extends AuthResponse {
+  readonly refreshToken: string;
+}
 
 /** The same for a wrong email and a wrong password, so it reveals neither. */
 const WRONG_CREDENTIALS = 'Wrong email or password.';
@@ -42,10 +48,11 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authTokens: AuthTokenService,
+    private readonly refreshTokens: RefreshTokenService,
   ) {}
 
   /** Creates a Member and signs them in. */
-  async register(request: ValidRegisterRequest): Promise<AuthResponse> {
+  async register(request: ValidRegisterRequest): Promise<SignedIn> {
     const passwordHash = await argon2.hash(request.password);
     const record = await this.prisma.user
       .create({ data: { email: request.email, passwordHash } })
@@ -57,7 +64,7 @@ export class AuthService {
     return this.signedIn(toUser(record));
   }
 
-  async signIn(request: ValidSignInRequest): Promise<AuthResponse> {
+  async signIn(request: ValidSignInRequest): Promise<SignedIn> {
     const record = await this.prisma.user.findUnique({
       where: { email: request.email },
     });
@@ -71,7 +78,11 @@ export class AuthService {
     return this.signedIn(toUser(record));
   }
 
-  private async signedIn(user: User): Promise<AuthResponse> {
-    return { authToken: await this.authTokens.issueAuthToken(user), user };
+  private async signedIn(user: User): Promise<SignedIn> {
+    return {
+      authToken: await this.authTokens.issueAuthToken(user),
+      user,
+      refreshToken: await this.refreshTokens.issue(user.id),
+    };
   }
 }

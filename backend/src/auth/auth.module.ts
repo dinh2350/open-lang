@@ -8,6 +8,7 @@ import { AuthTokenService } from './auth-token.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuthenticationGuard } from './authentication.guard.js';
+import { RefreshTokenService } from './refresh-token.service.js';
 
 const authEnvSchema = z.object({
   // HS256 needs a key of at least 256 bits.
@@ -34,6 +35,7 @@ const authEnvSchema = z.object({
   providers: [
     AuthService,
     AuthTokenService,
+    RefreshTokenService,
     // Every route needs a signed-in User unless it is marked @Public().
     { provide: APP_GUARD, useClass: AuthenticationGuard },
   ],
