@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { vi } from 'vitest';
 
 export const TEST_LIVEKIT_URL = 'ws://livekit.test:7880';
 const TEST_AGENT_NAME = 'test-agent';
@@ -55,4 +56,30 @@ export const backend = setupServer(
 export function resetBackend(): void {
   backend.resetHandlers();
   issuedRoomTokens.length = 0;
+}
+
+let requestsInFlight = 0;
+backend.events.on('request:start', () => {
+  requestsInFlight += 1;
+});
+backend.events.on('request:end', () => {
+  requestsInFlight -= 1;
+});
+
+/**
+ * Waits until the backend has answered every request sent so far. When a
+ * Conversation ends or the page unmounts, useSession fetches the next Room
+ * Token in the background; waiting keeps that request from meeting the next
+ * test's handlers.
+ */
+export async function allRequestsAnswered(): Promise<void> {
+  // A request sent a moment ago reaches the backend after pending microtasks.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await vi.waitFor(() => {
+    if (requestsInFlight > 0) {
+      throw new Error(
+        `${String(requestsInFlight)} requests are waiting for the backend`,
+      );
+    }
+  });
 }
