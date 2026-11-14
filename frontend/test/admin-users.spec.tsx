@@ -1,14 +1,16 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
-import { App } from '@/app';
 import { adminRequestAuthorizations } from './admin-backend';
 import { PASSWORD, renderApp, submitCredentials } from './app';
-import { authTokensIssued, backendHasUser, backendUsers } from './auth-backend';
+import {
+  authTokensIssued,
+  backendHasUser,
+  backendUsers,
+  browserIsSignedInAs,
+} from './auth-backend';
 import { backend } from './backend';
-import { createUnconnectedRoom } from './unconnected-room';
 
 const GRACE = 'grace@example.test';
 const ADA = 'ada@example.test';
@@ -69,20 +71,13 @@ describe('Admin Users page', () => {
   });
 
   it('sends a Member who opens the Users page to the Conversation page', async () => {
-    backendHasAdminAndMember();
-    const router = createMemoryRouter(
-      [{ path: '*', element: <App room={createUnconnectedRoom().room} /> }],
-      { initialEntries: ['/sign-in'] },
-    );
-    render(<RouterProvider router={router} />);
-    await signInAs(ADA);
+    browserIsSignedInAs(ADA, PASSWORD);
 
-    await act(() => router.navigate('/admin/users'));
+    renderApp('/admin/users');
 
     expect(
       await screen.findByRole('heading', { name: 'Talk to the Agent' }),
     ).toBeVisible();
-    expect(router.state.location.pathname).toBe('/');
     expect(adminRequestAuthorizations()).toEqual([]);
   });
 

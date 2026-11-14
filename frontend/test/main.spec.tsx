@@ -1,6 +1,8 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PASSWORD } from './app';
+import { browserIsSignedInAs, refreshesRequested } from './auth-backend';
 import { backend, TEST_LIVEKIT_URL } from './backend';
 
 describe('The app', () => {
@@ -15,7 +17,8 @@ describe('The app', () => {
     );
   });
 
-  it('opens on sign-in, since a page load starts signed out', async () => {
+  it('opens on sign-in when the browser holds no refresh cookie', async () => {
+    window.history.replaceState(null, '', '/');
     document.body.innerHTML = '<div id="root"></div>';
 
     await import('@/main');
@@ -24,6 +27,21 @@ describe('The app', () => {
       await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
     expect(window.location.pathname).toBe('/sign-in');
+  });
+
+  it('opens on the Conversation page when the browser holds a valid refresh cookie, and refreshes only once', async () => {
+    browserIsSignedInAs('ada@example.test', PASSWORD);
+    window.history.replaceState(null, '', '/');
+    document.body.innerHTML = '<div id="root"></div>';
+
+    await import('@/main');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Talk to the Agent' }),
+    ).toBeVisible();
+    // StrictMode runs effects twice; a second refresh would send a cookie
+    // the first one already rotated, which signs the User out everywhere.
+    expect(refreshesRequested()).toBe(1);
   });
 
   it('refuses to start when index.html has no #root element', async () => {

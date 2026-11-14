@@ -13,10 +13,7 @@ export function AdminNav() {
     return null;
   }
   return (
-    <nav
-      aria-label="Admin"
-      className="fixed top-0 right-0 flex gap-4 p-4 text-sm"
-    >
+    <nav aria-label="Admin" className="flex h-9 items-center gap-4 text-sm">
       <NavLink to="/" end className={linkClassName}>
         Conversation
       </NavLink>
