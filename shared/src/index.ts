@@ -13,6 +13,14 @@ export {
   type User,
 } from './auth.ts';
 export {
+  changeRoleRequestSchema,
+  userDetailsSchema,
+  usersResponseSchema,
+  type ChangeRoleRequest,
+  type UserDetails,
+  type UsersResponse,
+} from './admin-users.ts';
+export {
   roomTokenRequestSchema,
   roomTokenResponseSchema,
   type RoomTokenRequest,
