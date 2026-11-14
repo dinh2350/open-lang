@@ -1,0 +1,40 @@
+import {
+  type AuthResponse,
+  authResponseSchema,
+  errorResponseSchema,
+  type RegisterRequest,
+  type SignInRequest,
+} from '@livekit-platform/shared';
+
+/** The backend turned a request down, with a message meant for the person. */
+export class BackendRefusal extends Error {}
+
+async function requestAuthResponse(
+  path: string,
+  credentials: RegisterRequest | SignInRequest,
+): Promise<AuthResponse> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  if (response.ok) {
+    return authResponseSchema.parse(await response.json());
+  }
+  if (response.status >= 500) {
+    throw new Error(`${path} failed with status ${String(response.status)}`);
+  }
+  const { message } = errorResponseSchema.parse(await response.json());
+  throw new BackendRefusal(
+    Array.isArray(message) ? message.join(' ') : message,
+  );
+}
+
+/** Creates a Member and signs them in. */
+export function register(credentials: RegisterRequest): Promise<AuthResponse> {
+  return requestAuthResponse('/api/auth/register', credentials);
+}
+
+export function signIn(credentials: SignInRequest): Promise<AuthResponse> {
+  return requestAuthResponse('/api/auth/sign-in', credentials);
+}

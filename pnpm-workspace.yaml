@@ -15,11 +15,22 @@ catalog:
 
 onlyBuiltDependencies:
   - '@livekit/rtc-node'
+  # Downloads the Prisma schema engine that `prisma migrate` runs.
+  - '@prisma/engines'
   - '@swc/core'
+  # Uses its prebuilt binary, or compiles one where none ships (Intel Macs).
+  - argon2
   - esbuild
   - lefthook
+  # Checks the Node version before installing.
+  - prisma
 
 # Their install scripts are no-ops (`node -e ""`); they ship prebuilt binaries.
 ignoredBuiltDependencies:
   - '@livekit/blingfire'
   - '@livekit/local-inference'
+  # Optional native speedups for SSH, which Testcontainers doesn't use here,
+  # and a version notice.
+  - cpu-features
+  - protobufjs
+  - ssh2

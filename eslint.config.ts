@@ -12,6 +12,8 @@ import tseslint from 'typescript-eslint';
 export default defineConfig(
   globalIgnores([
     '**/dist/',
+    // Generated code, such as the Prisma client.
+    '**/generated/',
     '**/coverage/',
     '**/playwright-report/',
     '**/test-results/',

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
 
 declare global {
@@ -50,11 +51,21 @@ async function microphoneBytesSent(page: Page): Promise<number> {
     .reduce((total, report) => total + (report.bytesSent ?? 0), 0);
 }
 
-test('a person starts a Conversation, the Agent joins its room, and End leaves it', async ({
+/** Registers a new User from the sign-in page the app opens on. */
+async function registerNewUser(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Register' }).click();
+  await page.getByLabel('Email').fill(`e2e-${randomUUID()}@example.test`);
+  await page.getByLabel('Password').fill('correct horse battery staple');
+  await page.getByRole('button', { name: 'Register' }).click();
+}
+
+test('a person registers, starts a Conversation, the Agent joins its room, and End leaves it', async ({
   page,
 }) => {
   await recordPeerConnections(page);
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await registerNewUser(page);
 
   await page.getByRole('button', { name: 'Start' }).click();
 
