@@ -15,15 +15,15 @@ describe('The app', () => {
     );
   });
 
-  it('opens on the Conversation page', async () => {
+  it('opens on sign-in, since a page load starts signed out', async () => {
     document.body.innerHTML = '<div id="root"></div>';
 
     await import('@/main');
 
     expect(
-      await screen.findByRole('heading', { name: 'Talk to the Agent' }),
+      await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+    expect(window.location.pathname).toBe('/sign-in');
   });
 
   it('refuses to start when index.html has no #root element', async () => {

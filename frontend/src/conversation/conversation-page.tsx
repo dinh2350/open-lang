@@ -6,6 +6,7 @@ import {
 } from '@livekit/components-react';
 import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/auth/auth-context';
 import { Button } from '@/components/ui/button';
 import { createRoomTokenSource } from './room-token-source';
 
@@ -49,7 +50,10 @@ export function ConversationPage({
   room,
   agentJoinTimeoutMilliseconds = 15_000,
 }: ConversationPageProps) {
-  const [roomTokenSource] = useState(createRoomTokenSource);
+  const { authorizedFetch } = useAuth();
+  const [roomTokenSource] = useState(() =>
+    createRoomTokenSource(authorizedFetch),
+  );
   const session = useSession(roomTokenSource, {
     room,
     agentConnectTimeoutMilliseconds: agentJoinTimeoutMilliseconds,

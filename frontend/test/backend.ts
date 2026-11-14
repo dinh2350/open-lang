@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
+import { authHandlers, resetAuthBackend } from './auth-backend';
 
 export const TEST_LIVEKIT_URL = 'ws://livekit.test:7880';
 const TEST_AGENT_NAME = 'test-agent';
@@ -33,15 +34,23 @@ function roomToken(roomName: string): string {
 }
 
 const issuedRoomTokens: string[] = [];
+const roomTokenAuthorizations: (string | null)[] = [];
 
 /** The Room Tokens the backend issued in the current test, oldest first. */
 export function roomTokensIssued(): readonly string[] {
   return issuedRoomTokens;
 }
 
+/** The `Authorization` header of every Room Token request, oldest first. */
+export function roomTokenRequestAuthorizations(): readonly (string | null)[] {
+  return roomTokenAuthorizations;
+}
+
 /** The backend's `/api` endpoints, as the browser sees them. */
 export const backend = setupServer(
-  http.post('/api/token', () => {
+  ...authHandlers,
+  http.post('/api/token', ({ request }) => {
+    roomTokenAuthorizations.push(request.headers.get('Authorization'));
     const participantToken = roomToken(
       `conversation-${String(issuedRoomTokens.length + 1)}`,
     );
@@ -56,6 +65,8 @@ export const backend = setupServer(
 export function resetBackend(): void {
   backend.resetHandlers();
   issuedRoomTokens.length = 0;
+  roomTokenAuthorizations.length = 0;
+  resetAuthBackend();
 }
 
 let requestsInFlight = 0;
