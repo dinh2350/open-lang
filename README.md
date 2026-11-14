@@ -20,7 +20,7 @@ pnpm dev                            # frontend, backend and Agent
 
 Open http://localhost:5173 and register, or sign in as the first Admin (`SEED_ADMIN_EMAIL`) to manage Users. If another Postgres already uses port 5432, set `POSTGRES_PORT` in `.env` and the same port in `DATABASE_URL` in `backend/.env`.
 
-The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER=openai` and `OPENAI_API_KEY` in `agent/.env`. The Agent refuses to start, naming the variable, when its configuration is invalid.
+The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER=openai` and `OPENAI_API_KEY` in `agent/.env`. To try Pipeline mode instead, set `AGENT_MODE=pipeline` and choose `openai` for `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER`. The Agent refuses to start, naming the variable, when its configuration is invalid.
 
 ## Commands
 

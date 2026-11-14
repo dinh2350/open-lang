@@ -28,7 +28,7 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
       REALTIME_MODEL: 'gpt-realtime-2.1-mini',
     });
 
-    expect(config.realtime.model).toBe('gpt-realtime-2.1-mini');
+    expect(config).toHaveProperty('realtime.model', 'gpt-realtime-2.1-mini');
   });
 
   it('uses the voice set in REALTIME_VOICE', () => {
@@ -37,7 +37,7 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
       REALTIME_VOICE: 'cedar',
     });
 
-    expect(config.realtime).toHaveProperty('voice', 'cedar');
+    expect(config).toHaveProperty('realtime.voice', 'cedar');
   });
 
   it('treats empty optional variables, as copied from .env.example, as not set', () => {
@@ -47,11 +47,14 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
       REALTIME_VOICE: '',
     });
 
-    expect(config.realtime).toEqual({
-      provider: 'openai',
-      model: 'gpt-realtime-2.1',
-      voice: 'marin',
-      apiKey: 'test-key',
+    expect(config).toEqual({
+      agentMode: 'realtime',
+      realtime: {
+        provider: 'openai',
+        model: 'gpt-realtime-2.1',
+        voice: 'marin',
+        apiKey: 'test-key',
+      },
     });
   });
 
@@ -65,6 +68,15 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
 
     expect(options.llm).toBeInstanceOf(openai.realtime.RealtimeModel);
     expect(options.llm).toHaveProperty('model', 'gpt-realtime-2.1-mini');
+  });
+
+  it("transcribes the User with gpt-live-transcribe, Pipeline mode's default, instead of the plugin's deprecated gpt-4o-mini-transcribe", () => {
+    const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
+
+    // The plugin has no public getter for its session settings.
+    expect(options.llm).toHaveProperty('_options.inputAudioTranscription', {
+      model: 'gpt-live-transcribe',
+    });
   });
 
   it("leaves turn detection to OpenAI's server, with no local VAD and no LiveKit Inference", () => {
@@ -83,14 +95,8 @@ describe('Agent configuration refuses to start the Agent, naming the bad variabl
     expect(() =>
       loadAgentConfig({ ...realtimeWithOpenAi, AGENT_MODE: agentMode }),
     ).toThrow(
-      /Invalid Agent configuration:[\s\S]*AGENT_MODE must be "realtime"/,
+      /Invalid Agent configuration:[\s\S]*AGENT_MODE must be "realtime" or "pipeline"/,
     );
-  });
-
-  it('when AGENT_MODE is pipeline, which is not supported yet', () => {
-    expect(() =>
-      loadAgentConfig({ ...realtimeWithOpenAi, AGENT_MODE: 'pipeline' }),
-    ).toThrow(/AGENT_MODE "pipeline" is not supported yet/);
   });
 
   it.each([
