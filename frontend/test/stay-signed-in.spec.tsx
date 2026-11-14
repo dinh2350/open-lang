@@ -7,10 +7,12 @@ import {
   authRequestsReceived,
   authTokensIssued,
   backendHasUser,
+  refreshesRequested,
 } from './auth-backend';
 import { backend, roomTokenRequestAuthorizations } from './backend';
 
-const ONE_DAY = 24 * 60 * 60_000;
+const ONE_MINUTE = 60_000;
+const ONE_DAY = 24 * 60 * ONE_MINUTE;
 
 /** Moves the clock forward, for the app and the backend alike. */
 function travelForward(milliseconds: number): void {
@@ -64,5 +66,37 @@ describe('Staying signed in', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
+  });
+
+  it('gets a new Auth Token once and retries, when a request finds the Auth Token expired', async () => {
+    await signInAs('ada@example.test');
+
+    // The Room Token prepared on load has expired too, so Start asks again.
+    travelForward(16 * ONE_MINUTE);
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(await screen.findByRole('status')).toBeVisible();
+    const [expired, renewed] = authTokensIssued();
+    expect(roomTokenRequestAuthorizations().slice(-2)).toEqual([
+      `Bearer ${expired}`,
+      `Bearer ${renewed}`,
+    ]);
+  });
+
+  it('sends the User to sign-in when the Auth Token has expired and the refresh cookie no longer works', async () => {
+    await signInAs('ada@example.test');
+    const refreshesBefore = refreshesRequested();
+    const roomTokenRequestsBefore = roomTokenRequestAuthorizations().length;
+
+    travelForward(8 * ONE_DAY);
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in' }),
+    ).toBeVisible();
+    expect(refreshesRequested() - refreshesBefore).toBe(1);
+    expect(
+      roomTokenRequestAuthorizations().length - roomTokenRequestsBefore,
+    ).toBe(1);
   });
 });
