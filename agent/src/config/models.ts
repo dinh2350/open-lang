@@ -6,12 +6,19 @@ export const DEFAULT_REALTIME_MODEL = {
   // Released 2026-07-06 on the GA Realtime API; OpenAI's replacement for the
   // plugin default `gpt-realtime`. https://developers.openai.com/api/docs/models/gpt-realtime-2.1
   openai: 'gpt-realtime-2.1',
+  // GA on the Gemini API since 2026-09-15 and on Vertex AI, under the same
+  // name. The plugin's defaults are a Preview and a Vertex AI model retiring on
+  // 2026-12-13. https://aistudio.google.com/docs/deprecations
+  google: 'gemini-3.8-live',
 } as const;
 
 /** Default voice of each Provider in Realtime mode. */
 export const DEFAULT_REALTIME_VOICE = {
   // The plugin's default, and one of OpenAI's two newest Realtime voices.
   openai: 'marin',
+  // One of Gemini's 30 prebuilt voices, and its text-to-speech default too,
+  // so both Agent Modes sound alike.
+  google: 'Kore',
 } as const;
 
 /** Default speech-to-text model of each Provider in Pipeline mode. */

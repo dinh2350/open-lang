@@ -144,7 +144,7 @@ describe('Agent configuration in Pipeline mode refuses to start the Agent, namin
   ])('when %s %s', (variable, _, provider) => {
     expect(() =>
       loadAgentConfig({ ...pipelineWithOpenAi, [variable]: provider }),
-    ).toThrow(`${variable} must be "openai" or "fake"`);
+    ).toThrow(`${variable} must be "openai", "google" or "fake"`);
   });
 
   it.each(['STT_PROVIDER', 'LLM_PROVIDER', 'TTS_PROVIDER'])(
@@ -191,7 +191,7 @@ describe('Agent configuration in Pipeline mode refuses to start the Agent, namin
         TTS_PROVIDER: 'fake',
       }),
     ).toThrow(
-      /OPENAI_API_KEY is required when STT_PROVIDER is "openai"[\s\S]*LLM_PROVIDER must be "openai" or "fake"/,
+      /OPENAI_API_KEY is required when STT_PROVIDER is "openai"[\s\S]*LLM_PROVIDER must be "openai", "google" or "fake"/,
     );
   });
 });

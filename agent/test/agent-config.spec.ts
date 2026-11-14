@@ -105,7 +105,7 @@ describe('Agent configuration refuses to start the Agent, naming the bad variabl
   ])('when REALTIME_PROVIDER %s', (_, provider) => {
     expect(() =>
       loadAgentConfig({ ...realtimeWithOpenAi, REALTIME_PROVIDER: provider }),
-    ).toThrow(/REALTIME_PROVIDER must be "openai" or "fake"/);
+    ).toThrow('REALTIME_PROVIDER must be "openai", "google" or "fake"');
   });
 
   it.each([

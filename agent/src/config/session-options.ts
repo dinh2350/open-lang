@@ -5,6 +5,7 @@ import {
   type tts,
   voice,
 } from '@livekit/agents';
+import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
 import type { AgentConfig } from './agent-config.ts';
 import { fakeProviderSessionOptions } from './fake-provider.ts';
@@ -25,21 +26,40 @@ export function createSessionOptions(
 function realtimeSessionOptions({
   realtime,
 }: RealtimeConfig): voice.AgentSessionOptions {
-  if (realtime.provider === 'fake') {
-    return fakeProviderSessionOptions();
+  switch (realtime.provider) {
+    case 'openai':
+      return serverDetectsTurns(
+        new openai.realtime.RealtimeModel({
+          model: realtime.model,
+          voice: realtime.voice,
+          apiKey: realtime.apiKey,
+          // The plugin's default, gpt-4o-mini-transcribe, is deprecated.
+          inputAudioTranscription: { model: DEFAULT_STT_MODEL.openai },
+        }),
+      );
+    case 'google':
+      return serverDetectsTurns(
+        new google.realtime.RealtimeModel({
+          model: realtime.model,
+          voice: realtime.voice,
+          ...realtime.credentials,
+        }),
+      );
+    case 'fake':
+      return fakeProviderSessionOptions();
   }
-  const { model, voice, apiKey } = realtime;
+}
+
+/**
+ * The realtime model's server detects when the User has finished speaking.
+ * Left unset, AgentSession would also load a local Silero VAD and a turn
+ * detector that calls LiveKit Inference.
+ */
+function serverDetectsTurns(
+  realtimeModel: llm.RealtimeModel,
+): voice.AgentSessionOptions {
   return {
-    llm: new openai.realtime.RealtimeModel({
-      model,
-      voice,
-      apiKey,
-      // The plugin's default, gpt-4o-mini-transcribe, is deprecated.
-      inputAudioTranscription: { model: DEFAULT_STT_MODEL.openai },
-    }),
-    // OpenAI's server detects when the User has finished speaking. Left
-    // unset, AgentSession would also load a local Silero VAD and a turn
-    // detector that calls LiveKit Inference.
+    llm: realtimeModel,
     vad: null,
     turnHandling: { turnDetection: 'realtime_llm' },
   };

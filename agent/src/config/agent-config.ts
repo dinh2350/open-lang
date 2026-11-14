@@ -32,7 +32,9 @@ function modelVariable(name: string, defaultModel: string) {
 
 /** The error for a Provider variable that names no known Provider. */
 function unknownProvider(providerVariable: string) {
-  return { error: `${providerVariable} must be "openai" or "fake"` };
+  return {
+    error: `${providerVariable} must be "openai", "google" or "fake"`,
+  };
 }
 
 /** The OpenAI API key, required whenever a Provider variable selects OpenAI. */
@@ -43,6 +45,80 @@ function openAiApiKey(providerVariable: string) {
       error: `OPENAI_API_KEY is required when ${providerVariable} is "openai"`,
     }),
   );
+}
+
+/** A variable that a chosen setup needs; its error says which setup. */
+function requiredVariable(name: string, requiredWhen: string) {
+  return z.preprocess(
+    unsetIfEmpty,
+    z.string({ error: `${name} is required when ${requiredWhen}` }),
+  );
+}
+
+/**
+ * Google's credentials, in the shape the plugin's options take: a Gemini API
+ * key, or Vertex AI in a project and location. Vertex AI authenticates with
+ * Google's Application Default Credentials. As in Google's own SDK,
+ * GOOGLE_GENAI_USE_VERTEXAI chooses between them.
+ */
+function googleCredentials(providerVariable: string) {
+  const selected = `${providerVariable} is "google"`;
+  return z.discriminatedUnion(
+    'GOOGLE_GENAI_USE_VERTEXAI',
+    [
+      z
+        .object({
+          GOOGLE_GENAI_USE_VERTEXAI: z.literal(['false', '']).optional(),
+          GOOGLE_API_KEY: requiredVariable(
+            'GOOGLE_API_KEY',
+            `${selected}, unless GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+        })
+        .transform((env) => ({
+          vertexai: false as const,
+          apiKey: env.GOOGLE_API_KEY,
+        })),
+      z
+        .object({
+          GOOGLE_GENAI_USE_VERTEXAI: z.literal('true'),
+          GOOGLE_CLOUD_PROJECT: requiredVariable(
+            'GOOGLE_CLOUD_PROJECT',
+            `${selected} and GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+          GOOGLE_CLOUD_LOCATION: requiredVariable(
+            'GOOGLE_CLOUD_LOCATION',
+            `${selected} and GOOGLE_GENAI_USE_VERTEXAI is "true"`,
+          ),
+        })
+        .transform((env) => ({
+          vertexai: true as const,
+          project: env.GOOGLE_CLOUD_PROJECT,
+          location: env.GOOGLE_CLOUD_LOCATION,
+        })),
+    ],
+    { error: 'GOOGLE_GENAI_USE_VERTEXAI must be "true" or "false"' },
+  );
+}
+
+/**
+ * Parses the environment with another schema inside a transform, and reports
+ * its issues as the transform's own. zod rejects an intersection as a
+ * discriminated-union option, so an option that needs a second schema parses
+ * it here. On failure the result is never used.
+ */
+function parseWithin<T>(
+  schema: z.ZodType<T>,
+  env: unknown,
+  ctx: z.RefinementCtx,
+): T {
+  const result = schema.safeParse(env);
+  if (!result.success) {
+    for (const { message, path, input } of result.error.issues) {
+      ctx.addIssue({ code: 'custom', message, path, input });
+    }
+    return z.NEVER;
+  }
+  return result.data;
 }
 
 const realtimeMode = { AGENT_MODE: z.literal('realtime') };
@@ -71,6 +147,33 @@ const openAiRealtimeSchema = z
     },
   }));
 
+const googleRealtimeSchema = z
+  .looseObject({
+    ...realtimeMode,
+    REALTIME_PROVIDER: z.literal('google'),
+    REALTIME_MODEL: modelVariable(
+      'REALTIME_MODEL',
+      DEFAULT_REALTIME_MODEL.google,
+    ),
+    REALTIME_VOICE: z.preprocess(
+      unsetIfEmpty,
+      z.string().default(DEFAULT_REALTIME_VOICE.google),
+    ),
+  })
+  .transform((env, ctx) => ({
+    agentMode: env.AGENT_MODE,
+    realtime: {
+      provider: env.REALTIME_PROVIDER,
+      model: env.REALTIME_MODEL,
+      voice: env.REALTIME_VOICE,
+      credentials: parseWithin(
+        googleCredentials('REALTIME_PROVIDER'),
+        env,
+        ctx,
+      ),
+    },
+  }));
+
 const fakeRealtimeSchema = z
   .object({ ...realtimeMode, REALTIME_PROVIDER: z.literal('fake') })
   .transform((env) => ({
@@ -80,7 +183,7 @@ const fakeRealtimeSchema = z
 
 const realtimeSchema = z.discriminatedUnion(
   'REALTIME_PROVIDER',
-  [openAiRealtimeSchema, fakeRealtimeSchema],
+  [openAiRealtimeSchema, googleRealtimeSchema, fakeRealtimeSchema],
   unknownProvider('REALTIME_PROVIDER'),
 );
 
