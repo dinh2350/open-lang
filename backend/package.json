@@ -8,6 +8,7 @@
     "start": "nest start --exec \"node --env-file-if-exists=.env\"",
     "db:migrate": "prisma generate && prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "nest start --entryFile seed --exec \"node --env-file-if-exists=.env\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

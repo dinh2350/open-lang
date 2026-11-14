@@ -1,5 +1,6 @@
 import {
   registerRequestSchema,
+  type Role,
   signInRequestSchema,
   type User,
 } from '@livekit-platform/shared';
@@ -34,12 +35,12 @@ let refreshes = 0;
 let refreshCookie: string | null = null;
 
 /** The backend already has this User, as if they had registered earlier. */
-export function backendHasUser(email: string, password: string): User {
-  const user: User = {
-    id: `user-${String(accounts.size + 1)}`,
-    email,
-    role: 'member',
-  };
+export function backendHasUser(
+  email: string,
+  password: string,
+  role: Role = 'member',
+): User {
+  const user: User = { id: `user-${String(accounts.size + 1)}`, email, role };
   accounts.set(email, { user, password });
   return user;
 }
@@ -58,9 +59,34 @@ function issueRefreshCookie(email: string): void {
  * The User signed in in this browser earlier, so the browser holds their
  * refresh cookie.
  */
-export function browserIsSignedInAs(email: string, password: string): User {
-  const user = backendHasUser(email, password);
+export function browserIsSignedInAs(
+  email: string,
+  password: string,
+  role: Role = 'member',
+): User {
+  const user = backendHasUser(email, password, role);
   issueRefreshCookie(email);
+  return user;
+}
+
+/** Every User the backend has, in the order they registered. */
+export function backendUsers(): readonly User[] {
+  return [...accounts.values()].map((account) => account.user);
+}
+
+/** Changes a User's Role on the backend. Returns the User, or `undefined` for an unknown id. */
+export function changeRoleOnBackend(
+  userId: string,
+  role: Role,
+): User | undefined {
+  const account = [...accounts.values()].find(
+    (candidate) => candidate.user.id === userId,
+  );
+  if (account === undefined) {
+    return undefined;
+  }
+  const user = { ...account.user, role };
+  accounts.set(user.email, { ...account, user });
   return user;
 }
 

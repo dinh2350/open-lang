@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
+import { adminHandlers, resetAdminBackend } from './admin-backend';
 import {
   authHandlers,
   holdsValidAuthToken,
@@ -53,6 +54,7 @@ export function roomTokenRequestAuthorizations(): readonly (string | null)[] {
 /** The backend's `/api` endpoints, as the browser sees them. */
 export const backend = setupServer(
   ...authHandlers,
+  ...adminHandlers,
   http.post('/api/token', ({ request }) => {
     const authorization = request.headers.get('Authorization');
     roomTokenAuthorizations.push(authorization);
@@ -80,6 +82,7 @@ export function resetBackend(): void {
   issuedRoomTokens.length = 0;
   roomTokenAuthorizations.length = 0;
   resetAuthBackend();
+  resetAdminBackend();
 }
 
 let requestsInFlight = 0;
