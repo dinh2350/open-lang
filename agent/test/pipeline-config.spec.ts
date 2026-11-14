@@ -55,6 +55,97 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
       'turn-detector-v1-mini',
     );
   });
+
+  it('uses the models set in STT_MODEL, LLM_MODEL and TTS_MODEL, and the voice set in TTS_VOICE', () => {
+    const options = createSessionOptions(
+      loadAgentConfig({
+        ...pipelineWithOpenAi,
+        STT_MODEL: 'gpt-transcribe',
+        LLM_MODEL: 'gpt-6.1-terra',
+        TTS_MODEL: 'gpt-4o-mini-tts-2025-12-15',
+        TTS_VOICE: 'cedar',
+      }),
+    );
+
+    expect(options.stt).toHaveProperty('model', 'gpt-transcribe');
+    expect(options.llm).toHaveProperty('model', 'gpt-6.1-terra');
+    expect(options.tts).toHaveProperty('model', 'gpt-4o-mini-tts-2025-12-15');
+  });
+
+  it('treats empty model and voice variables, as copied from .env.example, as not set', () => {
+    const config = loadAgentConfig({
+      ...pipelineWithOpenAi,
+      STT_MODEL: '',
+      LLM_MODEL: '',
+      TTS_MODEL: '',
+      TTS_VOICE: '',
+    });
+
+    expect(config).toEqual(loadAgentConfig(pipelineWithOpenAi));
+  });
+});
+
+describe('Agent configuration in Pipeline mode refuses to start the Agent, naming the bad variable', () => {
+  it.each([
+    ['STT_PROVIDER', 'is not set', undefined],
+    ['STT_PROVIDER', 'is unknown', 'azure'],
+    ['LLM_PROVIDER', 'is not set', undefined],
+    ['LLM_PROVIDER', 'is unknown', 'azure'],
+    ['TTS_PROVIDER', 'is not set', undefined],
+    ['TTS_PROVIDER', 'is unknown', 'azure'],
+  ])('when %s %s', (variable, _, provider) => {
+    expect(() =>
+      loadAgentConfig({ ...pipelineWithOpenAi, [variable]: provider }),
+    ).toThrow(`${variable} must be "openai" or "fake"`);
+  });
+
+  it.each(['STT_PROVIDER', 'LLM_PROVIDER', 'TTS_PROVIDER'])(
+    'when OPENAI_API_KEY is not set while %s is "openai"',
+    (variable) => {
+      expect(() =>
+        loadAgentConfig({
+          AGENT_MODE: 'pipeline',
+          STT_PROVIDER: 'fake',
+          LLM_PROVIDER: 'fake',
+          TTS_PROVIDER: 'fake',
+          [variable]: 'openai',
+        }),
+      ).toThrow(`OPENAI_API_KEY is required when ${variable} is "openai"`);
+    },
+  );
+
+  it.each([
+    ['STT_MODEL', 'gpt-4o-mini-transcribe', 'gpt-live-transcribe'],
+    ['STT_MODEL', 'whisper-1', 'gpt-live-transcribe'],
+    ['STT_MODEL', 'gpt-4o-transcribe', 'gpt-live-transcribe'],
+    ['LLM_MODEL', 'gpt-4.1', 'gpt-6-luna'],
+    ['LLM_MODEL', 'gpt-4o-mini', 'gpt-6-luna'],
+    ['LLM_MODEL', 'gpt-5-mini', 'gpt-6.1-terra'],
+    ['TTS_MODEL', 'tts-1', 'gpt-4o-mini-tts'],
+    ['TTS_MODEL', 'tts-1-hd', 'gpt-4o-mini-tts'],
+  ])(
+    'when %s is %s, which OpenAI has deprecated, suggesting %s',
+    (variable, model, replacement) => {
+      expect(() =>
+        loadAgentConfig({ ...pipelineWithOpenAi, [variable]: model }),
+      ).toThrow(
+        `${variable} "${model}" is deprecated by its Provider; use "${replacement}"`,
+      );
+    },
+  );
+
+  it('reports every bad step at once', () => {
+    expect(() =>
+      loadAgentConfig({
+        AGENT_MODE: 'pipeline',
+        STT_PROVIDER: 'openai',
+        LLM_PROVIDER: 'azure',
+        TTS_PROVIDER: 'fake',
+      }),
+    ).toThrow(
+      /OPENAI_API_KEY is required when STT_PROVIDER is "openai"[\s\S]*LLM_PROVIDER must be "openai" or "fake"/,
+    );
+  });
 });
 
 describe('Agent configuration in Pipeline mode with any mix of OpenAI and the fake Provider', () => {
