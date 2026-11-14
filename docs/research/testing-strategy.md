@@ -70,17 +70,17 @@ Researched 2026-11-14 against primary sources only. Versions on npm that day: `@
 
 Legend: **[S]** follows directly from a source above. **[J]** is my judgement.
 
-| Layer | Tool | Covers | LiveKit server? | AI keys? | CI |
-|---|---|---|---|---|---|
-| Contract | Vitest | shared zod schemas, compile-time check against `livekit-client` payload types [J] | No | No | every push |
-| Backend unit | Vitest + `@nestjs/testing` | token claims via `TokenVerifier` [S], policies [S], guards | No | No | every push |
-| Backend E2E | Vitest + supertest + PGlite, plus Testcontainers for race tests [S] | `POST /token`, 401/403, DB | No | No | every push (Docker for Testcontainers) |
-| Agent config | Vitest | 2 modes x 2 providers, `instanceof` with dummy keys [J] | No | No | every push |
-| Agent behavior, offline | `voice.testing` + `FakeLLM` + `withMockTools` [S] | tools, turn flow | No | No | every push |
-| Agent behavior, live | `session.run` + `judge`, `lk agent debugger` [S] | real model behavior per provider | No | Yes | nightly or manual |
-| Frontend unit | Vitest jsdom + Testing Library, unconnected `Room` [S] | UI states | No | No | every push |
-| E2E smoke | Playwright + fake media + `livekit-server --dev` [J] | token, connect, agent joins | Yes (Docker) | No, if the agent has a fake-model mode [J] | every PR |
-| E2E voice / simulations | Playwright with WAV [J]; `lk agent simulate` [S] | full audio path | dev server or LiveKit Cloud | Yes | nightly |
+| Layer                   | Tool                                                                | Covers                                                                            | LiveKit server?             | AI keys?                                   | CI                                     |
+| ----------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------ | -------------------------------------- |
+| Contract                | Vitest                                                              | shared zod schemas, compile-time check against `livekit-client` payload types [J] | No                          | No                                         | every push                             |
+| Backend unit            | Vitest + `@nestjs/testing`                                          | token claims via `TokenVerifier` [S], policies [S], guards                        | No                          | No                                         | every push                             |
+| Backend E2E             | Vitest + supertest + PGlite, plus Testcontainers for race tests [S] | `POST /token`, 401/403, DB                                                        | No                          | No                                         | every push (Docker for Testcontainers) |
+| Agent config            | Vitest                                                              | 2 modes x 2 providers, `instanceof` with dummy keys [J]                           | No                          | No                                         | every push                             |
+| Agent behavior, offline | `voice.testing` + `FakeLLM` + `withMockTools` [S]                   | tools, turn flow                                                                  | No                          | No                                         | every push                             |
+| Agent behavior, live    | `session.run` + `judge`, `lk agent debugger` [S]                    | real model behavior per provider                                                  | No                          | Yes                                        | nightly or manual                      |
+| Frontend unit           | Vitest jsdom + Testing Library, unconnected `Room` [S]              | UI states                                                                         | No                          | No                                         | every push                             |
+| E2E smoke               | Playwright + fake media + `livekit-server --dev` [J]                | token, connect, agent joins                                                       | Yes (Docker)                | No, if the agent has a fake-model mode [J] | every PR                               |
+| E2E voice / simulations | Playwright with WAV [J]; `lk agent simulate` [S]                    | full audio path                                                                   | dev server or LiveKit Cloud | Yes                                        | nightly                                |
 
 Judgement calls [J]:
 
@@ -123,7 +123,10 @@ export default defineConfig({
     },
   },
   webServer: [
-    { command: 'pnpm --filter backend dev', url: 'http://localhost:3000/health' },
+    {
+      command: 'pnpm --filter backend dev',
+      url: 'http://localhost:3000/health',
+    },
     { command: 'pnpm --filter frontend dev', url: 'http://localhost:5173' },
   ],
 });

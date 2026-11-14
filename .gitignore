@@ -1,1 +1,23 @@
 response-language-vietnamese.md
+
+# Dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Local env files (each app commits a .env.example instead)
+.env
+.env.*
+!.env.example
+
+# Local Claude Code state
+.claude/worktrees/
+.claude/settings.local.json
+
+.DS_Store

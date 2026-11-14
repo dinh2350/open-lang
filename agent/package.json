@@ -1,0 +1,19 @@
+{
+  "name": "@livekit-platform/agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch-path=src --env-file-if-exists=.env src/main.ts dev",
+    "start": "node --env-file-if-exists=.env src/main.ts start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@livekit/agents": "^1.10.0",
+    "@livekit/rtc-node": "^1.2.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

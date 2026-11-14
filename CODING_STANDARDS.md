@@ -6,7 +6,7 @@ These rules apply to everyone who writes code in this repo, human or AI. Tools e
 
 - When a scanner reports a problem, change the code so the problem is gone. Never silence the scanner.
 - Never add `@ts-ignore`, `@ts-nocheck` or `// NOSONAR`.
-- An ESLint disable comment must target a single rule on a single line and give a description explaining why the rule is wrong *here*. Such a comment is a code-review finding unless the reason holds up.
+- An ESLint disable comment must target a single rule on a single line and give a description explaining why the rule is wrong _here_. Such a comment is a code-review finding unless the reason holds up.
 - `@ts-expect-error` is allowed only with a description, and only when a third-party type is provably wrong.
 - Don't loosen ESLint, Prettier, TypeScript or SonarQube configuration, don't add analysis or coverage exclusions, and don't lower thresholds without a human's explicit approval. Record that approval in the ticket's `## Comments`.
 - Only a human may mark a SonarQube Security Hotspot as safe. An agent lists new hotspots in the ticket's `## Comments` and stops.
@@ -14,7 +14,7 @@ These rules apply to everyone who writes code in this repo, human or AI. Tools e
 
 ## Language and naming
 
-- Use the vocabulary in `GLOSSARY.md` for names of types, functions, variables, files, tests and log fields. Write `User`, `Conversation`, `AuthToken`, `RoomToken`, `AgentMode` and `Provider`. Don't use the synonyms the glossary lists under *Avoid* (for example `session` for Conversation, or a bare `accessToken`).
+- Use the vocabulary in `GLOSSARY.md` for names of types, functions, variables, files, tests and log fields. Write `User`, `Conversation`, `AuthToken`, `RoomToken`, `AgentMode` and `Provider`. Don't use the synonyms the glossary lists under _Avoid_ (for example `session` for Conversation, or a bare `accessToken`).
 - When a decision contradicts an ADR in `docs/adr/`, say so explicitly in the ticket. Don't silently diverge.
 
 ## TypeScript

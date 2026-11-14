@@ -1,0 +1,25 @@
+packages:
+  - shared
+  - backend
+  - agent
+  - frontend
+  - e2e
+
+catalog:
+  '@types/node': ^24.12.0
+  livekit-client: ^2.24.1
+  livekit-server-sdk: ^2.19.3
+  typescript: ~6.0.3
+  vitest: ^5.1.0
+  zod: ^4.6.7
+
+onlyBuiltDependencies:
+  - '@livekit/rtc-node'
+  - '@swc/core'
+  - esbuild
+  - lefthook
+
+# Their install scripts are no-ops (`node -e ""`); they ship prebuilt binaries.
+ignoredBuiltDependencies:
+  - '@livekit/blingfire'
+  - '@livekit/local-inference'

@@ -1,0 +1,27 @@
+# Local services for development and the end-to-end tests.
+# The fixed project name makes every git worktree share one stack instead of
+# colliding on host ports.
+name: livekit-platform
+
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    # Dev mode: API key "devkey", secret "secret", and a single UDP port (7882).
+    # Bind all interfaces so Docker's port publishing reaches the server, and
+    # advertise 127.0.0.1 so the browser and the Agent on the host send media
+    # to the published ports.
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    ports:
+      - '7880:7880'
+      # On Docker Desktop for macOS, WebRTC over UDP 7882 doesn't connect, so
+      # all media flows over ICE/TCP on 7881. Keep both published.
+      - '7881:7881/tcp'
+      - '7882:7882/udp'
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--quiet', '-O', '/dev/null', 'http://127.0.0.1:7880']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+      start_interval: 1s
