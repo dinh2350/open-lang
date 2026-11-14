@@ -8,20 +8,7 @@ import {
   loadAgentConfig,
 } from '../../src/config/index.ts';
 import { startConversation } from '../../src/conversation-agent.ts';
-
-/** What the Agent says first in a session, as text. */
-function firstAgentMessage(session: voice.AgentSession): Promise<string> {
-  return new Promise((resolve) => {
-    session.on(
-      voice.AgentSessionEventTypes.ConversationItemAdded,
-      ({ item }) => {
-        if (item.type === 'message' && item.role === 'assistant') {
-          resolve(item.textContent ?? '');
-        }
-      },
-    );
-  });
-}
+import { firstAgentMessage } from './agent-messages.ts';
 
 describe.skipIf(!process.env.OPENAI_API_KEY)(
   'Agent in Realtime mode with OpenAI (live)',
@@ -40,7 +27,7 @@ describe.skipIf(!process.env.OPENAI_API_KEY)(
         // Without a room, as LiveKit's testing docs do: the User says nothing.
         await startConversation(session);
 
-        expect(await greeting).toMatch(/hello\W+how can i help/i);
+        expect((await greeting).textContent).toMatch(/hello\W+how can i help/i);
       } finally {
         await session.close();
       }
