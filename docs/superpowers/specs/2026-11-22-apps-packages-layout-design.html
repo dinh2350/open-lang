@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apps and packages layout</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --call: #a85a06;
+        --human: #1e4fd1;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --call: #f3b34a;
+          --human: #86a9ff;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      code {
+        font-size: 14px;
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+        gap: 14px;
+        align-items: start;
+      }
+      figure {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        min-width: 0;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      pre {
+        margin: 0;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Waiting for your review · 2026-11-22</p>
+        <h1>Apps and packages layout</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Summary</h2>
+        <p class="summary">
+          Move <code>agent</code>, <code>backend</code> and
+          <code>frontend</code> into <code>apps/</code>, and
+          <code>shared</code> into <code>packages/</code>.
+          <code>e2e</code> stays at the repository root. Nothing else changes:
+          package names (<code>@open-live-agent/*</code>) and behavior stay the
+          same. The reason is that more apps are expected, and moving now,
+          before there is any CI or Dockerfile, is cheapest. The one thing to
+          watch is the hard-coded paths in the root tooling (Vitest, ESLint,
+          Sonar, the lcov script, each package's <code>tsconfig.json</code>): a
+          missed one shows up as a failing <code>pnpm check</code>,
+          <code>pnpm sonar</code> or <code>pnpm test:e2e</code>, so all three
+          must pass afterwards.
+        </p>
+      </section>
+
+      <section id="overview">
+        <h2>Overview</h2>
+        <div class="pair">
+          <figure>
+            <pre>
+agent/
+backend/
+frontend/
+shared/
+e2e/</pre>
+            <figcaption>
+              Before: five packages side by side at the root (<a
+                href="#evidence-workspace"
+                >workspace file</a
+              >).
+            </figcaption>
+          </figure>
+          <figure>
+            <pre>
+apps/
+  agent/  backend/  frontend/
+packages/
+  shared/
+e2e/            (unchanged)</pre>
+            <figcaption>
+              After: deployable apps and libraries separated. Moves only; no
+              code changes.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="review">
+        <h2>For your review</h2>
+        <div class="group fact">
+          <h3>Confirmed</h3>
+          <ul>
+            <li>
+              The workspace lists the five packages flat (<a
+                href="#evidence-workspace"
+                >workspace file</a
+              >).
+            </li>
+            <li>
+              Root tooling hard-codes the old paths: Vitest, ESLint, Sonar, the
+              lcov script (<a href="#evidence-paths">hard-coded paths</a>).
+            </li>
+            <li>
+              Each package's <code>tsconfig.json</code> extends
+              <code>../tsconfig.base.json</code>, so the four moved packages
+              need <code>../../</code> (<a href="#evidence-tsconfig"
+                >tsconfig extends</a
+              >).
+            </li>
+            <li>
+              <code>e2e/playwright.config.ts</code> finds the root
+              <code>.env</code> and the evidence directory with <code>..</code>,
+              so it only works one level below the root (<a href="#evidence-e2e"
+                >e2e config</a
+              >). It starts the other packages by name with
+              <code>pnpm --filter</code>, so their move does not affect it.
+            </li>
+            <li>
+              The repository has no <code>.github</code> directory and no
+              Dockerfile, so nothing outside the files above refers to the old
+              paths (<a href="#evidence-no-ci">no CI</a>).
+            </li>
+            <li>
+              <code>apps/*</code> plus <code>packages/*</code> is the layout
+              Turborepo documents and Nx says matches pnpm, yarn and npm
+              workspace conventions (<a href="#evidence-convention"
+                >convention</a
+              >). Neither requires it; Nx says a flat layout works while the
+              project count is small.
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>My call</h3>
+          <ul>
+            <li>
+              No Turborepo or Nx now. Five packages, and
+              <code>pnpm --recursive</code> is enough; nothing slow has been
+              reported.
+            </li>
+            <li>
+              <code>shared</code> is not split into several packages now. Split
+              it when a real need appears.
+            </li>
+            <li>
+              Use <code>git mv</code> on whole directories, so history follows
+              and ignored files such as <code>.env</code> move with the
+              directory. The builder confirms this and re-runs
+              <code>pnpm install</code>.
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>You decided</h3>
+          <ul>
+            <li>
+              Approach B: <code>apps/</code> and <code>packages/</code> now, as
+              pure moves.
+            </li>
+            <li>
+              <code>e2e</code> stays at the root. The draft tree was approved.
+            </li>
+            <li>
+              Growth is expected in backend, frontend and agent, and a few more
+              apps may come.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>The design</h2>
+        <h3>Intent and why</h3>
+        <p>
+          The repository will gain more apps. Putting deployable apps and
+          libraries in separate folders now gives new apps an obvious place, and
+          costs less than moving later, once CI and Dockerfiles point at the
+          paths.
+        </p>
+        <h3>Goals</h3>
+        <ul>
+          <li>
+            <code>agent</code>, <code>backend</code>, <code>frontend</code> live
+            under <code>apps/</code>; <code>shared</code> under
+            <code>packages/</code>; <code>e2e</code> unchanged.
+          </li>
+          <li>
+            Every root command works as before: <code>pnpm dev</code>,
+            <code>pnpm check</code>, <code>pnpm test</code>,
+            <code>pnpm sonar</code>, <code>pnpm test:e2e</code>,
+            <code>pnpm db:migrate</code>, <code>pnpm db:seed</code>.
+          </li>
+          <li>
+            Docs and examples show the new paths (<code>README.md</code>,
+            <code>agent/AGENTS.md</code>, and any other mention found).
+          </li>
+        </ul>
+        <h3>Non-goals</h3>
+        <ul>
+          <li>Changing code inside any package.</li>
+          <li>Renaming packages or changing imports.</li>
+          <li>
+            Restructuring the inside of backend, frontend or agent. That is a
+            separate topic, not looked at yet.
+          </li>
+          <li>Adding Turborepo or Nx, or splitting <code>shared</code>.</li>
+        </ul>
+        <h3>Anti-goals</h3>
+        <ul>
+          <li>
+            A move that passes <code>pnpm check</code> but silently drops a
+            package from coverage, lint or the Sonar scan because a glob no
+            longer matches it.
+          </li>
+          <li>
+            Any lowered threshold, exclusion or suppression to get the gates
+            passing (see CLAUDE.md).
+          </li>
+        </ul>
+        <h3>Constraints</h3>
+        <ul>
+          <li>
+            Before the work is done, <code>pnpm check</code> and
+            <code>pnpm sonar</code> must pass, and so must
+            <code>pnpm test:e2e</code>, since the change touches how the Agent
+            and Conversation flow are started (CLAUDE.md).
+          </li>
+          <li>
+            Specs, plans and evidence go in <code>docs/superpowers/</code>.
+          </li>
+        </ul>
+        <h3>Approaches</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Approach</th>
+              <th>Trades off</th>
+              <th>Chosen</th>
+            </tr>
+            <tr>
+              <td>A. Keep the flat layout</td>
+              <td>
+                Free now, and fine at this size. Moving later costs more once CI
+                and Dockerfiles exist.
+              </td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>
+                B. <code>apps/</code> + <code>packages/</code> now, moves only
+              </td>
+              <td>
+                About a dozen config and doc edits, and all gates re-run. Clear
+                place for new apps.
+              </td>
+              <td>Yes: you chose it, since more apps are expected.</td>
+            </tr>
+            <tr>
+              <td>C. B plus Turborepo and a split <code>shared</code></td>
+              <td>
+                Pays off with slow builds or several teams. Neither is true yet.
+              </td>
+              <td>No</td>
+            </tr>
+          </table>
+        </div>
+        <h3>How it gets made</h3>
+        <ul>
+          <li>
+            <code>pnpm-workspace.yaml</code> packages become
+            <code>apps/*</code>, <code>packages/*</code>, <code>e2e</code>.
+          </li>
+          <li>
+            The four <code>tsconfig.json</code> files of the moved packages
+            extend <code>../../tsconfig.base.json</code>; <code>e2e</code> keeps
+            <code>../</code>.
+          </li>
+          <li>
+            Root <code>vitest.config.ts</code>: the project and coverage globs
+            cover <code>apps/*</code> and <code>packages/*</code>.
+          </li>
+          <li>
+            <code>eslint.config.ts</code>: the <code>backend/**</code> and
+            <code>frontend/**</code> globs get the <code>apps/</code> prefix.
+          </li>
+          <li>
+            <code>sonar-project.properties</code>: sources, tests and lcov paths
+            get the new prefixes. The <code>e2e</code> lines stay.
+          </li>
+          <li>
+            <code>scripts/split-lcov-by-package.ts</code>: finds each package
+            under its new directory; reports still land in
+            <code>&lt;package&gt;/coverage/lcov.info</code>.
+          </li>
+          <li>
+            <code>README.md</code>, <code>agent/AGENTS.md</code> (and the moved
+            <code>CLAUDE.md</code>, if it names paths) show the new paths.
+          </li>
+          <li>
+            My call: the order is workspace file and tsconfigs first, then the
+            root tooling, then docs, and the gates run last.
+          </li>
+        </ul>
+        <h3>How it will be verified</h3>
+        <ul>
+          <li>
+            You run <code>pnpm install</code> then <code>pnpm check</code>: it
+            passes, and the test count is the same as before the move.
+          </li>
+          <li>
+            <code>pnpm sonar</code> passes, and its report still covers all four
+            source packages and the <code>e2e</code> tests, with lcov for each
+            of the four.
+          </li>
+          <li>
+            <code>pnpm test:e2e</code> passes: the stack starts, you register
+            and talk to the Agent as before.
+          </li>
+          <li><code>pnpm dev</code> starts the backend, frontend and agent.</li>
+          <li>
+            A search of the repository (excluding <code>node_modules</code>,
+            lockfile and <code>docs/superpowers</code> history) finds no
+            remaining reference to <code>backend/</code>,
+            <code>frontend/</code>, <code>agent/</code> or
+            <code>shared/</code> at the old root positions.
+          </li>
+        </ul>
+        <p>
+          No new tests are written, because behavior does not change. The
+          existing unit, integration and end-to-end suites are the proof: they
+          all run through the three commands above, and the repository search
+          covers what they cannot see (docs and stale paths).
+        </p>
+        <h3>Left to the builder</h3>
+        <ul>
+          <li>
+            Inner paths not yet opened: <code>nest-cli.json</code>,
+            <code>prisma.config.ts</code>, <code>vite.config.ts</code>, the
+            <code>.env.example</code> files and anything under the packages'
+            <code>test/</code> directories. Fix any that point up the tree.
+          </li>
+          <li>
+            Whether <code>pnpm-lock.yaml</code> changes after the move, and
+            leaving it at whatever <code>pnpm install</code> produces.
+          </li>
+          <li>
+            Stale generated directories after the move (for example
+            <code>.scannerwork</code>, <code>coverage</code>).
+          </li>
+          <li>
+            Where the hooks in <code>.claude/</code> or
+            <code>lefthook.yml</code> name paths, if any.
+          </li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Evidence</h2>
+        <article id="evidence-workspace">
+          <h3>The workspace lists five flat packages</h3>
+          <p class="src">
+            Source:
+            <a href="../../../pnpm-workspace.yaml">pnpm-workspace.yaml</a>
+            · 2026-11-22
+          </p>
+          <blockquote>
+            packages: - shared - backend - agent - frontend - e2e
+          </blockquote>
+        </article>
+        <article id="evidence-paths">
+          <h3>Root tooling hard-codes the old paths</h3>
+          <p class="src">
+            Sources:
+            <a href="../../../sonar-project.properties"
+              >sonar-project.properties</a
+            >, <a href="../../../vitest.config.ts">vitest.config.ts</a>,
+            <a href="../../../eslint.config.ts">eslint.config.ts</a>,
+            <a href="../../../scripts/split-lcov-by-package.ts"
+              >split-lcov-by-package.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            sonar.sources=shared/src,backend/src,agent/src,frontend/src;
+            projects: ['*/vitest.config.ts']; include: ['*/src/**/*.{ts,tsx}'];
+            files: ['backend/**/*.ts'] and ['frontend/**/*.{ts,tsx}']; the lcov
+            script writes
+            <code>path.join(repoRoot, packageDirectory, 'coverage')</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-tsconfig">
+          <h3>Package tsconfigs extend the root base one level up</h3>
+          <p class="src">
+            Source: <code>grep "extends"</code> over the five
+            <code>tsconfig.json</code> files · 2026-11-22
+          </p>
+          <blockquote>
+            agent, backend, frontend, shared and e2e each returned
+            <code>"extends": "../tsconfig.base.json"</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-e2e">
+          <h3>The e2e config assumes it is one level below the root</h3>
+          <p class="src">
+            Source:
+            <a href="../../../e2e/playwright.config.ts"
+              >e2e/playwright.config.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            const rootEnvFile = path.join(import.meta.dirname, '..', '.env');
+            and path.resolve(import.meta.dirname, '..',
+            process.env.E2E_EVIDENCE_DIR); servers start with
+            <code>pnpm --filter @open-live-agent/backend ...</code>
+          </blockquote>
+        </article>
+        <article id="evidence-no-ci">
+          <h3>No CI and no Dockerfile yet</h3>
+          <p class="src">
+            Source: <code>ls .github</code> and
+            <code
+              >find . -name 'Dockerfile*' -not -path '*/node_modules/*'</code
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            <code>ls: .github: No such file or directory</code>; the
+            <code>find</code> returned nothing.
+          </blockquote>
+        </article>
+        <article id="evidence-convention">
+          <h3>
+            The apps/packages layout is a documented convention, not a rule
+          </h3>
+          <p class="src">
+            Sources:
+            <a
+              href="https://turborepo.dev/docs/crafting-your-repository/structuring-a-repository"
+              >Turborepo: structuring a repository</a
+            >,
+            <a href="https://nx.dev/docs/kb/folder-structure"
+              >Nx: folder structure</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            Turborepo's docs declare <code>apps/*</code> and
+            <code>packages/*</code> as the package locations. Per the Nx search
+            result: flat "works well when projects are published packages or
+            when the count stays small enough to scan", and past a few dozen
+            projects a flat folder stops communicating structure. The Nx part is
+            a summary of search results, not a page read in full.
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
