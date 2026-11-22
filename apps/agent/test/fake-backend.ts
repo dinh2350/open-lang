@@ -27,10 +27,12 @@ export interface FakeBackend {
 
 /**
  * A backend on a free local port, so no test reaches a real one. It answers
- * each request with the next of `statuses`, then with 204.
+ * each request with the next of `statuses`, then with 204, after
+ * `responseDelayMs` (default 0).
  */
 export async function startFakeBackend(
   statuses: number[] = [],
+  options: { responseDelayMs?: number } = {},
 ): Promise<FakeBackend> {
   const requests: ReceivedRequest[] = [];
   const server = createServer(
@@ -47,7 +49,7 @@ export async function startFakeBackend(
           body: body === '' ? undefined : JSON.parse(body),
         });
         response.statusCode = statuses.shift() ?? 204;
-        response.end();
+        setTimeout(() => response.end(), options.responseDelayMs ?? 0);
       });
     },
   );

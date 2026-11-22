@@ -159,6 +159,40 @@ describe('Agent dispatched into a Conversation room', () => {
     await job.end();
   });
 
+  it('sends the turns still queued when the job ends before it exits', async () => {
+    const slowBackend = await startFakeBackend([], { responseDelayMs: 1000 });
+    vi.stubEnv('BACKEND_URL', slowBackend.url);
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-ending',
+        standupAtNormalSpeed,
+      );
+      for (const id of ['item_first', 'item_last']) {
+        job
+          .session()
+          ?.emit(
+            voice.AgentSessionEventTypes.ConversationItemAdded,
+            voice.createConversationItemAddedEvent(
+              llm.ChatMessage.create({ id, role: 'user', content: 'Bye.' }),
+            ),
+          );
+      }
+
+      await job.end();
+
+      // The queue posts one turn at a time: the last is sent only after the
+      // slow answer to the first.
+      expect(
+        slowBackend.requests.map(
+          ({ body }) => (body as { itemId: string }).itemId,
+        ),
+      ).toEqual(['item_first', 'item_last']);
+    } finally {
+      await slowBackend.close();
+    }
+  });
+
   it.each(['BACKEND_URL', 'AGENT_API_KEY'])(
     'a job fails, naming %s, when it is missing',
     async (name) => {

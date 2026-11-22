@@ -25,9 +25,13 @@ function stubBackend(
 }
 
 function recordedSession(backend: BackendClient): voice.AgentSession {
+  return recorded(backend).session;
+}
+
+function recorded(backend: BackendClient, flushTimeoutMs?: number) {
   const session = new voice.AgentSession();
-  recordTranscript(session, backend, ROOM);
-  return session;
+  const recorder = recordTranscript(session, backend, ROOM, { flushTimeoutMs });
+  return { session, recorder };
 }
 
 function addMessage(
@@ -384,5 +388,224 @@ describe('Transcript recorder', () => {
       'item_failing',
       'item_next',
     ]);
+  });
+
+  it('resynchronizes after a User interval that no message claims', async () => {
+    const { backend, turns } = stubBackend();
+    const session = recordedSession(backend);
+
+    // The Agent greets; a cough during the greeting gives a User interval
+    // but no message.
+    agentState(session, 'thinking', 'speaking', T0);
+    userState(session, 'listening', 'speaking', T0 + 2000);
+    userState(session, 'speaking', 'listening', T0 + 2400);
+    addMessage(session, {
+      id: 'item_greeting',
+      role: 'assistant',
+      content: 'Morning!',
+      createdAt: T0,
+    });
+    agentState(session, 'speaking', 'listening', T0 + 5000);
+    // Two exchanges follow, each with its own intervals.
+    userState(session, 'listening', 'speaking', T0 + 6000);
+    userState(session, 'speaking', 'listening', T0 + 9000);
+    addMessage(session, {
+      id: 'item_first_answer',
+      role: 'user',
+      content: 'Morning.',
+      createdAt: T0 + 6000,
+    });
+    agentState(session, 'thinking', 'speaking', T0 + 9500);
+    addMessage(session, {
+      id: 'item_question',
+      role: 'assistant',
+      content: 'What did you do yesterday?',
+      createdAt: T0 + 9500,
+    });
+    agentState(session, 'speaking', 'listening', T0 + 12000);
+    userState(session, 'listening', 'speaking', T0 + 13000);
+    userState(session, 'speaking', 'listening', T0 + 15000);
+    addMessage(session, {
+      id: 'item_second_answer',
+      role: 'user',
+      content: 'I fixed a bug.',
+      createdAt: T0 + 13000,
+    });
+    await settle();
+
+    const userTurns = turns.filter(({ role }) => role === 'user');
+    expect(userTurns).toEqual([
+      {
+        itemId: 'item_first_answer',
+        role: 'user',
+        text: 'Morning.',
+        startedAt: iso(T0 + 6000),
+        endedAt: iso(T0 + 9000),
+      },
+      {
+        itemId: 'item_second_answer',
+        role: 'user',
+        text: 'I fixed a bug.',
+        startedAt: iso(T0 + 13000),
+        endedAt: iso(T0 + 15000),
+      },
+    ]);
+  });
+
+  it('resynchronizes after an Agent interval that no message claims', async () => {
+    const { backend, turns } = stubBackend();
+    const session = recordedSession(backend);
+
+    // The Agent speaks without a message, then the User answers.
+    agentState(session, 'thinking', 'speaking', T0);
+    agentState(session, 'speaking', 'listening', T0 + 1000);
+    userState(session, 'listening', 'speaking', T0 + 2000);
+    userState(session, 'speaking', 'listening', T0 + 4000);
+    addMessage(session, {
+      id: 'item_answer',
+      role: 'user',
+      content: 'Hello?',
+      createdAt: T0 + 4100,
+    });
+    agentState(session, 'thinking', 'speaking', T0 + 5000);
+    addMessage(session, {
+      id: 'item_reply',
+      role: 'assistant',
+      content: 'Hi, can you hear me?',
+      createdAt: T0 + 5000,
+    });
+    agentState(session, 'speaking', 'listening', T0 + 8000);
+    await settle();
+
+    expect(turns.filter(({ role }) => role === 'agent')).toEqual([
+      {
+        itemId: 'item_reply',
+        role: 'agent',
+        text: 'Hi, can you hear me?',
+        startedAt: iso(T0 + 5000),
+      },
+      {
+        itemId: 'item_reply',
+        role: 'agent',
+        text: 'Hi, can you hear me?',
+        startedAt: iso(T0 + 5000),
+        endedAt: iso(T0 + 8000),
+      },
+    ]);
+  });
+
+  it('never pairs a message with an interval that starts well after it', async () => {
+    const { backend, turns } = stubBackend();
+    const session = recordedSession(backend);
+
+    // A very late transcript of speech from T0 + 1000 arrives while the User
+    // is already speaking again.
+    userState(session, 'listening', 'speaking', T0 + 20000);
+    addMessage(session, {
+      id: 'item_late',
+      role: 'user',
+      content: 'Said a while ago.',
+      createdAt: T0 + 1000,
+    });
+    userState(session, 'speaking', 'listening', T0 + 22000);
+    addMessage(session, {
+      id: 'item_now',
+      role: 'user',
+      content: 'Said just now.',
+      createdAt: T0 + 20000,
+    });
+    await settle();
+
+    expect(turns).toEqual([
+      {
+        itemId: 'item_late',
+        role: 'user',
+        text: 'Said a while ago.',
+        startedAt: iso(T0 + 1000),
+      },
+      {
+        itemId: 'item_now',
+        role: 'user',
+        text: 'Said just now.',
+        startedAt: iso(T0 + 20000),
+        endedAt: iso(T0 + 22000),
+      },
+    ]);
+  });
+
+  it('ends a still-open speaking interval when the session closes', async () => {
+    const { backend, turns } = stubBackend();
+    const session = recordedSession(backend);
+
+    agentState(session, 'thinking', 'speaking', T0);
+    addMessage(session, {
+      id: 'item_goodbye',
+      role: 'assistant',
+      content: 'Bye!',
+      createdAt: T0,
+    });
+    session.emit(
+      voice.AgentSessionEventTypes.Close,
+      voice.createCloseEvent(voice.CloseReason.JOB_SHUTDOWN, null, T0 + 3000),
+    );
+    await settle();
+
+    expect(turns.at(-1)).toEqual({
+      itemId: 'item_goodbye',
+      role: 'agent',
+      text: 'Bye!',
+      startedAt: iso(T0),
+      endedAt: iso(T0 + 3000),
+    });
+  });
+
+  it('flush waits for every queued send, with the endedAt of an open interval', async () => {
+    let finishSlowSend: (() => void) | undefined;
+    const { backend, turns } = stubBackend((turn) =>
+      turn.itemId === 'item_slow' && turn.endedAt === undefined
+        ? new Promise<void>((resolve) => {
+            finishSlowSend = resolve;
+          })
+        : Promise.resolve(),
+    );
+    const { session, recorder } = recorded(backend);
+
+    agentState(session, 'thinking', 'speaking', T0);
+    addMessage(session, {
+      id: 'item_slow',
+      role: 'assistant',
+      content: 'Last words.',
+      createdAt: T0,
+    });
+    let flushed = false;
+    const flush = recorder.flush().then(() => {
+      flushed = true;
+    });
+    await settle();
+    expect(flushed).toBe(false);
+
+    finishSlowSend?.();
+    await flush;
+
+    expect(
+      turns.map(({ itemId, endedAt }) => [itemId, endedAt !== undefined]),
+    ).toEqual([
+      ['item_slow', false],
+      ['item_slow', true],
+    ]);
+  });
+
+  it('flush gives up after its timeout when a send never finishes', async () => {
+    const { backend } = stubBackend(() => new Promise<void>(() => undefined));
+    const { session, recorder } = recorded(backend, 20);
+
+    addMessage(session, {
+      id: 'item_stuck',
+      role: 'user',
+      content: 'Hello.',
+      createdAt: T0,
+    });
+
+    await expect(recorder.flush()).resolves.toBeUndefined();
   });
 });

@@ -60,9 +60,11 @@ export default defineAgent({
 
     await startConversation(session, choice, ctx.room);
     // Each turn goes to the backend as soon as it is in the history, so a
-    // Conversation that ends abruptly keeps its transcript.
+    // Conversation that ends abruptly keeps its transcript. The job process
+    // exits after its shutdown callbacks, so the last sends are awaited
+    // there; flush() is bounded and never rejects.
     if (roomName) {
-      recordTranscript(
+      const recorder = recordTranscript(
         session,
         createBackendClient({
           backendUrl: BACKEND_URL,
@@ -70,6 +72,7 @@ export default defineAgent({
         }),
         roomName,
       );
+      ctx.addShutdownCallback(() => recorder.flush());
     }
     logger.info(
       { roomName, ...choice, ...modelsOf(config) },

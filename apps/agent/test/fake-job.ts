@@ -85,7 +85,8 @@ export async function dispatchToRoom(
         .map((line) => JSON.parse(line) as LogRecord),
     /**
      * Ends the job. Like the framework's job runner, this closes the
-     * Conversation's AgentSession with the `job_shutdown` reason.
+     * Conversation's AgentSession with the `job_shutdown` reason, then runs
+     * the job's shutdown callbacks.
      */
     async end(): Promise<void> {
       const session = ctx._primaryAgentSession;
@@ -96,6 +97,9 @@ export async function dispatchToRoom(
         session.shutdown({ reason: voice.CloseReason.JOB_SHUTDOWN });
         await closed;
       }
+      await Promise.allSettled(
+        ctx.shutdownCallbacks.map((callback) => callback()),
+      );
     },
   };
 }
