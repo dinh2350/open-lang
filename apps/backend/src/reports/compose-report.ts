@@ -15,10 +15,13 @@ export function composeReport(
   draft: ReportDraft,
 ): ConversationReport {
   const missed = new Set(missedTurnIndexes);
+  const seen = new Set<number>();
   const listeningMisses: ListeningMiss[] = draft.listeningMisses.flatMap(
     (miss) => {
       const turn = turns.at(miss.turnIndex);
       if (turn === undefined || !missed.has(miss.turnIndex)) return [];
+      if (seen.has(miss.turnIndex)) return [];
+      seen.add(miss.turnIndex);
       return [
         {
           agentText: turn.text,

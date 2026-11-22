@@ -16,6 +16,8 @@ export const backendEnvSchema = liveKitEnvSchema.extend({
   // The key the Agent sends with each report. Like JWT_SECRET, at least 32
   // characters, so it can't be guessed.
   AGENT_API_KEY: z.string().min(32),
+  // Which model writes the Reports. `fake` gives canned answers.
+  REPORT_PROVIDER: z.enum(['fake']).default('fake'),
 });
 
 export type BackendEnv = z.output<typeof backendEnvSchema>;

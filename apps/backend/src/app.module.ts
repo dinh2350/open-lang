@@ -6,6 +6,7 @@ import { backendEnvSchema } from './config/env.schema.js';
 import { ConversationsModule } from './conversations/conversations.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LiveKitModule } from './livekit/livekit.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module.js';
     ConversationsModule,
     HealthModule,
     LiveKitModule,
+    ReportsModule,
     UsersModule,
     // Only the routes that use ThrottlerGuard are limited: register and
     // sign-in, each to 5 requests a minute per IP, to slow password guessing.

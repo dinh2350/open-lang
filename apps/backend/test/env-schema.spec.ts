@@ -53,6 +53,16 @@ describe('The backend environment schema', () => {
     expect(rejectedFor('x'.repeat(32))).toEqual([]);
   });
 
+  it('defaults REPORT_PROVIDER to fake and rejects an unknown provider', () => {
+    expect(backendEnvSchema.parse(testEnv).REPORT_PROVIDER).toBe('fake');
+    expect(
+      rejectedVariables(backendEnvSchema, {
+        ...testEnv,
+        REPORT_PROVIDER: 'nope',
+      }),
+    ).toEqual(['REPORT_PROVIDER']);
+  });
+
   it.each([
     [
       'a blank JWT_SECRET, as in .env.example',

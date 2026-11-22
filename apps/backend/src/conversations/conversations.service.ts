@@ -1,11 +1,27 @@
-import type {
-  ConversationChoice,
-  MissIngest,
-  TurnIngest,
-  User,
+import {
+  conversationDetailSchema,
+  conversationSummarySchema,
+  conversationReportSchema,
+  type ConversationChoice,
+  type ConversationDetail,
+  type ConversationSummary,
+  type MissIngest,
+  type TurnIngest,
+  type User,
 } from '@open-lang/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { conversationDurationSeconds } from '../reports/fluency.js';
+
+/** What a Conversation's summary is made of. */
+const summarySelect = {
+  roomName: true,
+  scenarioId: true,
+  speed: true,
+  createdAt: true,
+  turns: { select: { role: true, startedAt: true, endedAt: true } },
+  report: { select: { status: true } },
+} as const;
 
 /** The Conversations of Users. */
 @Injectable()
@@ -25,6 +41,41 @@ export class ConversationsService {
         scenarioId: choice.scenarioId,
         speed: choice.speed,
       },
+    });
+  }
+
+  /** The User's Conversations, newest first. */
+  async list(user: User): Promise<ConversationSummary[]> {
+    const conversations = await this.prisma.conversation.findMany({
+      where: { userId: user.id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: summarySelect,
+    });
+    return conversations.map((conversation) =>
+      conversationSummarySchema.parse(summarize(conversation)),
+    );
+  }
+
+  /** The User's Conversation in the room, with its Report once it is ready. `404` when it is not the User's. */
+  async get(user: User, roomName: string): Promise<ConversationDetail> {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { roomName, userId: user.id },
+      select: {
+        ...summarySelect,
+        report: { select: { status: true, content: true } },
+      },
+    });
+    if (conversation === null) {
+      throw new NotFoundException('There is no Conversation in that room.');
+    }
+    const { report } = conversation;
+    const content =
+      report?.status === 'ready' && report.content !== null
+        ? conversationReportSchema.parse(report.content)
+        : null;
+    return conversationDetailSchema.parse({
+      ...summarize(conversation),
+      report: content,
     });
   }
 
@@ -73,4 +124,27 @@ export class ConversationsService {
     }
     return conversation.id;
   }
+}
+
+/** The fields of a ConversationSummary, before they are checked against the contract. */
+function summarize(conversation: {
+  readonly roomName: string;
+  readonly scenarioId: string;
+  readonly speed: number;
+  readonly createdAt: Date;
+  readonly turns: readonly {
+    role: 'agent' | 'user';
+    startedAt: Date;
+    endedAt: Date | null;
+  }[];
+  readonly report: { readonly status: string } | null;
+}): Record<string, unknown> {
+  return {
+    roomName: conversation.roomName,
+    scenarioId: conversation.scenarioId,
+    speed: conversation.speed,
+    createdAt: conversation.createdAt.toISOString(),
+    durationSeconds: conversationDurationSeconds(conversation.turns),
+    reportStatus: conversation.report?.status ?? null,
+  };
 }

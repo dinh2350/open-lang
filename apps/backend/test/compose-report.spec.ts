@@ -91,6 +91,26 @@ describe('composeReport', () => {
     ]);
   });
 
+  it('keeps one listening miss per missed turn when the draft repeats a turnIndex', () => {
+    const draft: ReportDraft = {
+      listeningMisses: [
+        { turnIndex: 0, keyPhrases: ['first'], explanation: 'first' },
+        { turnIndex: 0, keyPhrases: ['second'], explanation: 'second' },
+      ],
+      grammarIssues: [],
+    };
+
+    const report = composeReport(turns, [0], draft);
+
+    expect(report.listeningMisses).toEqual([
+      {
+        agentText: 'Any blockers today?',
+        keyPhrases: ['first'],
+        explanation: 'first',
+      },
+    ]);
+  });
+
   it('returns empty lists for an empty draft', () => {
     const report = composeReport([], [], emptyDraft);
 

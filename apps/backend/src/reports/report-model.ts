@@ -21,6 +21,9 @@ export interface ReportDraft {
   readonly grammarIssues: readonly GrammarIssue[];
 }
 
+/** The injection token of the configured ReportModel. */
+export const REPORT_MODEL = Symbol('REPORT_MODEL');
+
 /** Writes the parts of a Report that need a language model. */
 export interface ReportModel {
   draft(input: ReportInput): Promise<ReportDraft>;

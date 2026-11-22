@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import type { App } from 'supertest/types.js';
 import { vi } from 'vitest';
 import { AppModule } from '../../src/app.module.js';
@@ -21,17 +21,23 @@ export const testEnv = {
 /**
  * Starts the real application module, configured as `main.ts` does, against
  * `testEnv` and this worker's test database. An override of `undefined`
- * removes that variable.
+ * removes that variable. `configure` may replace providers, for example
+ * `.overrideProvider(REPORT_MODEL).useValue(model)`.
  */
 export async function startTestApp(
   envOverrides: Readonly<Record<string, string | undefined>> = {},
+  configure: (builder: TestingModuleBuilder) => TestingModuleBuilder = (
+    builder,
+  ) => builder,
 ): Promise<INestApplication<App>> {
   for (const [name, value] of Object.entries({ ...testEnv, ...envOverrides })) {
     vi.stubEnv(name, value);
   }
-  const moduleRef = await Test.createTestingModule({
-    imports: [await AppModule.register()],
-  }).compile();
+  const moduleRef = await configure(
+    Test.createTestingModule({
+      imports: [await AppModule.register()],
+    }),
+  ).compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({
     logger: false,
   });
