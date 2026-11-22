@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const sourceDirectory = path.resolve(import.meta.dirname, '..', 'src');
 
 interface SourceFile {
-  /** Relative to `backend/src`, with `/` separators. */
+  /** Relative to `apps/backend/src`, with `/` separators. */
   readonly path: string;
   readonly text: string;
 }

@@ -1,5 +1,5 @@
 // Live tier (`pnpm test:live`): talks to the real Gemini Live API and costs
-// money. Skipped unless the environment or agent/.env has Google
+// money. Skipped unless the environment or apps/agent/.env has Google
 // credentials: GOOGLE_API_KEY, or Vertex AI through GOOGLE_GENAI_USE_VERTEXAI.
 import assert from 'node:assert/strict';
 import { initializeLogger, llm, voice } from '@livekit/agents';

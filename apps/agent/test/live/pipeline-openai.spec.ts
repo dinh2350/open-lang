@@ -1,6 +1,6 @@
 // Live tier (`pnpm test:live`): talks to the real OpenAI APIs and costs
 // money. Skipped when OPENAI_API_KEY is absent from the environment and from
-// agent/.env.
+// apps/agent/.env.
 import assert from 'node:assert/strict';
 import { initializeLogger, llm, voice } from '@livekit/agents';
 import { describe, it } from 'vitest';

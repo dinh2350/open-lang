@@ -32,7 +32,7 @@ Test the Agent through an `AgentSession` and `session.run(...)`, as LiveKit's [t
 
 When you change the Agent's instructions, tools or workflow, write the test for the wanted behavior first, then change the Agent until it passes.
 
-LiveKit simulations run scenarios against the Agent with `lk agent simulate text --scenarios agent/scenarios.yaml` (needs the `lk` CLI 2.19.0 or later, LiveKit Cloud credentials and a real Provider). Read the [simulations documentation](https://docs.livekit.io/testing/simulations/) before editing the scenarios.
+LiveKit simulations run scenarios against the Agent with `lk agent simulate text --scenarios apps/agent/scenarios.yaml` (needs the `lk` CLI 2.19.0 or later, LiveKit Cloud credentials and a real Provider). Read the [simulations documentation](https://docs.livekit.io/testing/simulations/) before editing the scenarios.
 
 ## Workflows
 

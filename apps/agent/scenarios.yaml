@@ -1,4 +1,4 @@
-# Scenarios for `lk agent simulate text --scenarios agent/scenarios.yaml`.
+# Scenarios for `lk agent simulate text --scenarios apps/agent/scenarios.yaml`.
 # The CLI offers to add the `id` each scenario needs on its first run.
 # Format: https://docs.livekit.io/testing/simulations/write-a-scenario/
 name: Conversation Agent

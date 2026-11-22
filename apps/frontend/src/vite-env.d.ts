@@ -1,4 +1,4 @@
-// The variables of frontend/.env that Vite exposes to the app.
+// The variables of apps/frontend/.env that Vite exposes to the app.
 interface ImportMetaEnv {
   readonly VITE_AGENT_JOIN_TIMEOUT_MS?: string;
 }
