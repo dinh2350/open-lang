@@ -98,7 +98,7 @@ importers:
       '@google/genai':
         specifier: ^2.32.0
         version: 2.32.0
-      '@livekit-platform/shared':
+      '@open-live-agent/shared':
         specifier: workspace:*
         version: link:../shared
       '@livekit/agents':
@@ -138,7 +138,7 @@ importers:
 
   backend:
     dependencies:
-      '@livekit-platform/shared':
+      '@open-live-agent/shared':
         specifier: workspace:*
         version: link:../shared
       '@nestjs/common':
@@ -238,7 +238,7 @@ importers:
 
   frontend:
     dependencies:
-      '@livekit-platform/shared':
+      '@open-live-agent/shared':
         specifier: workspace:*
         version: link:../shared
       '@livekit/components-react':

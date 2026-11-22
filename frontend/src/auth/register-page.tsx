@@ -1,7 +1,7 @@
 import {
   MINIMUM_PASSWORD_LENGTH,
   registerRequestSchema,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import { Link } from 'react-router';
 import { register } from './auth-api';
 import { CredentialsForm } from './credentials-form';

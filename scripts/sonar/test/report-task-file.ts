@@ -17,10 +17,10 @@ export function reportTaskFileFor(ceTaskId: string): string {
   writeFileSync(
     reportTaskFile,
     [
-      'projectKey=livekit-platform',
+      'projectKey=open-live-agent',
       `serverUrl=${FAKE_SONARQUBE_URL}`,
       'serverVersion=26.11.0.134175',
-      `dashboardUrl=${FAKE_SONARQUBE_URL}/dashboard?id=livekit-platform`,
+      `dashboardUrl=${FAKE_SONARQUBE_URL}/dashboard?id=open-live-agent`,
       `ceTaskId=${ceTaskId}`,
       `ceTaskUrl=${FAKE_SONARQUBE_URL}/api/ce/task?id=${ceTaskId}`,
       '',

@@ -3,7 +3,7 @@ import {
   type RoomTokenRequest,
   type RoomTokenResponse,
   type User,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { CurrentUser } from '../auth/authentication.guard.js';
 import { RoomTokenService } from './room-token.service.js';

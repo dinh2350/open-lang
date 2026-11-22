@@ -1,4 +1,4 @@
-import { ACCOUNT_LOCKED } from '@livekit-platform/shared';
+import { ACCOUNT_LOCKED } from '@open-live-agent/shared';
 import { ForbiddenException } from '@nestjs/common';
 
 /**

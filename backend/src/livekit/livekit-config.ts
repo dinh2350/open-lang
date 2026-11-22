@@ -2,7 +2,7 @@ import {
   type Environment,
   liveKitEnvSchema,
   parseEnv,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 
 export interface LiveKitConfig {
   /** URL the browser uses to reach the LiveKit server. */

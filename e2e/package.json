@@ -1,5 +1,5 @@
 {
-  "name": "@livekit-platform/e2e",
+  "name": "@open-live-agent/e2e",
   "private": true,
   "type": "module",
   "scripts": {

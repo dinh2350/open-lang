@@ -26,7 +26,7 @@ function analysisTokenName(): string {
     .update(repoRoot)
     .digest('hex')
     .slice(0, 8);
-  return `livekit-platform scan ${path.basename(repoRoot).slice(0, 40)} ${pathHash}`;
+  return `open-live-agent scan ${path.basename(repoRoot).slice(0, 40)} ${pathHash}`;
 }
 
 async function setup(): Promise<void> {

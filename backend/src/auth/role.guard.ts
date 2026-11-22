@@ -1,4 +1,4 @@
-import type { User } from '@livekit-platform/shared';
+import type { User } from '@open-live-agent/shared';
 import {
   type CanActivate,
   type ExecutionContext,

@@ -4,7 +4,7 @@ import {
   setPasswordRequestSchema,
   type User,
   type UserDetails,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import { http, HttpResponse } from 'msw';
 import {
   backendUsers,

@@ -187,7 +187,7 @@ describe('pnpm sonar, after the scanner ran', () => {
 
     expect(result.passed).toBe(false);
     expect(result.report).toContain(
-      'Another scan of livekit-platform finished after this one',
+      'Another scan of open-live-agent finished after this one',
     );
   });
 

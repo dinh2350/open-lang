@@ -4,7 +4,7 @@ import {
   type Role,
   signInRequestSchema,
   type User,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import { http, HttpResponse } from 'msw';
 
 /** The message the backend gives a Locked User with its `403`. */

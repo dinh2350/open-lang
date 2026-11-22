@@ -1,4 +1,4 @@
-# LiveKit Platform
+# Open Live Agent
 
 A web app where a person talks out loud with an AI voice Agent from the browser. It is a pnpm monorepo with five packages: `frontend` (React), `backend` (NestJS), `agent` (LiveKit Agents for Node), `shared` (contracts) and `e2e` (Playwright). A self-hosted LiveKit server runs in Docker. See `GLOSSARY.md` for the vocabulary and `docs/adr/` for the decisions.
 

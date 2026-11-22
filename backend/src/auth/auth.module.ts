@@ -1,4 +1,4 @@
-import { parseEnv } from '@livekit-platform/shared';
+import { parseEnv } from '@open-live-agent/shared';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';

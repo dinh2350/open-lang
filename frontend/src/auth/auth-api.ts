@@ -5,7 +5,7 @@ import {
   errorResponseSchema,
   type RegisterRequest,
   type SignInRequest,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 
 /** The backend turned a request down, with a message meant for the person. */
 export class BackendRefusal extends Error {}

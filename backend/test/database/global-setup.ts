@@ -13,7 +13,7 @@ declare module 'vitest' {
 
 // The image docker-compose.yml runs.
 const POSTGRES_IMAGE = 'postgres:18-alpine';
-const TEMPLATE_DATABASE = 'livekit_platform_template';
+const TEMPLATE_DATABASE = 'open_live_agent_template';
 
 const backendDirectory = path.resolve(import.meta.dirname, '..', '..');
 const prisma = path.join(backendDirectory, 'node_modules', '.bin', 'prisma');

@@ -1,4 +1,4 @@
-import type { User } from '@livekit-platform/shared';
+import type { User } from '@open-live-agent/shared';
 import type { User as UserRecord } from '../generated/prisma/client.js';
 
 /** A User as the API returns it: never the password hash. */

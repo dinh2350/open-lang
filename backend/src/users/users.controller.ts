@@ -8,7 +8,7 @@ import {
   type User,
   type UserDetails,
   type UsersResponse,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import {
   Body,
   Controller,

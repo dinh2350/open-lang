@@ -4,7 +4,7 @@ import type {
   registerRequestSchema,
   signInRequestSchema,
   User,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import {
   ConflictException,
   Injectable,

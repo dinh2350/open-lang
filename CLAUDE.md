@@ -1,4 +1,4 @@
-# livekit-platform
+# open-live-agent
 
 ## Agent skills
 

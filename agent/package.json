@@ -1,5 +1,5 @@
 {
-  "name": "@livekit-platform/agent",
+  "name": "@open-live-agent/agent",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
-    "@livekit-platform/shared": "workspace:*",
+    "@open-live-agent/shared": "workspace:*",
     "@livekit/agents": "^1.10.0",
     "@livekit/agents-plugin-google": "^1.10.0",
     "@livekit/agents-plugin-openai": "^1.10.0",

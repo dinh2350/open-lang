@@ -38,7 +38,7 @@ describe('Backend startup', () => {
 
   it('refuses a DATABASE_URL that is not a Postgres URL', async () => {
     await expect(
-      startTestApp({ DATABASE_URL: 'mysql://localhost/livekit_platform' }),
+      startTestApp({ DATABASE_URL: 'mysql://localhost/open_live_agent' }),
     ).rejects.toThrow(/DATABASE_URL/);
   });
 });

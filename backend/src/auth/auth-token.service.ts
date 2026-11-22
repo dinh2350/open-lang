@@ -1,4 +1,4 @@
-import { roleSchema, type User } from '@livekit-platform/shared';
+import { roleSchema, type User } from '@open-live-agent/shared';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { z } from 'zod';

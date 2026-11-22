@@ -1,4 +1,4 @@
-# LiveKit Platform
+# Open Live Agent
 
 A web app where a person talks out loud with an AI voice agent from the browser. For now it hosts one Agent; hosting many agents or tenants is out of scope.
 

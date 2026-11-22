@@ -7,7 +7,7 @@ import {
   type UserDetails,
   userDetailsSchema,
   usersResponseSchema,
-} from '@livekit-platform/shared';
+} from '@open-live-agent/shared';
 import { BackendRefusal } from '@/auth/auth-api';
 import type { AuthorizedFetch } from '@/auth/auth-context';
 

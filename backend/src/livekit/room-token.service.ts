@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { RoomTokenResponse, User } from '@livekit-platform/shared';
+import type { RoomTokenResponse, User } from '@open-live-agent/shared';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AccessToken,

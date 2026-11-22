@@ -1,4 +1,4 @@
-import type { AuthResponse, User } from '@livekit-platform/shared';
+import type { AuthResponse, User } from '@open-live-agent/shared';
 import {
   createContext,
   type ReactNode,

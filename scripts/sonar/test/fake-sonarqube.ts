@@ -70,7 +70,7 @@ interface StoredAnalysis {
   readonly files: readonly FakeFileMeasures[];
 }
 
-const PROJECT_KEY = 'livekit-platform';
+const PROJECT_KEY = 'open-live-agent';
 
 function page<T>(items: readonly T[], params: Params) {
   const pageSize = Number(params.ps ?? 100);

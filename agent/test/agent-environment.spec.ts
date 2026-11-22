@@ -5,7 +5,7 @@ const validEnvironment = {
   LIVEKIT_URL: 'ws://localhost:7880',
   LIVEKIT_API_KEY: 'devkey',
   LIVEKIT_API_SECRET: 'secret',
-  AGENT_NAME: 'livekit-platform-agent',
+  AGENT_NAME: 'open-live-agent',
 };
 
 describe('Agent environment', () => {

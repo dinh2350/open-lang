@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { parseEnv } from '@livekit-platform/shared';
+import { parseEnv } from '@open-live-agent/shared';
 import { z } from 'zod';
 import { PrismaClient } from '../generated/prisma/client.js';
 

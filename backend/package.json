@@ -1,5 +1,5 @@
 {
-  "name": "@livekit-platform/backend",
+  "name": "@open-live-agent/backend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@livekit-platform/shared": "workspace:*",
+    "@open-live-agent/shared": "workspace:*",
     "@nestjs/common": "^12.5.0",
     "@nestjs/core": "^12.5.0",
     "@nestjs/jwt": "^12.0.5",

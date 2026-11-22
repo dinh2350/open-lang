@@ -1,7 +1,7 @@
 /** The SonarQube project that every checkout of this repo scans into. */
 export const SONAR_PROJECT = {
-  key: 'livekit-platform',
-  name: 'LiveKit Platform',
+  key: 'open-live-agent',
+  name: 'Open Live Agent',
 } as const;
 
 export interface GateCondition {
@@ -19,7 +19,7 @@ const RATING_A = '1';
  * greenfield repo all code is new, and Community Build has no branch analysis.
  */
 export const QUALITY_GATE = {
-  name: 'LiveKit Platform Gate',
+  name: 'Open Live Agent Gate',
   conditions: [
     {
       metric: 'software_quality_reliability_rating',
