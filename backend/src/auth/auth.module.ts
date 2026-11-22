@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { AuthTokenService } from './auth-token.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { RefreshTokensModule } from '../refresh-tokens/refresh-tokens.module.js';
+import { UsersModule } from '../users/users.module.js';
 import { AuthenticationGuard } from './guards/authentication.guard.js';
-import { RefreshTokenService } from './refresh-token.service.js';
 
 const authEnvSchema = z.object({
   // HS256 needs a key of at least 256 bits.
@@ -27,16 +28,15 @@ const authEnvSchema = z.object({
         verifyOptions: { algorithms: ['HS256'] },
       }),
     }),
+    UsersModule,
+    RefreshTokensModule,
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
     AuthTokenService,
-    RefreshTokenService,
     // Every route needs a signed-in User unless it is marked @Public().
     { provide: APP_GUARD, useClass: AuthenticationGuard },
   ],
-  // Locking a User and setting their password sign them out everywhere.
-  exports: [RefreshTokenService],
 })
 export class AuthModule {}

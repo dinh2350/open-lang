@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import argon2 from 'argon2';
 import { Prisma, type User as UserRecord } from '../generated/prisma/client.js';
-import { RefreshTokenService } from '../auth/refresh-token.service.js';
-import { toUser } from '../auth/users.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RefreshTokenService } from '../refresh-tokens/refresh-token.service.js';
+import { toUserDetails } from './user.mapper.js';
 
 /**
  * Locks the row of every unlocked Admin until the transaction ends, and
@@ -47,22 +47,37 @@ async function findUser(
   return user;
 }
 
-/** A User as an Admin sees them: never the password hash. */
-function toUserDetails(record: UserRecord): UserDetails {
-  return {
-    ...toUser(record),
-    locked: record.locked,
-    createdAt: record.createdAt.toISOString(),
-  };
-}
-
-/** What Admins do with Users. */
+/** The User records, and what Admins do with Users. */
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly refreshTokens: RefreshTokenService,
   ) {}
+
+  /** The User with this id, or null when nobody has it. */
+  findById(id: string): Promise<UserRecord | null> {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  /** The User with this email, or null when nobody has it. */
+  findByEmail(email: string): Promise<UserRecord | null> {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  /** Any one Admin, or null when there is none. */
+  findAnAdmin(): Promise<UserRecord | null> {
+    return this.prisma.user.findFirst({ where: { role: 'admin' } });
+  }
+
+  /** Creates a User; a Member unless `role` says otherwise. */
+  create(data: {
+    readonly email: string;
+    readonly passwordHash: string;
+    readonly role?: Role;
+  }): Promise<UserRecord> {
+    return this.prisma.user.create({ data });
+  }
 
   /** Every User, oldest first. */
   async listUsers(): Promise<UserDetails[]> {

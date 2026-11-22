@@ -2,8 +2,8 @@ import { type AuthResponse, authResponseSchema } from '@open-live-agent/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { PrismaService } from '../src/prisma/prisma.service.js';
 import { seedFirstAdmin } from '../src/users/first-admin.js';
+import { UsersService } from '../src/users/users.service.js';
 import { PASSWORD } from './users.js';
 
 /** Signs a User in through the API and returns the response body. */
@@ -31,7 +31,7 @@ export async function signInFirstAdmin(
   app: INestApplication<App>,
   email = 'grace@example.test',
 ): Promise<AuthResponse> {
-  await seedFirstAdmin(app.get(PrismaService), {
+  await seedFirstAdmin(app.get(UsersService), {
     SEED_ADMIN_EMAIL: email,
     SEED_ADMIN_PASSWORD: PASSWORD,
   });

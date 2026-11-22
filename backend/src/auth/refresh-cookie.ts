@@ -1,8 +1,8 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import { parseCookie } from 'cookie';
 import type { CookieOptions, Request, Response } from 'express';
+import { REFRESH_TOKEN_LIFETIME_MILLISECONDS } from '../refresh-tokens/refresh-token.service.js';
 import { AUTH_ROUTES } from '../routes.js';
-import { REFRESH_TOKEN_LIFETIME_MILLISECONDS } from './refresh-token.service.js';
 
 const REFRESH_COOKIE = 'refresh_token';
 

@@ -5,7 +5,7 @@ import {
 } from '@open-live-agent/shared';
 import argon2 from 'argon2';
 import { z } from 'zod';
-import type { PrismaClient } from '../generated/prisma/client.js';
+import type { UsersService } from './users.service.js';
 
 // The same rules as registering: a valid email, stored lowercase, and a
 // password of at least 12 characters.
@@ -24,11 +24,10 @@ export type FirstAdminSeed =
  * Admin exists, and then needs neither variable.
  */
 export async function seedFirstAdmin(
-  prisma: PrismaClient,
+  users: UsersService,
   env: Environment,
 ): Promise<FirstAdminSeed> {
-  const anAdmin = await prisma.user.findFirst({ where: { role: 'admin' } });
-  if (anAdmin !== null) {
+  if ((await users.findAnAdmin()) !== null) {
     return { outcome: 'admin-exists' };
   }
   const { SEED_ADMIN_EMAIL: email, SEED_ADMIN_PASSWORD: password } = parseEnv(
@@ -38,14 +37,15 @@ export async function seedFirstAdmin(
   );
   // Promoting an existing account would hand Admin rights to whoever
   // registered this email first, with their own password.
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing !== null) {
+  if ((await users.findByEmail(email)) !== null) {
     throw new Error(
       'SEED_ADMIN_EMAIL already belongs to a Member. Set SEED_ADMIN_EMAIL to an email nobody has registered, then run the seed again.',
     );
   }
-  const admin = await prisma.user.create({
-    data: { email, passwordHash: await argon2.hash(password), role: 'admin' },
+  const admin = await users.create({
+    email,
+    passwordHash: await argon2.hash(password),
+    role: 'admin',
   });
   return { outcome: 'created', userId: admin.id };
 }

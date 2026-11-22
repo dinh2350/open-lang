@@ -5,12 +5,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { toUser } from '../../users/user.mapper.js';
+import { UsersService } from '../../users/users.service.js';
 import { AuthTokenService } from '../auth-token.service.js';
 import type { AuthenticatedRequest } from '../authenticated-request.js';
 import { PUBLIC_ROUTE } from '../decorators/public.decorator.js';
 import { AccountLockedException } from '../exceptions/account-locked.exception.js';
-import { toUser } from '../users.js';
 
 const BEARER = /^Bearer (\S+)$/i;
 
@@ -26,7 +26,7 @@ export class AuthenticationGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authTokens: AuthTokenService,
-    private readonly prisma: PrismaService,
+    private readonly users: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -42,9 +42,9 @@ export class AuthenticationGuard implements CanActivate {
     if (authToken === undefined) {
       throw new UnauthorizedException();
     }
-    const record = await this.prisma.user.findUnique({
-      where: { id: await this.authTokens.userIdOf(authToken) },
-    });
+    const record = await this.users.findById(
+      await this.authTokens.userIdOf(authToken),
+    );
     if (record === null) {
       throw new UnauthorizedException();
     }

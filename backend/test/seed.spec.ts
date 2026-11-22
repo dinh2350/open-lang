@@ -3,8 +3,8 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { PrismaService } from '../src/prisma/prisma.service.js';
 import { seedFirstAdmin } from '../src/users/first-admin.js';
+import { UsersService } from '../src/users/users.service.js';
 import { startTestApp, stopTestApp } from './test-app.js';
 import { PASSWORD, registerUser } from './users.js';
 
@@ -20,7 +20,7 @@ describe('Seeding the first Admin (pnpm db:seed)', () => {
   });
 
   function seed(env: Record<string, string | undefined>) {
-    return seedFirstAdmin(app.get(PrismaService), env);
+    return seedFirstAdmin(app.get(UsersService), env);
   }
 
   function signIn(email: string, password: string) {

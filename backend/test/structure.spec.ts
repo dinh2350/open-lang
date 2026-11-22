@@ -28,6 +28,13 @@ function filesContaining(needle: string): string[] {
     .map(({ path: file }) => file);
 }
 
+/** The paths of the source files whose text matches `pattern`. */
+function filesMatching(pattern: RegExp): string[] {
+  return sourceFiles()
+    .filter(({ text }) => pattern.test(text))
+    .map(({ path: file }) => file);
+}
+
 describe('The backend source layout', () => {
   it('spells the API prefix and the auth path only in routes.ts', () => {
     const offenders = sourceFiles()
@@ -84,5 +91,34 @@ describe('The backend source layout', () => {
     expect(filesContaining('export type ValidRegisterRequest')).toEqual([
       'auth/auth.types.ts',
     ]);
+  });
+
+  it('lets only UsersService read and write the User table', () => {
+    expect(filesMatching(/\b(prisma|transaction)\.user\./)).toEqual([
+      'users/users.service.ts',
+    ]);
+    expect(sourceFiles().map(({ path: file }) => file)).not.toContain(
+      'auth/users.ts',
+    );
+  });
+
+  it('keeps the modules free of cycles', () => {
+    const files = sourceFiles();
+    const importsOf = (folder: string, pattern: RegExp) =>
+      files
+        .filter(
+          ({ path: file, text }) =>
+            file.startsWith(folder) && pattern.test(text),
+        )
+        .map(({ path: file }) => file);
+
+    expect(files.map(({ path: file }) => file)).toContain(
+      'refresh-tokens/refresh-token.service.ts',
+    );
+    expect(importsOf('refresh-tokens/', /from '\.\.\/(auth|users)\//)).toEqual(
+      [],
+    );
+    expect(importsOf('users/users.module.ts', /auth\.module/)).toEqual([]);
+    expect(importsOf('auth/', /prisma\.service/)).toEqual([]);
   });
 });

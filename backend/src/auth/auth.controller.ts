@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { RefreshTokenService } from '../refresh-tokens/refresh-token.service.js';
 import { AUTH_PATH } from '../routes.js';
 import { AuthService } from './auth.service.js';
 import type {
@@ -30,7 +31,6 @@ import {
   RefreshTokenCookie,
   setRefreshCookie,
 } from './refresh-cookie.js';
-import { RefreshTokenService } from './refresh-token.service.js';
 
 /** Sets the refresh cookie and returns the body: the Auth Token and the User. */
 function respondSignedIn(

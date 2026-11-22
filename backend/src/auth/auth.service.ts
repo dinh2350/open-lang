@@ -7,7 +7,9 @@ import {
 } from '@nestjs/common';
 import argon2 from 'argon2';
 import { Prisma } from '../generated/prisma/client.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { RefreshTokenService } from '../refresh-tokens/refresh-token.service.js';
+import { toUser } from '../users/user.mapper.js';
+import { UsersService } from '../users/users.service.js';
 import { AuthTokenService } from './auth-token.service.js';
 import type {
   SignedIn,
@@ -15,8 +17,6 @@ import type {
   ValidSignInRequest,
 } from './auth.types.js';
 import { AccountLockedException } from './exceptions/account-locked.exception.js';
-import { RefreshTokenService } from './refresh-token.service.js';
-import { toUser } from './users.js';
 
 /** The same for a wrong email and a wrong password, so it reveals neither. */
 const WRONG_CREDENTIALS = 'Wrong email or password.';
@@ -38,7 +38,7 @@ export class AuthService {
   private unknownUserPasswordHash: Promise<string> | undefined;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly users: UsersService,
     private readonly authTokens: AuthTokenService,
     private readonly refreshTokens: RefreshTokenService,
   ) {}
@@ -46,8 +46,8 @@ export class AuthService {
   /** Creates a Member and signs them in. */
   async register(request: ValidRegisterRequest): Promise<SignedIn> {
     const passwordHash = await argon2.hash(request.password);
-    const record = await this.prisma.user
-      .create({ data: { email: request.email, passwordHash } })
+    const record = await this.users
+      .create({ email: request.email, passwordHash })
       .catch((error: unknown) => {
         throw isUniqueConstraintViolation(error)
           ? new ConflictException('An account with this email already exists.')
@@ -60,9 +60,7 @@ export class AuthService {
   }
 
   async signIn(request: ValidSignInRequest): Promise<SignedIn> {
-    const record = await this.prisma.user.findUnique({
-      where: { email: request.email },
-    });
+    const record = await this.users.findByEmail(request.email);
     this.unknownUserPasswordHash ??= argon2.hash(randomBytes(32));
     const passwordHash =
       record?.passwordHash ?? (await this.unknownUserPasswordHash);
