@@ -1,0 +1,23 @@
+/*
+ * LiveKit's BarVisualizer renders one child element per bar and sets
+ * data-lk-highlighted="true" on the bars that are lit. The colours are
+ * Astryx tokens, so both modes follow the theme.
+ */
+.voice-bars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 6rem;
+}
+
+.voice-bars > * {
+  width: 1rem;
+  border-radius: 9999px;
+  background-color: var(--color-background-muted);
+  transition: height 0.15s ease;
+}
+
+.voice-bars > [data-lk-highlighted='true'] {
+  background-color: var(--color-accent);
+}

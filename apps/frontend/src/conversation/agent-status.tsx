@@ -1,8 +1,10 @@
+import { Text } from '@astryxdesign/core/Text';
 import {
   type AgentState,
   BarVisualizer,
   type TrackReference,
 } from '@livekit/components-react';
+import './voice-bars.css';
 
 const AGENT_STATE_TEXT: Partial<Record<AgentState, string>> = {
   listening: 'The Agent is listening.',
@@ -29,11 +31,13 @@ export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
         state={agentState}
         track={agentVoice}
         barCount={7}
-        className="flex h-24 items-center justify-center gap-2 *:w-4 *:rounded-full *:bg-muted *:transition-[height] *:data-[lk-highlighted=true]:bg-primary"
+        className="voice-bars"
       />
-      <p role="status" className="text-muted-foreground">
-        {AGENT_STATE_TEXT[agentState] ?? 'Waiting for the Agent…'}
-      </p>
+      <div role="status">
+        <Text as="p" color="secondary">
+          {AGENT_STATE_TEXT[agentState] ?? 'Waiting for the Agent…'}
+        </Text>
+      </div>
     </>
   );
 }

@@ -6,6 +6,11 @@ import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
 import { backend, roomTokensIssued } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
+import {
+  findStatusMessage,
+  getStatusMessage,
+  queryStatusMessage,
+} from './status-message';
 
 /** The Room Tokens of every room the Room connected to, oldest first. */
 function roomTokensUsed(
@@ -42,7 +47,7 @@ describe('Conversation page failures', () => {
     await waitFor(() => {
       expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
     });
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(queryStatusMessage()).toBeNull();
     expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
   });
 
@@ -88,14 +93,12 @@ describe('Conversation page failures', () => {
     await screen.findByText('Waiting for the Agent…');
 
     await act(() => vi.advanceTimersByTimeAsync(14_000));
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Waiting for the Agent',
-    );
+    expect(getStatusMessage()).toHaveTextContent('Waiting for the Agent');
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
     expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(queryStatusMessage()).toBeNull();
     expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
   });
 
@@ -132,7 +135,7 @@ describe('Conversation page failures', () => {
       liveKit.allowMicrophoneAccess();
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
-      expect(await screen.findByRole('status')).toHaveTextContent(
+      expect(await findStatusMessage()).toHaveTextContent(
         'Waiting for the Agent',
       );
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -156,7 +159,7 @@ describe('Conversation page failures', () => {
       backend.resetHandlers();
       await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
-      expect(await screen.findByRole('status')).toHaveTextContent(
+      expect(await findStatusMessage()).toHaveTextContent(
         'Waiting for the Agent',
       );
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -182,9 +185,7 @@ describe('Conversation page failures', () => {
         liveKit.agentJoins();
       });
 
-      expect(screen.getByRole('status')).toHaveTextContent(
-        'The Agent is listening.',
-      );
+      expect(getStatusMessage()).toHaveTextContent('The Agent is listening.');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));

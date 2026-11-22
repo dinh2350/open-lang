@@ -1,3 +1,7 @@
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Stack } from '@astryxdesign/core/Stack';
 import {
   RoomAudioRenderer,
   SessionProvider,
@@ -7,7 +11,6 @@ import {
 import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/auth/auth-context';
-import { Button } from '@/components/ui/button';
 import { AgentStatus } from './agent-status';
 import { MicrophoneToggle } from './microphone-toggle';
 import { createRoomTokenSource } from './room-token-source';
@@ -89,12 +92,17 @@ export function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-md flex-col items-center justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">Talk to the Agent</h1>
+    <Stack
+      as="main"
+      align="center"
+      justify="center"
+      gap={6}
+      padding={6}
+      minHeight="100svh"
+    >
+      <Heading level={1}>Talk to the Agent</Heading>
       {failure !== null && (
-        <p role="alert" className="text-destructive text-center">
-          {failureMessages[failure]}
-        </p>
+        <Banner status="error" role="alert" title={failureMessages[failure]} />
       )}
       <SessionProvider session={session}>
         {inConversation ? (
@@ -103,18 +111,20 @@ export function ConversationPage({
               agentState={agent.state}
               agentVoice={agent.microphoneTrack}
             />
-            <div className="flex gap-3">
+            <Stack direction="horizontal" gap={3}>
               <MicrophoneToggle />
-              <Button variant="outline" onClick={() => void session.end()}>
-                End
-              </Button>
-            </div>
+              <Button label="End" onClick={() => void session.end()} />
+            </Stack>
           </>
         ) : (
-          <Button onClick={() => void startConversation()}>Start</Button>
+          <Button
+            label="Start"
+            variant="primary"
+            onClick={() => void startConversation()}
+          />
         )}
         <RoomAudioRenderer />
       </SessionProvider>
-    </main>
+    </Stack>
   );
 }

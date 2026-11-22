@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
 import { roomTokensIssued, TEST_LIVEKIT_URL } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
+import {
+  findStatusMessage,
+  getStatusMessage,
+  queryStatusMessage,
+} from './status-message';
 
 describe('Conversation page', () => {
   it('starts a Conversation in the room of a Room Token from the backend when the User presses Start', async () => {
@@ -18,7 +23,7 @@ describe('Conversation page', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await findStatusMessage()).toHaveTextContent(
       'Waiting for the Agent',
     );
     expect(liveKit.connections()).toEqual([
@@ -44,9 +49,7 @@ describe('Conversation page', () => {
       liveKit.agentJoins();
     });
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'The Agent is listening.',
-    );
+    expect(getStatusMessage()).toHaveTextContent('The Agent is listening.');
   });
 
   it.each(['thinking', 'speaking'] as const)(
@@ -68,7 +71,7 @@ describe('Conversation page', () => {
         liveKit.agentIs(agentState);
       });
 
-      expect(screen.getByRole('status')).toHaveTextContent(
+      expect(getStatusMessage()).toHaveTextContent(
         `The Agent is ${agentState}.`,
       );
     },
@@ -141,7 +144,7 @@ describe('Conversation page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'End' }));
 
     expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(queryStatusMessage()).toBeNull();
     expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
   });
 
