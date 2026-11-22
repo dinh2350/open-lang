@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  LiveKitEnv,
-  RoomTokenResponse,
-  User,
-} from '@open-live-agent/shared';
+import type { LiveKitEnv, RoomTokenResponse, User } from '@open-lang/shared';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {

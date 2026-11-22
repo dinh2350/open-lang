@@ -64,7 +64,7 @@ describe('The backend environment schema', () => {
     ],
     [
       'a DATABASE_URL that is not a Postgres URL',
-      { DATABASE_URL: 'mysql://localhost/open_live_agent' },
+      { DATABASE_URL: 'mysql://localhost/open_lang' },
       'DATABASE_URL',
     ],
   ])('rejects %s, naming it', (_case, override, name) => {

@@ -1,4 +1,4 @@
-import type { User } from '@open-live-agent/shared';
+import type { User } from '@open-lang/shared';
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../authenticated-request.js';
 

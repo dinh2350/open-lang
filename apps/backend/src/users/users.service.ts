@@ -1,4 +1,4 @@
-import type { Role, User, UserDetails } from '@open-live-agent/shared';
+import type { Role, User, UserDetails } from '@open-lang/shared';
 import {
   ConflictException,
   Injectable,

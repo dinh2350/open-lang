@@ -3,7 +3,7 @@ import {
   roleSchema,
   setPasswordRequestSchema,
   type UserDetails,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SubmitEvent, useId, useState } from 'react';
 import { BackendRefusal } from '@/auth/auth-api';

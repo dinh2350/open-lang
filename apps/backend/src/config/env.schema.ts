@@ -1,4 +1,4 @@
-import { liveKitEnvSchema } from '@open-live-agent/shared';
+import { liveKitEnvSchema } from '@open-lang/shared';
 import { z } from 'zod';
 
 const databaseUrl = z.url({ protocol: /^postgres(ql)?$/ });

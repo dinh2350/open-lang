@@ -8,7 +8,7 @@ import {
   type User,
   type UserDetails,
   type UsersResponse,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import {
   Body,
   Controller,

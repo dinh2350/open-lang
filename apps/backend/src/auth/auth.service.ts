@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { User } from '@open-live-agent/shared';
+import type { User } from '@open-lang/shared';
 import {
   ConflictException,
   Injectable,

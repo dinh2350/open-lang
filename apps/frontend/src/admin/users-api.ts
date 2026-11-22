@@ -7,7 +7,7 @@ import {
   type UserDetails,
   userDetailsSchema,
   usersResponseSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { BackendRefusal } from '@/auth/auth-api';
 import type { AuthorizedFetch } from '@/auth/auth-context';
 

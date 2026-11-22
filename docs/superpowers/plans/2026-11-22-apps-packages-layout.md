@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Moves only: no code changes inside any package; package names `@open-live-agent/*` and imports do not change.
+- Moves only: no code changes inside any package; package names `@open-lang/*` and imports do not change.
 - Target layout: `apps/agent`, `apps/backend`, `apps/frontend`, `packages/shared`; `e2e/` stays at the repository root.
 - The four moved packages extend `../../tsconfig.base.json`; `e2e` keeps `../tsconfig.base.json`.
 - Use `git mv` on whole directories, so history follows and ignored files such as `.env` move with them. Re-run `pnpm install` afterwards.
@@ -47,7 +47,7 @@ All five are whole-project. The Build line names the frontend because it is the 
 **Format run:** `pnpm format:check`
 **Lint run:** `pnpm lint`
 **Typecheck run:** `pnpm typecheck`
-**Build run:** `pnpm --filter @open-live-agent/frontend build`
+**Build run:** `pnpm --filter @open-lang/frontend build`
 **Sonar run:** `pnpm sonar`
 
 ## Review Focus
@@ -241,7 +241,7 @@ Expected: `2 passed`, and the directory above holds a video, screenshot and trac
 
 - [ ] **Step 2: Prove the e2e run can fail**
 
-In `e2e/playwright.config.ts`, change the agent's `command` to `pnpm --filter @open-live-agent/agent-missing start`.
+In `e2e/playwright.config.ts`, change the agent's `command` to `pnpm --filter @open-lang/agent-missing start`.
 
 Run: `pnpm test:e2e`
 Expected: FAIL: the agent web server does not start.
@@ -276,7 +276,7 @@ Expected: three lines ending `200`, then `lsof` prints nothing.
 Run: `pnpm check`
 Expected: pass.
 
-Run: `pnpm --filter @open-live-agent/frontend build`
+Run: `pnpm --filter @open-lang/frontend build`
 Expected: succeeds.
 
 - [ ] **Step 6: Commit the evidence**

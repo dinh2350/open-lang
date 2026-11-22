@@ -1,4 +1,4 @@
-import type { User, UserDetails } from '@open-live-agent/shared';
+import type { User, UserDetails } from '@open-lang/shared';
 import type { User as UserRecord } from '../generated/prisma/client.js';
 
 /** A User as the API returns it: never the password hash. */

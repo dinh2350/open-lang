@@ -2,7 +2,7 @@ import type {
   AuthResponse,
   registerRequestSchema,
   signInRequestSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import type { z } from 'zod';
 
 export type ValidRegisterRequest = z.output<typeof registerRequestSchema>;

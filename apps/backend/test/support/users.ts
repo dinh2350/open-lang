@@ -1,4 +1,4 @@
-import { type AuthResponse, authResponseSchema } from '@open-live-agent/shared';
+import { type AuthResponse, authResponseSchema } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';

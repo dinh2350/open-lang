@@ -40,7 +40,7 @@ function sonarTokenIn(envFile: string): string | undefined {
 
 function setUp({
   envFile = envFileWith(''),
-  tokenName = 'open-live-agent checkout-a',
+  tokenName = 'open-lang checkout-a',
 } = {}) {
   return setUpSonarQube({
     hostUrl: FAKE_SONARQUBE_URL,
@@ -70,32 +70,32 @@ describe('pnpm sonar:setup', () => {
     expect(sonarQube.acceptsAdminPassword(ADMIN_PASSWORD)).toBe(true);
   });
 
-  it('creates the open-live-agent project once', async () => {
+  it('creates the open-lang project once', async () => {
     const sonarQube = startFakeSonarQube();
 
     await setUp();
     await setUp();
 
     expect(sonarQube.projects()).toEqual([
-      { key: 'open-live-agent', name: 'Open Live Agent' },
+      { key: 'open-lang', name: 'Open Lang' },
     ]);
   });
 
-  it('creates the Open Live Agent Gate on overall code and makes it the default', async () => {
+  it('creates the Open Lang Gate on overall code and makes it the default', async () => {
     const sonarQube = startFakeSonarQube();
 
     await setUp();
 
     expect(sonarQube.defaultQualityGate()).toEqual({
-      name: 'Open Live Agent Gate',
+      name: 'Open Lang Gate',
       conditions: GATE_CONDITIONS,
     });
   });
 
-  it('restores the Open Live Agent Gate when its conditions were changed', async () => {
+  it('restores the Open Lang Gate when its conditions were changed', async () => {
     const sonarQube = startFakeSonarQube();
     await setUp();
-    sonarQube.changeQualityGate('Open Live Agent Gate', (conditions) => [
+    sonarQube.changeQualityGate('Open Lang Gate', (conditions) => [
       ...conditions
         .filter((condition) => condition.metric !== 'coverage')
         .map((condition) =>
@@ -110,7 +110,7 @@ describe('pnpm sonar:setup', () => {
     await setUp();
 
     expect(sonarQube.defaultQualityGate()).toEqual({
-      name: 'Open Live Agent Gate',
+      name: 'Open Lang Gate',
       conditions: GATE_CONDITIONS,
     });
   });
@@ -121,12 +121,10 @@ describe('pnpm sonar:setup', () => {
       `# Local SonarQube\nSONAR_ADMIN_PASSWORD=${ADMIN_PASSWORD}\n`,
     );
 
-    await setUp({ envFile, tokenName: 'open-live-agent checkout-a' });
+    await setUp({ envFile, tokenName: 'open-lang checkout-a' });
 
     const token = sonarTokenIn(envFile) ?? '';
-    expect(sonarQube.analysisTokenNamed(token)).toBe(
-      'open-live-agent checkout-a',
-    );
+    expect(sonarQube.analysisTokenNamed(token)).toBe('open-lang checkout-a');
     expect(readFileSync(envFile, 'utf8')).toBe(
       `# Local SonarQube\nSONAR_ADMIN_PASSWORD=${ADMIN_PASSWORD}\nSONAR_TOKEN=${token}\n`,
     );
@@ -157,9 +155,7 @@ describe('pnpm sonar:setup', () => {
 
     const newToken = sonarTokenIn(envFile) ?? '';
     expect(newToken).not.toBe(oldToken);
-    expect(sonarQube.analysisTokenNamed(newToken)).toBe(
-      'open-live-agent checkout-a',
-    );
+    expect(sonarQube.analysisTokenNamed(newToken)).toBe('open-lang checkout-a');
     expect(sonarQube.analysisTokenNamed(oldToken)).toBeUndefined();
     expect(readFileSync(envFile, 'utf8')).toBe(`SONAR_TOKEN=${newToken}\n`);
   });
@@ -169,13 +165,13 @@ describe('pnpm sonar:setup', () => {
     const otherEnvFile = envFileWith('');
     await setUp({
       envFile: otherEnvFile,
-      tokenName: 'open-live-agent checkout-b',
+      tokenName: 'open-lang checkout-b',
     });
 
-    await setUp({ tokenName: 'open-live-agent checkout-a' });
+    await setUp({ tokenName: 'open-lang checkout-a' });
 
     expect(sonarQube.analysisTokenNamed(sonarTokenIn(otherEnvFile) ?? '')).toBe(
-      'open-live-agent checkout-b',
+      'open-lang checkout-b',
     );
   });
 

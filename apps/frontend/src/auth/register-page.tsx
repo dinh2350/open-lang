@@ -1,7 +1,7 @@
 import {
   MINIMUM_PASSWORD_LENGTH,
   registerRequestSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { Link } from 'react-router';
 import { register } from './auth-api';
 import { CredentialsForm } from './credentials-form';

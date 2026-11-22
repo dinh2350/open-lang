@@ -18,7 +18,7 @@ const rootEnv = existsSync(rootEnvFile)
   : {};
 const postgresPort =
   process.env.POSTGRES_PORT ?? rootEnv.POSTGRES_PORT ?? '5432';
-const DATABASE_URL = `postgresql://open_live_agent:open_live_agent@localhost:${postgresPort}/open_live_agent_e2e`;
+const DATABASE_URL = `postgresql://open_lang:open_lang@localhost:${postgresPort}/open_lang_e2e`;
 
 // Several git worktrees share one LiveKit server, and a developer's own Agent
 // may be registered with it too. A run-unique Agent name makes sure the Agent
@@ -80,7 +80,7 @@ export default defineConfig({
       name: 'backend',
       // Migrating creates the database on the first run.
       command:
-        'pnpm --filter @open-live-agent/backend db:migrate:deploy && pnpm --filter @open-live-agent/backend start',
+        'pnpm --filter @open-lang/backend db:migrate:deploy && pnpm --filter @open-lang/backend start',
       url: `${BACKEND_URL}/api/health`,
       env: {
         ...liveKitEnv,
@@ -94,7 +94,7 @@ export default defineConfig({
     },
     {
       name: 'agent',
-      command: 'pnpm --filter @open-live-agent/agent start',
+      command: 'pnpm --filter @open-lang/agent start',
       url: AGENT_HEALTH_URL,
       // The fake Provider needs no API key and makes no AI calls.
       env: { ...liveKitEnv, AGENT_MODE: 'realtime', REALTIME_PROVIDER: 'fake' },
@@ -105,7 +105,7 @@ export default defineConfig({
     },
     {
       name: 'frontend',
-      command: 'pnpm --filter @open-live-agent/frontend dev',
+      command: 'pnpm --filter @open-lang/frontend dev',
       url: FRONTEND_URL,
       env: { BACKEND_URL },
       reuseExistingServer: false,

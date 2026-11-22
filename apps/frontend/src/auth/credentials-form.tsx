@@ -2,7 +2,7 @@ import type {
   AuthResponse,
   registerRequestSchema,
   signInRequestSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { useMutation } from '@tanstack/react-query';
 import { type ReactNode, type SubmitEvent, useId, useState } from 'react';
 import { useNavigate } from 'react-router';

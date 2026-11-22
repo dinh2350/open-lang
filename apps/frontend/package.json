@@ -1,5 +1,5 @@
 {
-  "name": "@open-live-agent/frontend",
+  "name": "@open-lang/frontend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-live-agent/shared": "workspace:*",
+    "@open-lang/shared": "workspace:*",
     "@livekit/components-react": "^2.9.25",
     "@tanstack/react-query": "^5.107.1",
     "class-variance-authority": "^0.7.1",

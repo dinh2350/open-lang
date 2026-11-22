@@ -276,7 +276,7 @@ git commit -m "refactor(backend): make PrismaModule non-global and group test he
 
 **Interfaces:**
 
-- Consumes: `liveKitEnvSchema`, `LiveKitEnv` from `@open-live-agent/shared`; Task 3's `SeedModule` and `seedFirstAdmin(users, env)`; Task 4's `test/support/test-app.ts`.
+- Consumes: `liveKitEnvSchema`, `LiveKitEnv` from `@open-lang/shared`; Task 3's `SeedModule` and `seedFirstAdmin(users, env)`; Task 4's `test/support/test-app.ts`.
 - Produces, from `config/env.schema.ts`: `backendEnvSchema` (`liveKitEnvSchema.extend({ PORT: z.coerce.number().int().positive().default(3000), DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }), JWT_SECRET: z.string().min(32) })`), `type BackendEnv = z.output<typeof backendEnvSchema>`, `seedEnvSchema` (`DATABASE_URL` same rule; `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` as `z.string().optional()`), `type DatabaseEnv = Pick<BackendEnv, 'DATABASE_URL'>`.
 - Produces: `AppModule.register(): Promise<DynamicModule>` and `SeedModule.register(): Promise<DynamicModule>`; each awaits `ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, validationSchema: <its schema> })` and returns `{ module, imports: [thatModule] }`. `PrismaService`'s constructor takes `ConfigService<DatabaseEnv, true>`. Read values with `config.getOrThrow('NAME', { infer: true })` — without `{ infer: true }` the return type is `any`.
 
@@ -303,7 +303,7 @@ Expected: FAIL — `config/env.schema.js` and `SeedModule.register` do not exist
 
 - [ ] **Step 4: Add the dependency and the schema**
 
-Run: `pnpm --filter @open-live-agent/backend add @nestjs/config@^12.1.1`, then create `env.schema.ts`.
+Run: `pnpm --filter @open-lang/backend add @nestjs/config@^12.1.1`, then create `env.schema.ts`.
 Run: `pnpm exec vitest run --project backend env-schema`
 Expected: PASS
 

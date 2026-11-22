@@ -1,7 +1,7 @@
 import {
   type RoomTokenRequest,
   roomTokenResponseSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { TokenSource } from 'livekit-client';
 import type { AuthorizedFetch } from '@/auth/auth-context';
 

@@ -2,7 +2,7 @@ import {
   type AuthResponse,
   roomTokenResponseSchema,
   type RoomTokenRequest,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';

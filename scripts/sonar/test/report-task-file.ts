@@ -17,10 +17,10 @@ export function reportTaskFileFor(ceTaskId: string): string {
   writeFileSync(
     reportTaskFile,
     [
-      'projectKey=open-live-agent',
+      'projectKey=open-lang',
       `serverUrl=${FAKE_SONARQUBE_URL}`,
       'serverVersion=26.11.0.134175',
-      `dashboardUrl=${FAKE_SONARQUBE_URL}/dashboard?id=open-live-agent`,
+      `dashboardUrl=${FAKE_SONARQUBE_URL}/dashboard?id=open-lang`,
       `ceTaskId=${ceTaskId}`,
       `ceTaskUrl=${FAKE_SONARQUBE_URL}/api/ce/task?id=${ceTaskId}`,
       '',

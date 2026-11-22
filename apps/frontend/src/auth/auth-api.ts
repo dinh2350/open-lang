@@ -5,7 +5,7 @@ import {
   errorResponseSchema,
   type RegisterRequest,
   type SignInRequest,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 
 /** The backend turned a request down, with a message meant for the person. */
 export class BackendRefusal extends Error {}

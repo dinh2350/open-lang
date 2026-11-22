@@ -3,7 +3,7 @@ import {
   signInRequestSchema,
   type AuthResponse,
   type User,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import {
   Body,
   Controller,

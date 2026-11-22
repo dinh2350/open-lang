@@ -1,4 +1,4 @@
-import { type Environment, parseEnv } from '@open-live-agent/shared';
+import { type Environment, parseEnv } from '@open-lang/shared';
 import { z } from 'zod';
 
 /** An empty variable, as copied from `.env.example`, counts as not set. */

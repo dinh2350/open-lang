@@ -1,4 +1,4 @@
-import { signInRequestSchema } from '@open-live-agent/shared';
+import { signInRequestSchema } from '@open-lang/shared';
 import { Link } from 'react-router';
 import { signIn } from './auth-api';
 import { useAuth } from './auth-context';

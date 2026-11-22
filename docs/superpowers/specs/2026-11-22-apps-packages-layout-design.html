@@ -198,12 +198,12 @@
           <code>frontend</code> into <code>apps/</code>, and
           <code>shared</code> into <code>packages/</code>.
           <code>e2e</code> stays at the repository root. Nothing else changes:
-          package names (<code>@open-live-agent/*</code>) and behavior stay the
-          same. The reason is that more apps are expected, and moving now,
-          before there is any CI or Dockerfile, is cheapest. The one thing to
-          watch is the hard-coded paths in the root tooling (Vitest, ESLint,
-          Sonar, the lcov script, each package's <code>tsconfig.json</code>): a
-          missed one shows up as a failing <code>pnpm check</code>,
+          package names (<code>@open-lang/*</code>) and behavior stay the same.
+          The reason is that more apps are expected, and moving now, before
+          there is any CI or Dockerfile, is cheapest. The one thing to watch is
+          the hard-coded paths in the root tooling (Vitest, ESLint, Sonar, the
+          lcov script, each package's <code>tsconfig.json</code>): a missed one
+          shows up as a failing <code>pnpm check</code>,
           <code>pnpm sonar</code> or <code>pnpm test:e2e</code>, so all three
           must pass afterwards.
         </p>
@@ -568,7 +568,7 @@ e2e/            (unchanged)</pre>
             const rootEnvFile = path.join(import.meta.dirname, '..', '.env');
             and path.resolve(import.meta.dirname, '..',
             process.env.E2E_EVIDENCE_DIR); servers start with
-            <code>pnpm --filter @open-live-agent/backend ...</code>
+            <code>pnpm --filter @open-lang/backend ...</code>
           </blockquote>
         </article>
         <article id="evidence-no-ci">

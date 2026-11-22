@@ -1,5 +1,5 @@
 {
-  "name": "@open-live-agent/shared",
+  "name": "@open-lang/shared",
   "private": true,
   "type": "module",
   "exports": {

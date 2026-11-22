@@ -1,4 +1,4 @@
-import type { AuthResponse, User } from '@open-live-agent/shared';
+import type { AuthResponse, User } from '@open-lang/shared';
 import {
   createContext,
   type ReactNode,

@@ -3,7 +3,7 @@ import {
   type LiveKitEnv,
   liveKitEnvSchema,
   parseEnv,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 
 /**
  * How the Agent reaches the LiveKit server, and the name it registers with.

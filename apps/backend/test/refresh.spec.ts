@@ -1,4 +1,4 @@
-import { authResponseSchema } from '@open-live-agent/shared';
+import { authResponseSchema } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

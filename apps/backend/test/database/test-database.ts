@@ -11,7 +11,7 @@ const templateDatabase = new URL(inject('templateDatabaseUrl')).pathname.slice(
   1,
 );
 // VITEST_POOL_ID tells the workers that run at the same time apart.
-const workerDatabase = `open_live_agent_test_${process.env.VITEST_POOL_ID ?? '1'}`;
+const workerDatabase = `open_lang_test_${process.env.VITEST_POOL_ID ?? '1'}`;
 
 /** Connection URL of this Vitest worker's own database. */
 export const testDatabaseUrl = databaseUrl(workerDatabase);

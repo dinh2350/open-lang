@@ -2,7 +2,7 @@ import {
   accountLockedResponseSchema,
   type AuthResponse,
   errorResponseSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';
 import type { App } from 'supertest/types.js';

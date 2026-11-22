@@ -1,4 +1,4 @@
-# open-live-agent
+# open-lang
 
 TypeScript monorepo (pnpm workspaces): `agent`, `backend`, `frontend`, `shared`, `e2e`. Postgres and LiveKit run through `docker-compose.yml`.
 

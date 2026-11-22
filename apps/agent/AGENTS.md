@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This is the Agent of open-live-agent: a LiveKit Agents (Node.js) voice agent. It follows LiveKit's [Node.js starter](https://github.com/livekit-examples/agent-starter-node), adapted to this monorepo. The root `CLAUDE.md` still applies: its quality gates and workflow come first.
+This is the Agent of open-lang: a LiveKit Agents (Node.js) voice agent. It follows LiveKit's [Node.js starter](https://github.com/livekit-examples/agent-starter-node), adapted to this monorepo. The root `CLAUDE.md` still applies: its quality gates and workflow come first.
 
 ## Tooling
 

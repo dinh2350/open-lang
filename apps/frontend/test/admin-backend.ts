@@ -4,7 +4,7 @@ import {
   setPasswordRequestSchema,
   type User,
   type UserDetails,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import { http, HttpResponse } from 'msw';
 import {
   backendUsers,

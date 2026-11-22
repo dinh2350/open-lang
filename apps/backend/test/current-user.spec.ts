@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { userSchema } from '@open-live-agent/shared';
+import { userSchema } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';

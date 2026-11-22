@@ -1,4 +1,4 @@
-import { type Environment, parseEnv } from '@open-live-agent/shared';
+import { type Environment, parseEnv } from '@open-lang/shared';
 import { z } from 'zod';
 import {
   DEFAULT_LLM_MODEL,

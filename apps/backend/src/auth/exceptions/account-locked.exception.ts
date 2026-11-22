@@ -1,4 +1,4 @@
-import { ACCOUNT_LOCKED } from '@open-live-agent/shared';
+import { ACCOUNT_LOCKED } from '@open-lang/shared';
 import { ForbiddenException } from '@nestjs/common';
 
 /**

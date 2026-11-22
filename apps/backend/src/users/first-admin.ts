@@ -2,7 +2,7 @@ import {
   type Environment,
   parseEnv,
   registerRequestSchema,
-} from '@open-live-agent/shared';
+} from '@open-lang/shared';
 import argon2 from 'argon2';
 import { z } from 'zod';
 import type { UsersService } from './users.service.js';
