@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest';
+import { backendEnvSchema, seedEnvSchema } from '../src/config/env.schema.js';
+import { testEnv } from './support/test-app.js';
+
+type Env = Record<string, string | undefined>;
+
+/** The names of the variables the schema rejects, or none when it accepts. */
+function rejectedVariables(
+  schema: typeof backendEnvSchema,
+  env: Env,
+): string[] {
+  const result = schema.safeParse(env);
+  return result.success
+    ? []
+    : result.error.issues.map((issue) => String(issue.path[0]));
+}
+
+const without = (name: string): Env =>
+  Object.fromEntries(Object.entries(testEnv).filter(([key]) => key !== name));
+
+describe('The backend environment schema', () => {
+  it('accepts a complete environment and defaults PORT to 3000', () => {
+    expect(backendEnvSchema.parse(testEnv).PORT).toBe(3000);
+  });
+
+  it('reads PORT as a number', () => {
+    expect(backendEnvSchema.parse({ ...testEnv, PORT: '8080' }).PORT).toBe(
+      8080,
+    );
+  });
+
+  it('ignores variables it does not declare', () => {
+    expect(
+      rejectedVariables(backendEnvSchema, { ...testEnv, PATH: '/bin' }),
+    ).toEqual([]);
+  });
+
+  it.each(Object.keys(testEnv))(
+    'rejects an environment without %s, naming it',
+    (name) => {
+      expect(rejectedVariables(backendEnvSchema, without(name))).toEqual([
+        name,
+      ]);
+    },
+  );
+
+  it.each([
+    [
+      'a blank JWT_SECRET, as in .env.example',
+      { JWT_SECRET: '' },
+      'JWT_SECRET',
+    ],
+    [
+      'a JWT_SECRET of 31 characters',
+      { JWT_SECRET: 'x'.repeat(31) },
+      'JWT_SECRET',
+    ],
+    ['a PORT that is not a number', { PORT: 'abc' }, 'PORT'],
+    ['a PORT of zero', { PORT: '0' }, 'PORT'],
+    [
+      'a LIVEKIT_URL that is not a WebSocket URL',
+      { LIVEKIT_URL: 'https://livekit.test' },
+      'LIVEKIT_URL',
+    ],
+    [
+      'a DATABASE_URL that is not a Postgres URL',
+      { DATABASE_URL: 'mysql://localhost/open_live_agent' },
+      'DATABASE_URL',
+    ],
+  ])('rejects %s, naming it', (_case, override, name) => {
+    expect(
+      rejectedVariables(backendEnvSchema, { ...testEnv, ...override }),
+    ).toEqual([name]);
+  });
+});
+
+describe('The seed environment schema', () => {
+  it('accepts DATABASE_URL alone', () => {
+    expect(
+      seedEnvSchema.safeParse({ DATABASE_URL: testEnv.DATABASE_URL }).success,
+    ).toBe(true);
+  });
+
+  it('accepts blank SEED_ADMIN_ variables, which only matter when no Admin exists', () => {
+    expect(
+      seedEnvSchema.safeParse({
+        DATABASE_URL: testEnv.DATABASE_URL,
+        SEED_ADMIN_EMAIL: '',
+        SEED_ADMIN_PASSWORD: '',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects a missing DATABASE_URL', () => {
+    expect(seedEnvSchema.safeParse({}).success).toBe(false);
+  });
+});

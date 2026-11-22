@@ -29,7 +29,7 @@ export async function startTestApp(
     vi.stubEnv(name, value);
   }
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
+    imports: [await AppModule.register()],
   }).compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({
     logger: false,

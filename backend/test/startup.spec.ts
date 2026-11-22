@@ -1,25 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { startTestApp, type testEnv } from './support/test-app.js';
-
-const settingsNamedInErrors: Record<keyof typeof testEnv, string> = {
-  LIVEKIT_URL: 'LiveKit',
-  LIVEKIT_API_KEY: 'LiveKit',
-  LIVEKIT_API_SECRET: 'LiveKit',
-  AGENT_NAME: 'LiveKit',
-  JWT_SECRET: 'Auth',
-  DATABASE_URL: 'database',
-};
+import { startTestApp, testEnv } from './support/test-app.js';
 
 describe('Backend startup', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it.each(Object.entries(settingsNamedInErrors))(
+  it.each(Object.keys(testEnv))(
     'refuses to start, naming %s, when it is missing',
-    async (name, settings) => {
+    async (name) => {
       await expect(startTestApp({ [name]: undefined })).rejects.toThrow(
-        new RegExp(`Invalid ${settings} settings[\\s\\S]*${name}`),
+        new RegExp(name),
       );
     },
   );
@@ -36,9 +27,19 @@ describe('Backend startup', () => {
     );
   });
 
+  it('refuses a blank JWT_SECRET, as .env.example leaves it', async () => {
+    await expect(startTestApp({ JWT_SECRET: '' })).rejects.toThrow(
+      /JWT_SECRET/,
+    );
+  });
+
   it('refuses a DATABASE_URL that is not a Postgres URL', async () => {
     await expect(
       startTestApp({ DATABASE_URL: 'mysql://localhost/open_live_agent' }),
     ).rejects.toThrow(/DATABASE_URL/);
+  });
+
+  it('refuses a PORT that is not a number', async () => {
+    await expect(startTestApp({ PORT: 'abc' })).rejects.toThrow(/PORT/);
   });
 });
