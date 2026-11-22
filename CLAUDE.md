@@ -25,4 +25,4 @@ Fix the code, never the scanner: no `NOSONAR`, `@ts-ignore`, ESLint or Sonar exc
 
 ## MCP servers
 
-`.mcp.json` configures context7 (library docs), playwright and chrome-devtools (browser), github (read-only) and dbhub (read-only Postgres). It only holds `${VAR}` references. Keep real values, such as `GITHUB_PERSONAL_ACCESS_TOKEN` and `DBHUB_DSN`, in the git-ignored `.claude/settings.local.json`, and never write a secret into a committed file.
+`.mcp.json` configures context7 (library docs), livekit-docs (LiveKit's docs, code search and changelog), playwright and chrome-devtools (browser), github (read-only) and dbhub (read-only Postgres). It only holds `${VAR}` references. Keep real values, such as `GITHUB_PERSONAL_ACCESS_TOKEN` and `DBHUB_DSN`, in the git-ignored `.claude/settings.local.json`, and never write a secret into a committed file.
