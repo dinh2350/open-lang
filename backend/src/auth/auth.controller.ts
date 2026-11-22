@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { AUTH_PATH } from '../routes.js';
 import {
   AuthService,
   type SignedIn,
@@ -39,7 +40,7 @@ function respondSignedIn(
   return authResponse;
 }
 
-@Controller('auth')
+@Controller(AUTH_PATH)
 export class AuthController {
   constructor(
     private readonly auth: AuthService,

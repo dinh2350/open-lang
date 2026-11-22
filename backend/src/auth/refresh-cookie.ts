@@ -1,12 +1,10 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import { parseCookie } from 'cookie';
 import type { CookieOptions, Request, Response } from 'express';
+import { AUTH_ROUTES } from '../routes.js';
 import { REFRESH_TOKEN_LIFETIME_MILLISECONDS } from './refresh-token.service.js';
 
 const REFRESH_COOKIE = 'refresh_token';
-
-/** The auth routes: the global `/api` prefix, then AuthController's path. */
-const AUTH_ROUTES = '/api/auth';
 
 /**
  * A cookie that page scripts can't read, that the browser sends only over
