@@ -33,6 +33,12 @@ describe('Backend startup', () => {
     );
   });
 
+  it('refuses an AGENT_API_KEY shorter than 32 characters', async () => {
+    await expect(
+      startTestApp({ AGENT_API_KEY: 'x'.repeat(31) }),
+    ).rejects.toThrow(/AGENT_API_KEY/);
+  });
+
   it('refuses a DATABASE_URL that is not a Postgres URL', async () => {
     await expect(
       startTestApp({ DATABASE_URL: 'mysql://localhost/open_lang' }),

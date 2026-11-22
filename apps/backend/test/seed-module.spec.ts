@@ -15,6 +15,7 @@ describe('The seed module (pnpm db:seed)', () => {
     vi.stubEnv('DATABASE_URL', testEnv.DATABASE_URL);
     for (const name of [
       'JWT_SECRET',
+      'AGENT_API_KEY',
       'LIVEKIT_URL',
       'LIVEKIT_API_KEY',
       'LIVEKIT_API_SECRET',

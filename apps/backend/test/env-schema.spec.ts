@@ -44,6 +44,15 @@ describe('The backend environment schema', () => {
     },
   );
 
+  it('requires AGENT_API_KEY of at least 32 characters', () => {
+    const rejectedFor = (key: string) =>
+      rejectedVariables(backendEnvSchema, { ...testEnv, AGENT_API_KEY: key });
+
+    expect(rejectedFor('x'.repeat(31))).toEqual(['AGENT_API_KEY']);
+    expect(rejectedFor('')).toEqual(['AGENT_API_KEY']);
+    expect(rejectedFor('x'.repeat(32))).toEqual([]);
+  });
+
   it.each([
     [
       'a blank JWT_SECRET, as in .env.example',

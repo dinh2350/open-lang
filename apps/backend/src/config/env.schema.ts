@@ -13,6 +13,9 @@ export const backendEnvSchema = liveKitEnvSchema.extend({
   DATABASE_URL: databaseUrl,
   // HS256 needs a key of at least 256 bits.
   JWT_SECRET: z.string().min(32),
+  // The key the Agent sends with each report. Like JWT_SECRET, at least 32
+  // characters, so it can't be guessed.
+  AGENT_API_KEY: z.string().min(32),
 });
 
 export type BackendEnv = z.output<typeof backendEnvSchema>;

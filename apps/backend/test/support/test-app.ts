@@ -14,6 +14,7 @@ export const testEnv = {
   LIVEKIT_API_SECRET: 'test-api-secret-with-at-least-32-chars',
   AGENT_NAME: 'test-agent',
   JWT_SECRET: randomBytes(32).toString('base64url'),
+  AGENT_API_KEY: 'test-agent-api-key-with-at-least-32-chars',
   DATABASE_URL: testDatabaseUrl,
 } as const;
 

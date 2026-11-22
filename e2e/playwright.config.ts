@@ -88,6 +88,7 @@ export default defineConfig({
         DATABASE_URL,
         // A new secret every run: no Auth Token outlives it.
         JWT_SECRET: randomBytes(32).toString('base64url'),
+        AGENT_API_KEY: randomBytes(48).toString('base64url'),
       },
       reuseExistingServer: false,
       timeout: 60_000,
