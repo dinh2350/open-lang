@@ -61,9 +61,13 @@ test('a person registers, starts a Conversation, the Agent joins its room and sh
 
   await page.getByRole('button', { name: 'Start' }).click();
 
-  await expect(page.getByRole('status')).toHaveText('The Agent is listening.', {
-    timeout: 30_000,
-  });
+  // Every Astryx button renders an empty status region of its own.
+  await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
+    'The Agent is listening.',
+    {
+      timeout: 30_000,
+    },
+  );
   await expect.poll(() => microphoneBytesSent(page)).toBeGreaterThan(0);
 
   await page.getByRole('button', { name: 'End' }).click();

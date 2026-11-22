@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
@@ -64,6 +64,40 @@ describe('Signing in', () => {
       'Wrong email or password.',
     );
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  });
+
+  it('disables the Sign in button while the request is pending, so a second click sends nothing', async () => {
+    let signInRequests = 0;
+    let answer = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    backend.use(
+      http.post('/api/auth/sign-in', async () => {
+        signInRequests += 1;
+        await held;
+        return HttpResponse.json(
+          { statusCode: 401, message: 'Wrong email or password.' },
+          { status: 401 },
+        );
+      }),
+    );
+    renderApp('/sign-in');
+    await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
+    const button = screen.getByRole('button', { name: 'Sign in' });
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+    });
+    await userEvent.click(button);
+    expect(signInRequests).toBe(1);
+
+    answer();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Wrong email or password.',
+    );
+    expect(signInRequests).toBe(1);
+    expect(button).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   it('asks for the password before sending anything', async () => {
