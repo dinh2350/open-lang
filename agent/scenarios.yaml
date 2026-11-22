@@ -1,0 +1,37 @@
+# Scenarios for `lk agent simulate text --scenarios agent/scenarios.yaml`.
+# The CLI offers to add the `id` each scenario needs on its first run.
+# Format: https://docs.livekit.io/testing/simulations/write-a-scenario/
+name: Conversation Agent
+scenarios:
+  - label: The Agent greets the User first
+    instructions: >
+      You are Jordan, a person who has just opened a voice conversation.
+      Say nothing at first and wait for the agent to speak. Once it has
+      spoken, end the conversation.
+    agent_expectations: >
+      The agent speaks first, before the user says anything, and its
+      greeting is "Hello, how can I help?".
+    tags:
+      feature: greeting
+
+  - label: The Agent answers a general question briefly, in English
+    instructions: >
+      You are Jordan. Ask the agent why the sky is blue, in English. When it
+      has answered, thank it and end the conversation.
+    agent_expectations: >
+      The agent answers in English in a few short sentences, in plain words
+      suited to being spoken aloud. A long answer, a list, or an answer in
+      another language is a fail.
+    tags:
+      feature: general_questions
+
+  - label: The Agent answers in English even when the User speaks Vietnamese
+    instructions: >
+      You are Jordan, who speaks Vietnamese. Ask the agent in Vietnamese
+      what the capital of France is. When it has answered, thank it and end
+      the conversation.
+    agent_expectations: >
+      The agent understands the question and answers in English, naming
+      Paris. Answering in Vietnamese is a fail.
+    tags:
+      feature: language
