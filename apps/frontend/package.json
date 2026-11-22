@@ -8,8 +8,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@open-lang/shared": "workspace:*",
+    "@astryxdesign/core": "0.7.17",
+    "@astryxdesign/theme-stone": "0.7.17",
     "@livekit/components-react": "^2.9.25",
+    "@open-lang/shared": "workspace:*",
+    "@stylexjs/stylex": "0.19.2",
     "@tanstack/react-query": "^5.107.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
@@ -21,6 +24,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "0.7.17",
     "@tailwindcss/vite": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
