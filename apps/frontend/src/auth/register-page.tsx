@@ -2,7 +2,7 @@ import {
   MINIMUM_PASSWORD_LENGTH,
   registerRequestSchema,
 } from '@open-lang/shared';
-import { Link } from 'react-router';
+import { Link } from '@astryxdesign/core/Link';
 import { register } from './auth-api';
 import { CredentialsForm } from './credentials-form';
 
@@ -15,10 +15,7 @@ export function RegisterPage() {
       passwordAutoComplete="new-password"
       passwordHint={`At least ${String(MINIMUM_PASSWORD_LENGTH)} characters.`}
     >
-      Already registered?{' '}
-      <Link to="/sign-in" className="text-foreground underline">
-        Sign in
-      </Link>
+      Already registered? <Link href="/sign-in">Sign in</Link>
     </CredentialsForm>
   );
 }

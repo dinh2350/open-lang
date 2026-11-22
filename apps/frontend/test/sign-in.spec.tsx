@@ -10,6 +10,7 @@ import {
 } from './auth-backend';
 import { backend, roomTokenRequestAuthorizations } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
+import { findStatusMessage } from './status-message';
 
 describe('Signing in', () => {
   it('sends a signed-out person who opens the Conversation page to sign-in', async () => {
@@ -41,7 +42,7 @@ describe('Signing in', () => {
     await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Start' }));
-    await screen.findByRole('status');
+    await findStatusMessage();
 
     expect(roomTokenRequestAuthorizations()).not.toHaveLength(0);
     expect(new Set(roomTokenRequestAuthorizations())).toEqual(

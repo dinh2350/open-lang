@@ -9,6 +9,7 @@ import {
   registeredEmails,
 } from './auth-backend';
 import { roomTokenRequestAuthorizations } from './backend';
+import { findStatusMessage } from './status-message';
 
 describe('Registering', () => {
   it('registers a new person, who is signed in and lands on the Conversation page', async () => {
@@ -25,7 +26,7 @@ describe('Registering', () => {
     expect(registeredEmails()).toEqual(['ada@example.test']);
 
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-    await screen.findByRole('status');
+    await findStatusMessage();
     expect(roomTokenRequestAuthorizations().at(-1)).toBe(
       `Bearer ${authTokensIssued()[0]}`,
     );

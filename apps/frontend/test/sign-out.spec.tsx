@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { reloadApp, signInAs } from './app';
 import { backend } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
+import { findStatusMessage } from './status-message';
 
 describe('Signing out', () => {
   it('signs the User out: they land on sign-in, and a reload keeps them signed out', async () => {
@@ -29,7 +30,7 @@ describe('Signing out', () => {
     const liveKit = createUnconnectedRoom();
     await signInAs('ada@example.test', liveKit.room);
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-    await screen.findByRole('status');
+    await findStatusMessage();
 
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 

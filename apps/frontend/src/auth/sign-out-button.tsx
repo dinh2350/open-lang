@@ -1,5 +1,7 @@
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Stack } from '@astryxdesign/core/Stack';
 import { useMutation } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { useAuth } from './auth-context';
 
 /**
@@ -10,21 +12,22 @@ export function SignOutButton() {
   const { signOut } = useAuth();
   const request = useMutation({ mutationFn: signOut });
   return (
-    <div className="flex flex-col items-end gap-2">
+    <Stack gap={2} align="end">
       <Button
+        label="Sign out"
         variant="ghost"
-        disabled={request.isPending}
+        isDisabled={request.isPending}
         onClick={() => {
           request.mutate();
         }}
-      >
-        Sign out
-      </Button>
+      />
       {request.isError && (
-        <p role="alert" className="text-destructive text-sm">
-          Couldn&apos;t sign out. Try again.
-        </p>
+        <Banner
+          status="error"
+          role="alert"
+          title="Couldn't sign out. Try again."
+        />
       )}
-    </div>
+    </Stack>
   );
 }

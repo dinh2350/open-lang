@@ -1,14 +1,19 @@
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { FormLayout } from '@astryxdesign/core/FormLayout';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Stack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import type {
   AuthResponse,
   registerRequestSchema,
   signInRequestSchema,
 } from '@open-lang/shared';
 import { useMutation } from '@tanstack/react-query';
-import { type ReactNode, type SubmitEvent, useId, useState } from 'react';
+import { type ReactNode, type SubmitEvent, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { BackendRefusal } from './auth-api';
 import { useAuth } from './auth-context';
 
@@ -63,17 +68,12 @@ export function CredentialsForm({
       void navigate('/', { replace: true });
     },
   });
-  const emailId = useId();
-  const passwordId = useId();
-  const passwordHintId = useId();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   function submit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const credentials = schema.safeParse({
-      email: form.get('email'),
-      password: form.get('password'),
-    });
+    const credentials = schema.safeParse({ email, password });
     if (!credentials.success) {
       setInvalidCredentials(
         credentials.error.issues.map((issue) => issue.message).join(' '),
@@ -90,45 +90,49 @@ export function CredentialsForm({
     (request.isIdle ? initialError : null);
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">{action}</h1>
-      <form noValidate onSubmit={submit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={emailId}>Email</Label>
-          <Input
-            id={emailId}
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={passwordId}>Password</Label>
-          <Input
-            id={passwordId}
-            name="password"
-            type="password"
-            autoComplete={passwordAutoComplete}
-            required
-            aria-describedby={passwordHint && passwordHintId}
-          />
-          {passwordHint && (
-            <p id={passwordHintId} className="text-muted-foreground text-sm">
-              {passwordHint}
-            </p>
-          )}
-        </div>
-        {error !== null && (
-          <p role="alert" className="text-destructive text-sm">
-            {error}
-          </p>
-        )}
-        <Button type="submit" disabled={request.isPending}>
-          {action}
-        </Button>
-      </form>
-      <p className="text-muted-foreground text-sm">{children}</p>
-    </main>
+    <Stack as="main" align="center" justify="center" minHeight="100svh">
+      <Card width="100%" maxWidth={384} padding={6}>
+        <Stack gap={6}>
+          <Heading level={1}>{action}</Heading>
+          <form noValidate onSubmit={submit}>
+            <Stack gap={4}>
+              <FormLayout defaultOptionality="required">
+                <TextInput
+                  label="Email"
+                  htmlName="email"
+                  type="email"
+                  autoComplete="email"
+                  isRequired
+                  value={email}
+                  onChange={setEmail}
+                />
+                <TextInput
+                  label="Password"
+                  htmlName="password"
+                  type="password"
+                  autoComplete={passwordAutoComplete}
+                  isRequired
+                  description={passwordHint}
+                  value={password}
+                  onChange={setPassword}
+                />
+              </FormLayout>
+              {error !== null && (
+                <Banner status="error" role="alert" title={error} />
+              )}
+              <Button
+                label={action}
+                type="submit"
+                variant="primary"
+                isDisabled={request.isPending}
+              />
+            </Stack>
+          </form>
+          <Text as="p" color="secondary">
+            {children}
+          </Text>
+        </Stack>
+      </Card>
+    </Stack>
   );
 }

@@ -1,5 +1,5 @@
 import { signInRequestSchema } from '@open-lang/shared';
-import { Link } from 'react-router';
+import { Link } from '@astryxdesign/core/Link';
 import { signIn } from './auth-api';
 import { useAuth } from './auth-context';
 import { CredentialsForm } from './credentials-form';
@@ -18,10 +18,7 @@ export function SignInPage() {
       passwordAutoComplete="current-password"
       initialError={accountLockedMessage}
     >
-      No account yet?{' '}
-      <Link to="/register" className="text-foreground underline">
-        Register
-      </Link>
+      No account yet? <Link href="/register">Register</Link>
     </CredentialsForm>
   );
 }

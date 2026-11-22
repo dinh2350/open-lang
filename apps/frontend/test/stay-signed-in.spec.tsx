@@ -9,6 +9,7 @@ import {
   refreshesRequested,
 } from './auth-backend';
 import { backend, roomTokenRequestAuthorizations } from './backend';
+import { findStatusMessage } from './status-message';
 
 const ONE_MINUTE = 60_000;
 const ONE_DAY = 24 * 60 * ONE_MINUTE;
@@ -33,7 +34,7 @@ describe('Staying signed in', () => {
     ).toBeVisible();
     expect(authRequestsReceived()).toEqual(['/api/auth/sign-in']);
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-    await screen.findByRole('status');
+    await findStatusMessage();
     expect(roomTokenRequestAuthorizations().at(-1)).toBe(
       `Bearer ${String(authTokensIssued().at(-1))}`,
     );
@@ -67,7 +68,7 @@ describe('Staying signed in', () => {
     travelForward(16 * ONE_MINUTE);
     await userEvent.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(await screen.findByRole('status')).toBeVisible();
+    expect(await findStatusMessage()).toBeVisible();
     const [expired, renewed] = authTokensIssued();
     expect(roomTokenRequestAuthorizations().slice(-2)).toEqual([
       `Bearer ${expired}`,
