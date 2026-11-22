@@ -4,6 +4,18 @@ import {
   setPasswordRequestSchema,
   type UserDetails,
 } from '@open-lang/shared';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Stack } from '@astryxdesign/core/Stack';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table';
+import { Text } from '@astryxdesign/core/Text';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SubmitEvent, useId, useState } from 'react';
 import { BackendRefusal } from '@/auth/auth-api';
@@ -15,15 +27,6 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from '@/components/ui/native-select';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { changeLocked, changeRole, listUsers, setPassword } from './users-api';
 
 const USERS_QUERY_KEY = ['admin', 'users'] as const;
@@ -55,28 +58,46 @@ export function UsersPage() {
   });
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 p-6 pt-16">
-      <h1 className="text-2xl font-semibold">Users</h1>
+    <Stack
+      as="main"
+      gap={6}
+      padding={6}
+      paddingBlockStart={10}
+      maxWidth="56rem"
+      style={{ marginInline: 'auto' }}
+    >
+      <Heading level={1}>Users</Heading>
       {users.isPending && (
-        <p role="status" className="text-muted-foreground">
-          Loading Users…
-        </p>
+        <div role="status">
+          <Text as="p" color="secondary">
+            Loading Users…
+          </Text>
+        </div>
       )}
       {users.error !== null && (
-        <p role="alert" className="text-destructive text-sm">
-          {errorMessage(users.error)}
-        </p>
+        <Banner status="error" role="alert" title={errorMessage(users.error)} />
       )}
       {users.data !== undefined && (
-        <Table>
-          <TableCaption>Every User, oldest first.</TableCaption>
+        <Table verticalAlign="top">
+          {/* Astryx has no caption component; children mode puts this
+              native caption straight into the <table>. */}
+          <caption
+            style={{
+              captionSide: 'bottom',
+              paddingBlockStart: 'var(--spacing-4)',
+            }}
+          >
+            <Text type="supporting" color="secondary">
+              Every User, oldest first.
+            </Text>
+          </caption>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col">Email</TableHead>
-              <TableHead scope="col">Role</TableHead>
-              <TableHead scope="col">Status</TableHead>
-              <TableHead scope="col">Created</TableHead>
-              <TableHead scope="col">Password</TableHead>
+              <TableHeaderCell scope="col">Email</TableHeaderCell>
+              <TableHeaderCell scope="col">Role</TableHeaderCell>
+              <TableHeaderCell scope="col">Status</TableHeaderCell>
+              <TableHeaderCell scope="col">Created</TableHeaderCell>
+              <TableHeaderCell scope="col">Password</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,7 +111,7 @@ export function UsersPage() {
           </TableBody>
         </Table>
       )}
-    </main>
+    </Stack>
   );
 }
 
@@ -103,7 +124,11 @@ interface UserRowProps {
 function UserRow({ user, isSignedInUser }: UserRowProps) {
   return (
     <TableRow>
-      <TableHead scope="row">{user.email}</TableHead>
+      <TableHeaderCell scope="row">
+        <Text color="primary" weight="medium">
+          {user.email}
+        </Text>
+      </TableHeaderCell>
       <TableCell>
         <RoleControl user={user} isSignedInUser={isSignedInUser} />
       </TableCell>
