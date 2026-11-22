@@ -5,13 +5,7 @@ import {
   loadAgentConfig,
   modelsOf,
 } from './config/index.ts';
-
-/**
- * The Agent's instructions: it answers anything, in English, and has no
- * tools. The model reads them, so they use the model's own words.
- */
-const INSTRUCTIONS =
-  'You are a helpful general-purpose voice assistant. Always answer in English, briefly and clearly, because your answers are spoken aloud.';
+import { ConversationAgent } from './agent.ts';
 
 const GREETING_INSTRUCTIONS =
   'Greet the user by saying exactly: "Hello, how can I help?"';
@@ -28,7 +22,7 @@ export async function startConversation(
 ): Promise<void> {
   // In a job, start() also connects to the room.
   await session.start({
-    agent: new voice.Agent({ instructions: INSTRUCTIONS }),
+    agent: new ConversationAgent(),
     room,
   });
   // Greets only once the room is connected: the Agent's state changes
