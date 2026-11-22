@@ -29,7 +29,12 @@ export interface ReportModel {
   draft(input: ReportInput): Promise<ReportDraft>;
 }
 
-/** How long a Provider request may take before it fails, in milliseconds. */
+/**
+ * How long a Provider request may take before it fails, in milliseconds. The
+ * adapters make one attempt only, so a run takes at most this long. It must
+ * stay below the Report service's staleness window (`GENERATING_TIMEOUT_MS`,
+ * 120 000 ms), after which another run may start.
+ */
 export const REPORT_REQUEST_TIMEOUT_MS = 60_000;
 
 /** The model failed, or answered in a shape we cannot use. */

@@ -67,7 +67,8 @@ describe('OpenAiReportModel', () => {
     });
     expect(String(body.input)).toContain('[1] User: No blocker.');
     expect(String(body.instructions)).toContain('Vietnamese');
-    expect(options).toMatchObject({ timeout: 60_000 });
+    // No SDK retries: one run must end within the timeout.
+    expect(options).toMatchObject({ timeout: 60_000, maxRetries: 0 });
   });
 
   it('fails instead of hanging when the request times out', async () => {
@@ -105,7 +106,8 @@ describe('GoogleReportModel', () => {
     expect(request.contents).toContain('[1] User: No blocker.');
     expect(request.config).toMatchObject({
       responseMimeType: 'application/json',
-      httpOptions: { timeout: 60_000 },
+      // One attempt: no SDK retries, so one run ends within the timeout.
+      httpOptions: { timeout: 60_000, retryOptions: { attempts: 1 } },
     });
     expect(String(request.config.systemInstruction)).toContain('Vietnamese');
   });

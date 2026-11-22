@@ -34,7 +34,13 @@ export class GoogleReportModel implements ReportModel {
         config: {
           systemInstruction: system,
           responseMimeType: 'application/json',
-          httpOptions: { timeout: this.timeoutMs },
+          // One attempt, which says it outright rather than relying on the
+          // SDK's default of no retries. As with OpenAI, one run must end
+          // well within the Report service's staleness window (120 000 ms).
+          httpOptions: {
+            timeout: this.timeoutMs,
+            retryOptions: { attempts: 1 },
+          },
         },
       });
       return response.text;
