@@ -9,9 +9,11 @@
     "db:migrate": "prisma generate && prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "nest start --entryFile seed --exec \"node --env-file-if-exists=.env\"",
+    "test:live": "node --env-file-if-exists=.env node_modules/vitest/vitest.mjs run --config test/live/vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/genai": "^2.32.0",
     "@nestjs/common": "^12.5.0",
     "@nestjs/config": "^12.1.1",
     "@nestjs/core": "^12.5.0",
@@ -24,6 +26,7 @@
     "argon2": "^0.45.2",
     "cookie": "^2.0.2",
     "livekit-server-sdk": "catalog:",
+    "openai": "^7.62.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "catalog:"

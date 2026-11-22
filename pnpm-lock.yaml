@@ -138,6 +138,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@google/genai':
+        specifier: ^2.32.0
+        version: 2.32.0
       '@nestjs/common':
         specifier: ^12.5.0
         version: 12.5.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -174,6 +177,9 @@ importers:
       livekit-server-sdk:
         specifier: 'catalog:'
         version: 2.19.3
+      openai:
+        specifier: ^7.62.0
+        version: 7.62.0(google-auth-library@10.9.1)(undici@8.12.4)(ws@8.23.0)(zod@4.6.7)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -4959,6 +4965,33 @@ packages:
       '@smithy/hash-node':
         optional: true
       '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
+  openai@7.62.0:
+    resolution: {integrity: sha512-dehzgY2anBfU3H+FfWHCVjhb9ZRYzahzNpvmMExTmMaeU11i51NJIMJPDctgLiP4+pCh53KIsLVQ66ucKyDNMA==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      google-auth-library: '>=9.15.1 <12'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      google-auth-library:
+        optional: true
+      undici:
         optional: true
       ws:
         optional: true
@@ -11095,6 +11128,13 @@ snapshots:
 
   openai@6.49.0(ws@8.23.0)(zod@4.6.7):
     optionalDependencies:
+      ws: 8.23.0
+      zod: 4.6.7
+
+  openai@7.62.0(google-auth-library@10.9.1)(undici@8.12.4)(ws@8.23.0)(zod@4.6.7):
+    optionalDependencies:
+      google-auth-library: 10.9.1
+      undici: 8.12.4
       ws: 8.23.0
       zod: 4.6.7
 

@@ -63,6 +63,62 @@ describe('The backend environment schema', () => {
     ).toEqual(['REPORT_PROVIDER']);
   });
 
+  describe('REPORT_PROVIDER keys', () => {
+    const rejectedFor = (env: Env) =>
+      rejectedVariables(backendEnvSchema, { ...testEnv, ...env });
+
+    it('requires OPENAI_API_KEY when REPORT_PROVIDER is openai', () => {
+      expect(rejectedFor({ REPORT_PROVIDER: 'openai' })).toEqual([
+        'OPENAI_API_KEY',
+      ]);
+      expect(
+        rejectedFor({ REPORT_PROVIDER: 'openai', OPENAI_API_KEY: '' }),
+      ).toEqual(['OPENAI_API_KEY']);
+      expect(
+        rejectedFor({ REPORT_PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test' }),
+      ).toEqual([]);
+    });
+
+    it('requires GOOGLE_API_KEY when REPORT_PROVIDER is google', () => {
+      expect(rejectedFor({ REPORT_PROVIDER: 'google' })).toEqual([
+        'GOOGLE_API_KEY',
+      ]);
+      expect(
+        rejectedFor({ REPORT_PROVIDER: 'google', GOOGLE_API_KEY: '' }),
+      ).toEqual(['GOOGLE_API_KEY']);
+      expect(
+        rejectedFor({ REPORT_PROVIDER: 'google', GOOGLE_API_KEY: 'g-test' }),
+      ).toEqual([]);
+    });
+
+    it('needs no key for fake', () => {
+      expect(rejectedFor({ REPORT_PROVIDER: 'fake' })).toEqual([]);
+      expect(
+        rejectedFor({ REPORT_PROVIDER: 'fake', OPENAI_API_KEY: '' }),
+      ).toEqual([]);
+    });
+
+    it('names the variable and the provider in the message', () => {
+      const result = backendEnvSchema.safeParse({
+        ...testEnv,
+        REPORT_PROVIDER: 'openai',
+      });
+
+      expect(result.success ? '' : result.error.issues[0]?.message).toBe(
+        'OPENAI_API_KEY is required when REPORT_PROVIDER is "openai"',
+      );
+    });
+
+    it('treats a blank REPORT_MODEL as unset', () => {
+      expect(
+        backendEnvSchema.parse({ ...testEnv, REPORT_MODEL: '' }).REPORT_MODEL,
+      ).toBeUndefined();
+      expect(
+        backendEnvSchema.parse({ ...testEnv, REPORT_MODEL: 'm' }).REPORT_MODEL,
+      ).toBe('m');
+    });
+  });
+
   it.each([
     [
       'a blank JWT_SECRET, as in .env.example',

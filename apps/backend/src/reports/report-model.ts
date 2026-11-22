@@ -29,6 +29,9 @@ export interface ReportModel {
   draft(input: ReportInput): Promise<ReportDraft>;
 }
 
+/** How long a Provider request may take before it fails, in milliseconds. */
+export const REPORT_REQUEST_TIMEOUT_MS = 60_000;
+
 /** The model failed, or answered in a shape we cannot use. */
 export class ReportModelError extends Error {}
 
@@ -57,6 +60,30 @@ function unfence(text: string): string {
     ? inner.slice(FENCE_LANGUAGE.length)
     : inner;
   return unlabelled.trim();
+}
+
+/**
+ * Asks a Provider for its answer and reads it as a draft. A failed request,
+ * such as a timeout, becomes a ReportModelError that keeps the original as its
+ * `cause`; an empty answer is one too.
+ */
+export async function draftFromProvider(
+  provider: string,
+  ask: () => Promise<string | undefined>,
+): Promise<ReportDraft> {
+  let answer: string | undefined;
+  try {
+    answer = await ask();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'unknown error';
+    throw new ReportModelError(`${provider} report request failed: ${reason}`, {
+      cause: error,
+    });
+  }
+  if (!answer) {
+    throw new ReportModelError(`${provider} returned an empty report.`);
+  }
+  return parseReportDraft(answer);
 }
 
 /** Reads the model's JSON answer, which may be wrapped in a code fence. */
