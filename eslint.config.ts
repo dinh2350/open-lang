@@ -57,7 +57,7 @@ export default defineConfig(
   },
   {
     // NestJS modules are empty classes that only carry the @Module decorator.
-    files: ['backend/**/*.ts'],
+    files: ['apps/backend/**/*.ts'],
     rules: {
       '@typescript-eslint/no-extraneous-class': [
         'error',
@@ -66,7 +66,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['frontend/**/*.{ts,tsx}'],
+    files: ['apps/frontend/**/*.{ts,tsx}'],
     extends: [reactHooks.configs.flat.recommended, jsxA11y.flatConfigs.strict],
     languageOptions: {
       globals: globals.browser,

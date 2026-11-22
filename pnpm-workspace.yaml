@@ -1,8 +1,6 @@
 packages:
-  - shared
-  - backend
-  - agent
-  - frontend
+  - apps/*
+  - packages/*
   - e2e
 
 catalog:

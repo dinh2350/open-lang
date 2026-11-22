@@ -5,7 +5,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 # The Prisma client: `prisma generate` writes it on install.
-backend/src/generated/
+apps/backend/src/generated/
 
 # Test output
 coverage/

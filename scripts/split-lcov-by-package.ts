@@ -1,6 +1,8 @@
 // Vitest only supports coverage at the root of a projects config, so
 // `vitest run --coverage` writes one lcov report for the whole repo. This
-// splits it into one report per package, at `<package>/coverage/lcov.info`.
+// splits it into one report per package, at
+// `<package directory>/coverage/lcov.info` (for example
+// `apps/backend/coverage/lcov.info`).
 // Source paths stay relative to the repo root, as SonarQube expects.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -22,7 +24,8 @@ for (const record of rootReport.split(END_OF_RECORD)) {
   if (sourceFile === undefined) {
     throw new Error(`lcov record without a source file:\n${record}`);
   }
-  const packageDirectory = sourceFile.split('/')[0] ?? '';
+  // `apps/backend/src/main.ts` belongs to `apps/backend`.
+  const packageDirectory = sourceFile.split('/').slice(0, 2).join('/');
   const records = recordsByPackage.get(packageDirectory) ?? [];
   records.push(record + END_OF_RECORD);
   recordsByPackage.set(packageDirectory, records);
