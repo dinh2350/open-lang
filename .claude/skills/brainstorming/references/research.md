@@ -25,7 +25,7 @@ source exists, and don't guess what it would have said.
 | Web                      | Prior art, known pitfalls, migration guides                                                        | Prefer official sources; note the date.                                                                       |
 
 Independent sources can be researched in parallel
-(`dispatching-parallel-agents`). Give each one a single
+(`superpowers:dispatching-parallel-agents`). Give each one a single
 question and ask for findings with the evidence behind them.
 
 ## Safety Rules

@@ -29,7 +29,7 @@ Before you start implementing, you must, in order:
    human partner pick one (see Lay out the approaches).
 2. Write the design doc, short or full (see Size the Work).
 3. Get their approval of that doc.
-4. Invoke the writing-plans skill.
+4. Invoke the superpowers:writing-plans skill.
 
 If nothing is open when you write your first message and there's one
 sensible way, steps 1 to 3 happen in that message (see Your First
@@ -266,6 +266,9 @@ hand it over. In this order:
 - **Overview:** a before-and-after diagram of what changes, with labeled
   arrows. Draw only what the decision turns on. Skip it for a small
   change when a sentence says it faster.
+- **Folder structure:** a tree of only the folders and files this
+  touches, each marked new, changed, or removed, with a few words on what
+  changes in it. Skip it when nothing is added, moved, or removed.
 - **For your review:** Confirmed, My call, and what they decided. Each
   Confirmed and My call item links to its entry under Evidence.
 - **The design:**
@@ -329,7 +332,7 @@ stays labeled throwaway, and keeping what it produced is a new request
 that comes back through this gate.
 
 After the design doc is approved, the next step is the plan: invoke
-writing-plans and no other skill.
+superpowers:writing-plans and no other skill.
 </HARD-GATE>
 
 ## Red Flags
