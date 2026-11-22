@@ -35,15 +35,27 @@ const liveKitEnv = {
 
 const microphoneWav = path.join(import.meta.dirname, 'fixtures', 'hello.wav');
 
+// Set E2E_EVIDENCE_DIR (relative to the repository root) to keep a video, a
+// screenshot and a trace of every test, as evidence that a change works.
+const evidenceDirectory =
+  process.env.E2E_EVIDENCE_DIR === undefined
+    ? undefined
+    : path.resolve(import.meta.dirname, '..', process.env.E2E_EVIDENCE_DIR);
+
 export default defineConfig({
   testDir: './tests',
   forbidOnly: Boolean(process.env.CI),
   workers: 1,
   timeout: 60_000,
   reporter: 'list',
+  ...(evidenceDirectory !== undefined && {
+    outputDir: path.join(evidenceDirectory, 'artifacts'),
+  }),
   use: {
     baseURL: FRONTEND_URL,
-    trace: 'retain-on-failure',
+    ...(evidenceDirectory === undefined
+      ? { trace: 'retain-on-failure' }
+      : { trace: 'on', video: 'on', screenshot: 'on' }),
   },
   projects: [
     {
