@@ -24,3 +24,6 @@ blob-report/
 .claude/settings.local.json
 
 .DS_Store
+
+# Scratch workspace of the executing-plans / subagent-driven-development skills
+.superpowers/
