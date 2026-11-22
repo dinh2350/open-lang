@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@4.7.3"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@0.0.86", "--isolated"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@1.13.0", "--no-usage-statistics"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/readonly",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "dbhub": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@bytebase/dbhub@2.0.1",
+        "--transport",
+        "stdio",
+        "--config",
+        ".mcp/dbhub.toml"
+      ],
+      "env": {
+        "DBHUB_DSN": "${DBHUB_DSN}"
+      }
+    }
+  }
+}

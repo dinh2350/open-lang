@@ -1,0 +1,336 @@
+---
+name: writing-plans
+description: Use when you have a spec or requirements for a multi-step task, before touching code
+---
+
+# Writing Plans
+
+## Overview
+
+Write implementation plans for an engineer who has not seen this codebase or this spec. Assume they write idiomatic code in the project's language once they know the exact interface and the exact test, and that they will make a reasonable choice wherever the plan leaves one open. What they cannot know is what you decided: which files, which names and signatures, which values from the spec, which tests prove each task. Document those. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** If working in an isolated worktree, it should have been created via the `using-git-worktrees` skill at execution time.
+
+**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+
+- (User preferences for plan location override this default)
+
+## Scope Check
+
+If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
+
+## File Structure
+
+Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
+
+- Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
+- You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
+- Files that change together should live together. Split by responsibility, not by technical layer.
+- In existing codebases, take naming and file locations from the code around it, but not its quality. Set how to use a library or framework from its docs for the version in the lockfile (a docs MCP tool if present, else the official docs), not from how neighbouring code does it. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
+
+This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
+
+## Task Right-Sizing
+
+A task is the smallest unit that carries its own test cycle and is worth a
+fresh reviewer's gate. When drawing task boundaries: fold setup,
+configuration, scaffolding, and documentation steps into the task whose
+deliverable needs them; split only where a reviewer could meaningfully
+reject one task while approving its neighbor. Each task ends with an
+independently testable deliverable.
+
+## Step Granularity
+
+**Each step is one action with a checkable result:**
+
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+**Spec:** [path to the spec/design doc this plan implements — the plan
+argues from the spec, so the spec travels with it; executors read both]
+
+## Global Constraints
+
+[The spec's project-wide requirements — version floors, dependency limits,
+naming and copy rules, platform requirements — one line each, with exact
+values copied verbatim from the spec. Every task's requirements implicitly
+include this section.]
+
+## Test Strategy
+
+[Every plan covers all three test levels. One row per scenario from the
+spec's "how it will be verified", in your human partner's terms, naming the
+test at each level and the task that owns it. The four lines under the table
+are read by `verify-levels` (verification-before-completion), so
+keep each on one line in exactly this form. A level is dropped only by
+writing `none — <reason>` in place of its command; its table cell is `—`.]
+
+| Scenario                     | Unit                 | Integration          | E2E                           |
+| ---------------------------- | -------------------- | -------------------- | ----------------------------- |
+| [what they will see working] | `test_name` (Task N) | `test_name` (Task N) | `scenario name` (Task [last]) |
+
+**Unit run:** `[exact command]`
+**Integration run:** `[exact command]`
+**E2E run:** `[exact command; it must write its capture into the evidence path]`
+**E2E evidence:** `[path]` — screenshots at every assertion plus a video for
+a UI; a saved terminal transcript or request/response log for a CLI or API.
+Default: `docs/superpowers/evidence/YYYY-MM-DD-<feature-name>/`
+
+## Quality Gates
+
+[Five more checks, one line each in exactly this form, read by
+`verify-levels` (verification-before-completion). Whole-project
+commands; the exception is a level already red at the base commit (see
+"Red at the base" below; Unit and Integration sit in Test Strategy). Use the project's own
+scripts (`package.json` "scripts", the CI config) when it has them; the
+commands below are the JS/TS defaults. A gate is dropped only by writing
+`none — <reason>` in place of its command.]
+
+**Format run:** `npx prettier --check .`
+**Lint run:** `npx eslint . --max-warnings 0`
+**Typecheck run:** `npx tsc --noEmit`
+**Build run:** `npm run build`
+**Sonar run:** `npx sonar-scanner -Dsonar.qualitygate.wait=true`
+
+## Review Focus
+
+[The five input classes or failure modes the spec implies but no task's
+tests exercise that are most likely to bite a person using this software
+— one line each, naming the input or condition and the behavior a
+reasonable person would expect, most likely first. The spec is a vision
+document: it says what the software must do, not everything it will
+meet, and its silence on an input is not permission for that input to
+break the program. Write the list here, once, with the spec in front of
+you. Then, for each line, add the test that pins it to the task that
+owns the code, in that task's own step style.]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Interfaces:**
+
+- Consumes: [what this task uses from earlier tasks — exact signatures]
+- Produces: [what later tasks rely on — exact function names, parameter
+  and return types. A task's implementer sees only their own task; this
+  block is how they learn the names and types neighboring tasks use.]
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+- [ ] **Step 3: Implement `function(input: InputType) -> ResultType` in `exact/path/to/file.py`**
+
+One line on the approach when the signature and the test leave a choice
+(which library call, which data structure); a code block only for an
+algorithm they do not determine.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Test Levels in the Plan
+
+**Unit:** every task writes a unit test for each new behavior. That is
+Steps 1-4 above.
+
+**Integration:** when a task's deliverable crosses a boundary — module to
+module, database, network, filesystem — that task also carries an integration
+test: the same write, run-to-fail, implement, run-to-pass steps, with real
+components on both sides of the boundary and its own `Run:` and `Expected:`.
+The Test Strategy row names it. test-driven-development runs it
+in the same cycle as the unit tests.
+
+**E2E:** the last task is always `### Task N: End-to-end scenarios`. It adds
+no production code. Its steps: write one e2e test per Test Strategy scenario
+from the spec's wording, never from the implementation; run it (Expected:
+PASS); prove it can fail by breaking the behavior it checks, running it
+(Expected: FAIL), and restoring; commit. Running it with evidence captured is
+the job of verification-before-completion, not of this task.
+
+## Quality Gates in the Plan
+
+Read the project before filling in the section: `package.json` scripts,
+`.prettierrc*`, `eslint.config.*` or `.eslintrc*`, `tsconfig.json`,
+`sonar-project.properties`, the CI config. Write what CI runs.
+
+**Another stack** uses its equivalent (`ruff format --check`, `go vet ./...`,
+`cargo clippy -- -D warnings`), or `none — <reason>` where it has none.
+
+**Dropping a gate:** only when it does not apply: no TypeScript, no build
+step. "Not set up yet" in a JS/TS project is a gap, not a reason; the plan's
+first task sets the tool up, so your human partner sees it when they review
+the plan, and the line names its command. Sonar is the exception, because it
+needs a server the plan cannot create: ask your human partner whether the
+repo has a Sonar project, and write `none — <reason>` only on their word.
+
+**Red at the base.** Before writing the section, run the whole-project
+Format, Lint and Typecheck commands, and the Unit and Integration suites,
+once on the commit the plan starts from. A level that is green stays
+whole-project. A level that is red, on a project that already has the tool
+set up, is scoped to what this plan changes, so the plan does not ask anyone
+to repair code it never touched. Write the base commit's sha into each
+scoped line:
+
+**Lint run:** `files=$(git diff --name-only --diff-filter=ACMR <base-sha>...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx'); [ -z "$files" ] || npx eslint $files --max-warnings 0`
+**Typecheck run:** `changed-only <base-sha> -- npx tsc --noEmit --pretty false`
+**Unit run:** `files=$(git diff --name-only --diff-filter=ACMR <base-sha>...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx'); [ -z "$files" ] || npx jest --findRelatedTests $files`
+
+- **Lint** lints the changed files. Guard the empty list: ESLint 9 with no
+  file arguments lints the whole directory.
+- **Typecheck** cannot take a file list (`tsc` then ignores `tsconfig`), so
+  `changed-only` runs the whole check and passes when no error is in a
+  changed file. It fails on a tool that crashed and printed no error.
+  `verify-levels` puts it on the `PATH`.
+- **Unit and Integration** run the tests related to the changed files: Jest
+  `--findRelatedTests`, Vitest `related --run`. They follow the import graph,
+  so a test that reaches a changed file through another module still runs;
+  dynamic imports are not seen. The plan's new tests are changed files, so
+  they always run. A stack without an equivalent keeps the whole suite.
+- **Format** checks only the files the diff adds (`--diff-filter=A`):
+  formatting a whole legacy file buries the real change in the diff.
+- **Sonar** has nothing to scope in its command: the Sonar way quality gate
+  judges new code. If this project's gate has conditions on the whole code
+  and is red, the plan cannot scope it; ask your human partner.
+
+The line between the two is the files this plan changes. A failure in one of
+them is fixed, including one that was there before. A failure anywhere else
+is not fixed: the executor leaves it, and the plan's sentence and the
+reports tell your human partner what is there.
+
+Another stack scopes its own tools the same way. Under the gate lines, one
+plain sentence says which levels are scoped and what the whole-project run
+found ("lint: 412 findings at `<sha>`"), so your human partner sees it when
+they review the plan. Build and E2E stay whole-project; a red one at the
+base is a question for your human partner, not a gate to drop.
+
+**Sonar reads coverage.** The quality gate's coverage condition reads the
+report the tests write, so the Unit run (and the Integration run, if it
+measures coverage) must write it where the scanner looks
+(`sonar.javascript.lcov.reportPaths`, default `coverage/lcov.info`). A run
+that writes none fails the gate on coverage.
+
+**Credentials stay out of the plan.** The scanner reads `SONAR_TOKEN`, and
+the server URL from `sonar-project.properties` or `SONAR_HOST_URL`, in the
+environment. The plan is committed; `verify-levels` rejects one that spells
+out a token.
+
+## What a Step Contains
+
+A step is done when the implementer can write exactly one reasonable thing
+from it. That is the whole requirement: unambiguous, not complete. Each kind
+of step carries what makes it unambiguous and nothing more:
+
+- **A test step:** the test's name and its assertions, as code, with the
+  spec's exact values in them.
+- **A code step:** the exact signature (name, parameters, return type), the
+  file it lives in, and the specific values the spec pins. The implementer
+  writes the body. A body appears only for an algorithm the signature and
+  tests do not determine, or for exact copy the spec fixes.
+- **A verification step:** the command to run and the output that means it
+  passed.
+- **A reference to another task:** that task's Interfaces block says what
+  to use; the plan does not repeat that task's code.
+
+A plan is the set of decisions the implementer cannot make alone. A plan
+longer than the code it describes has written the code instead. Lines that
+decide nothing ("TBD", "handle edge cases", "add appropriate validation",
+"write tests for the above", a type or function no task defines) are the
+opposite failure, and the self-review catches both.
+
+## Self-Review
+
+After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
+
+**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
+
+**2. Step scan:** Every step must let the implementer write exactly one reasonable thing, and no step may carry more than that: a line that decides nothing is a gap, a function body the signature and tests already determine is a transcript. Fix both.
+
+**3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Review Focus:** For each input class or failure mode the spec implies, is there a task whose tests exercise it? The five uncovered ones most likely to bite a person go in the Review Focus section, and each line there gets its test added to the owning task. An empty section means you checked and found none, not that you skipped the check.
+
+**5. Proportion:** Compare the plan's length to the spec's. A plan several times longer than the spec it implements is a transcript of the program, not a plan. If code blocks are most of the document, replace bodies with signatures, test names and assertions, and check that each step is still unambiguous.
+
+**6. Test levels:** Does every Test Strategy row name a test at unit, integration, and e2e, or a line saying why a level does not apply? Does each integration test sit in the task that crosses the boundary it tests? Is the last task the e2e task? Does each of the header's Unit run, Integration run, and E2E run lines hold a command or `none — <reason>`, and does the E2E evidence line hold a path? Does the E2E run command, run exactly as written, write its capture into that path — with any environment variable it needs set on the command line? A command that writes evidence only when a variable is set, and does not set it, exits 0 with no evidence and fails at verification.
+
+**7. Quality gates:** Does each of the five Quality Gates lines hold a whole-project command or `none — <reason>` (Format, Lint, Typecheck, Unit and Integration scoped to the changed files only where the base run was red, with its count stated), and does each reason hold against the project's config files and CI? If the Sonar line is a command, does the Unit run write the coverage report it reads, and does no line spell out a token?
+
+If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
+
+## Execution Handoff
+
+After saving and self-reviewing the plan, link it for your human partner
+to read. If they have already explicitly supplied an execution method, ask
+them to review the plan and confirm it captures what they want; wait for that
+review before implementation, then use the preserved method. Otherwise, ask
+them to review the plan and choose an execution method before implementation.
+
+**When no execution method has already been supplied:**
+
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Which execution approach would you prefer?**
+
+- **Subagent-driven** - A fresh subagent implements each task and a fresh reviewer checks it before the next one starts, then a whole-branch review at the end. Most thorough; costs a fresh context per task and per review.
+- **Native** - I implement every task myself in this session, the way this harness runs work, then one fresh reviewer on the most capable model checks the whole branch. Cheapest and fastest; no independent review until the end. Runs well with a mid-tier session model, since the plan carries the design.
+
+**For this plan I recommend <one of the two>, because <one sentence from the plan: how much the tasks depend on each other's interfaces, how many there are, what a shipped mistake would cost>. Does the plan capture what you want, and which approach should we use?"**
+
+**When an execution method has already been supplied:**
+
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Does it capture what you want?"**
+
+**If Subagent-driven chosen:**
+
+- **REQUIRED SUB-SKILL:** Use subagent-driven-development
+
+**If Native chosen:**
+
+- **REQUIRED SUB-SKILL:** Use executing-plans

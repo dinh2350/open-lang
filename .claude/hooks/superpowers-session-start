@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# SessionStart hook: injects the using-superpowers skill into every session.
+# Adapted from superpowers/hooks/session-start for Claude Code project skills.
+set -euo pipefail
+
+skill_md="${CLAUDE_PROJECT_DIR:-.}/.claude/skills/using-superpowers/SKILL.md"
+[ -r "$skill_md" ] || exit 0
+
+content="$(<"$skill_md")"
+context="<EXTREMELY_IMPORTANT>
+You have superpowers.
+
+**Below is the full content of your 'using-superpowers' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**
+
+${content}
+</EXTREMELY_IMPORTANT>"
+
+# Emit JSON through python so the skill text is escaped correctly.
+python3 -I -c 'import json,sys; print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}}))' "$context"

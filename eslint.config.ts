@@ -18,6 +18,9 @@ export default defineConfig(
     '**/playwright-report/',
     '**/test-results/',
     '.claude/worktrees/',
+    // Superpowers skills copied from github.com/dinh2350/superpowers; their
+    // helper scripts are not part of this repo's TypeScript project.
+    '.claude/skills/',
     '.scratch/',
   ]),
   {
