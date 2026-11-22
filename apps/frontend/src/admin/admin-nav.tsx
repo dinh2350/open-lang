@@ -46,7 +46,6 @@ export function AdminNav() {
       direction="horizontal"
       align="center"
       gap={4}
-      minHeight="2.25rem"
     >
       <AdminNavLink href="/" end>
         Conversation

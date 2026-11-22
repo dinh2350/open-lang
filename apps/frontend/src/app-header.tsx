@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { useAuth } from './auth/auth-context';
 import { SignOutButton } from './auth/sign-out-button';
 import { ModeToggle } from './theme/mode-toggle';
+import './app-header.css';
 
 /**
  * The top right of every page: the links passed in, the light or dark mode
@@ -14,17 +15,7 @@ export function AppHeader({
 }): ReactElement {
   const { user } = useAuth();
   return (
-    <header
-      style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 'var(--spacing-4)',
-        padding: 'var(--spacing-4)',
-      }}
-    >
+    <header className="app-header">
       {children}
       <ModeToggle />
       {user !== null && <SignOutButton />}
