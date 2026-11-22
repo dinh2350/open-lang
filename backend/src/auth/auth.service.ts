@@ -1,31 +1,22 @@
 import { randomBytes } from 'node:crypto';
-import type {
-  AuthResponse,
-  registerRequestSchema,
-  signInRequestSchema,
-  User,
-} from '@open-live-agent/shared';
+import type { User } from '@open-live-agent/shared';
 import {
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import argon2 from 'argon2';
-import type { z } from 'zod';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { AccountLockedException } from './account-locked.exception.js';
 import { AuthTokenService } from './auth-token.service.js';
+import type {
+  SignedIn,
+  ValidRegisterRequest,
+  ValidSignInRequest,
+} from './auth.types.js';
+import { AccountLockedException } from './exceptions/account-locked.exception.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 import { toUser } from './users.js';
-
-export type ValidRegisterRequest = z.output<typeof registerRequestSchema>;
-export type ValidSignInRequest = z.output<typeof signInRequestSchema>;
-
-/** A signed-in User: the response body, plus the refresh token for the cookie. */
-export interface SignedIn extends AuthResponse {
-  readonly refreshToken: string;
-}
 
 /** The same for a wrong email and a wrong password, so it reveals neither. */
 const WRONG_CREDENTIALS = 'Wrong email or password.';

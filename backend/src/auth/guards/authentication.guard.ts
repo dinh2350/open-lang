@@ -1,33 +1,16 @@
-import type { User } from '@open-live-agent/shared';
 import {
   type CanActivate,
-  createParamDecorator,
   type ExecutionContext,
   Injectable,
-  SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { Request } from 'express';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { AccountLockedException } from './account-locked.exception.js';
-import { AuthTokenService } from './auth-token.service.js';
-import { toUser } from './users.js';
-
-const PUBLIC_ROUTE = Symbol('PublicRoute');
-
-/** Lets people who aren't signed in call this route or controller. */
-export const Public = () => SetMetadata(PUBLIC_ROUTE, true);
-
-interface AuthenticatedRequest extends Request {
-  user: User;
-}
-
-/** The signed-in User calling a route. Only on routes that aren't `@Public()`. */
-export const CurrentUser = createParamDecorator(
-  (_data: unknown, context: ExecutionContext): User =>
-    context.switchToHttp().getRequest<AuthenticatedRequest>().user,
-);
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { AuthTokenService } from '../auth-token.service.js';
+import type { AuthenticatedRequest } from '../authenticated-request.js';
+import { PUBLIC_ROUTE } from '../decorators/public.decorator.js';
+import { AccountLockedException } from '../exceptions/account-locked.exception.js';
+import { toUser } from '../users.js';
 
 const BEARER = /^Bearer (\S+)$/i;
 

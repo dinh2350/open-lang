@@ -2,12 +2,11 @@ import { parseEnv } from '@open-live-agent/shared';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { minutes, ThrottlerModule } from '@nestjs/throttler';
 import { z } from 'zod';
 import { AuthTokenService } from './auth-token.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { AuthenticationGuard } from './authentication.guard.js';
+import { AuthenticationGuard } from './guards/authentication.guard.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 
 const authEnvSchema = z.object({
@@ -27,12 +26,6 @@ const authEnvSchema = z.object({
         signOptions: { algorithm: 'HS256', expiresIn: '15m' },
         verifyOptions: { algorithms: ['HS256'] },
       }),
-    }),
-    // Only the routes that use ThrottlerGuard are limited: register and
-    // sign-in, each to 5 requests a minute per IP, to slow password guessing.
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: minutes(1), limit: 5 }],
-      errorMessage: 'Too many attempts. Wait a minute, then try again.',
     }),
   ],
   controllers: [AuthController],

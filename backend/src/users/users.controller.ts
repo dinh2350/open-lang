@@ -19,8 +19,8 @@ import {
   ParseUUIDPipe,
   Put,
 } from '@nestjs/common';
-import { CurrentUser } from '../auth/authentication.guard.js';
-import { AdminOnly } from '../auth/role.guard.js';
+import { AdminOnly } from '../auth/decorators/admin-only.decorator.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { UsersService } from './users.service.js';
 
 /** The Admin API for managing Users. Members get `403`. */

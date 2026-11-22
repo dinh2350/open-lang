@@ -17,13 +17,14 @@ import {
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AUTH_PATH } from '../routes.js';
-import {
-  AuthService,
-  type SignedIn,
-  type ValidRegisterRequest,
-  type ValidSignInRequest,
-} from './auth.service.js';
-import { CurrentUser, Public } from './authentication.guard.js';
+import { AuthService } from './auth.service.js';
+import type {
+  SignedIn,
+  ValidRegisterRequest,
+  ValidSignInRequest,
+} from './auth.types.js';
+import { CurrentUser } from './decorators/current-user.decorator.js';
+import { Public } from './decorators/public.decorator.js';
 import {
   clearRefreshCookie,
   RefreshTokenCookie,

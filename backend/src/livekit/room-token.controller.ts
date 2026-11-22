@@ -5,7 +5,7 @@ import {
   type User,
 } from '@open-live-agent/shared';
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { CurrentUser } from '../auth/authentication.guard.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { RoomTokenService } from './room-token.service.js';
 
 @Controller('token')
