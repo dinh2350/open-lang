@@ -2,3 +2,13 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-stone/theme.css';
+
+/*
+ * Paint the page with the theme. Astryx puts the theme on <html> but leaves
+ * the page itself to the app, and only AppShell (which this app does not use)
+ * paints it. Unlayered, so it sits above the reset and theme layers.
+ */
+html {
+  background-color: var(--color-background-body);
+  color: var(--color-text-primary);
+}
