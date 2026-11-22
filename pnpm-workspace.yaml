@@ -25,6 +25,10 @@ onlyBuiltDependencies:
 
 # Their install scripts are no-ops (`node -e ""`); they ship prebuilt binaries.
 ignoredBuiltDependencies:
+  # Their postinstall only prints a nudge to run `astryx init`, which this
+  # project must not run against its CLAUDE.md and AGENTS.md.
+  - '@astryxdesign/cli'
+  - '@astryxdesign/core'
   - '@google/genai'
   - '@livekit/blingfire'
   - '@livekit/local-inference'
