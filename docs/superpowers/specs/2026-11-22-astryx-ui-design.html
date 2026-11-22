@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Astryx UI</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --fact-bg: #def3f0;
+        --call: #a85a06;
+        --call-bg: #fdf0d2;
+        --human: #1e4fd1;
+        --human-bg: #dde8fd;
+        --chg: #b0306a;
+        --chg-bg: #fbe3ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --fact-bg: #12302d;
+          --call: #f3b34a;
+          --call-bg: #3a2a0c;
+          --human: #86a9ff;
+          --human-bg: #172650;
+          --chg: #ff8fbd;
+          --chg-bg: #3b1526;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .pair {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .pair svg {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      figure {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        min-width: 0;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        color: var(--muted);
+      }
+      svg .box {
+        fill: var(--surface);
+        stroke: var(--line);
+        stroke-width: 1.5;
+      }
+      svg .box.chg {
+        fill: var(--chg-bg);
+        stroke: var(--chg);
+        stroke-width: 2;
+      }
+      svg .ln {
+        stroke: var(--muted);
+        stroke-width: 1.5;
+        fill: none;
+      }
+      svg text {
+        fill: var(--fg);
+        font:
+          12.5px system-ui,
+          sans-serif;
+      }
+      svg .tb {
+        font-weight: 600;
+      }
+      svg .ts {
+        fill: var(--muted);
+        font-size: 11px;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      .tree {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 0;
+        overflow-x: auto;
+        font:
+          13.5px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .tree .add,
+      .tree .mod,
+      .tree .del,
+      .legend .add,
+      .legend .mod,
+      .legend .del {
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .tree .add,
+      .legend .add {
+        background: var(--fact-bg);
+        color: var(--fact);
+      }
+      .tree .mod,
+      .legend .mod {
+        background: var(--chg-bg);
+        color: var(--chg);
+      }
+      .tree .del,
+      .legend .del {
+        background: var(--call-bg);
+        color: var(--call);
+        text-decoration: line-through;
+      }
+      .tree .note {
+        color: var(--muted);
+      }
+      .legend {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Waiting for your review · 2026-11-22</p>
+        <h1>Astryx UI</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Summary</h2>
+        <p class="summary">
+          Replace the whole look of <code>apps/frontend</code> (sign in,
+          register, Conversation, admin Users) with Meta's Astryx design system,
+          using its <strong>stone</strong> theme in both light and dark. The
+          goal is a nicer-looking app for office workers learning English.
+          Tailwind, shadcn, Radix and class-variance-authority are removed;
+          Astryx is the only UI layer. Pages keep their text, behavior and
+          flows. The Agent's voice bars need new plain CSS because they are
+          styled with Tailwind today. The thing to watch: Astryx is beta
+          (0.7.17), so versions are pinned exactly, and we must prove early that
+          its components work in the project's jsdom tests.
+        </p>
+      </section>
+
+      <section id="overview">
+        <h2>Overview</h2>
+        <div class="pair">
+          <figure>
+            <svg
+              viewBox="0 0 410 66"
+              role="img"
+              aria-label="Before: pages use shadcn wrappers styled by Tailwind"
+            >
+              <defs>
+                <marker
+                  id="ah-before"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">Pages</text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                ui/ wrappers
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                Tailwind
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">import</text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                styled by
+              </text>
+            </svg>
+            <figcaption>
+              Before: pages import five shadcn-style wrappers; classes come from
+              Tailwind; light mode only.
+            </figcaption>
+          </figure>
+          <figure>
+            <svg
+              viewBox="0 0 410 170"
+              role="img"
+              aria-label="After: pages use Astryx components under the stone theme, with a new mode toggle"
+            >
+              <defs>
+                <marker
+                  id="ah-after"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">Pages</text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">Astryx</text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                stone theme
+              </text>
+              <rect
+                class="box chg"
+                x="160"
+                y="100"
+                width="90"
+                height="44"
+                rx="6"
+              />
+              <text class="tb" x="205" y="127" text-anchor="middle">
+                Mode toggle
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">use</text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                themed by
+              </text>
+              <path
+                class="ln"
+                d="M250,122 H355 V56"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="302" y="114" text-anchor="middle">
+                light / dark
+              </text>
+            </svg>
+            <figcaption>
+              After: Tailwind, shadcn wrappers and Radix are gone. The stone
+              theme supplies light and dark; a new toggle on every page picks
+              the mode.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h2>Folder structure</h2>
+        <pre class="tree">apps/frontend/
+├── <span class="mod">package.json</span>   <span class="note">← drop tailwindcss, @tailwindcss/vite, tw-animate-css, shadcn, radix-ui, class-variance-authority, cn; add @astryxdesign/core, @astryxdesign/theme-stone, @stylexjs/stylex (exact versions)</span>
+├── <span class="del">components.json</span>   <span class="note">← shadcn config, no longer used</span>
+├── <span class="mod">vite.config.ts</span>   <span class="note">← remove the Tailwind plugin</span>
+├── <span class="mod">index.html</span>   <span class="note">← possibly an early script so the saved mode applies before first paint (builder's call)</span>
+├── src/
+│   ├── <span class="mod">index.css</span>   <span class="note">← Astryx and stone CSS imports replace the shadcn tokens</span>
+│   ├── <span class="mod">main.tsx</span> / <span class="mod">app.tsx</span>   <span class="note">← wrap the app in the Astryx theme provider</span>
+│   ├── <span class="add">theme/</span>   <span class="note">← new: the light/dark mode choice (default, saved choice) and its toggle</span>
+│   ├── <span class="del">components/ui/</span>   <span class="note">← button, input, label, native-select, table; Astryx replaces them</span>
+│   ├── <span class="del">lib/utils.ts</span>   <span class="note">← only re-exports the class-name helper</span>
+│   ├── <span class="mod">auth/</span>   <span class="note">← credentials form, sign-in and register pages, header (now also shown signed out, for the mode toggle), sign-out button</span>
+│   ├── <span class="mod">admin/</span>   <span class="note">← admin nav, Users page and its table</span>
+│   └── conversation/
+│       ├── <span class="mod">conversation-page.tsx</span>, <span class="mod">microphone-toggle.tsx</span>, <span class="mod">agent-status.tsx</span>
+│       └── <span class="add">voice-bars.css</span>   <span class="note">← plain CSS for the Agent's voice bars, on Astryx color tokens</span>
+└── test/
+    ├── <span class="add">theme-mode.spec.tsx</span>   <span class="note">← the mode choice and toggle</span>
+    └── <span class="mod">existing *.spec.tsx</span>   <span class="note">← only where a query no longer fits</span>
+e2e/tests/
+└── <span class="add">theme-mode.spec.ts</span>   <span class="note">← the saved mode survives a reload</span></pre>
+        <p class="legend">
+          <span class="add">new</span> <span class="mod">changed</span>
+          <span class="del">removed</span> · Untouched on purpose:
+          <code>apps/backend</code>, <code>apps/agent</code>,
+          <code>packages/shared</code>, and the pages' text, routes and
+          behavior. The root <code>CLAUDE.md</code> and <code>AGENTS.md</code>
+          also stay as they are (see Constraints).
+        </p>
+      </section>
+
+      <section id="review">
+        <h2>For your review</h2>
+        <div class="group fact">
+          <h3>Confirmed</h3>
+          <ul>
+            <li>
+              Astryx drops into a Vite app with a few CSS imports and a theme
+              wrapper; no build plugin (<a href="#evidence-vite"
+                >Astryx setup for Vite</a
+              >).
+            </li>
+            <li>
+              The stone theme has light and dark values, and the theme wrapper
+              takes a <code>mode</code> of system, light or dark (<a
+                href="#evidence-stone-dark"
+                >stone has dark values</a
+              >, <a href="#evidence-mode">the mode setting</a>).
+            </li>
+            <li>
+              Astryx is in beta and the current version of core and all seven
+              themes is 0.7.17 (<a href="#evidence-beta">beta and version</a>).
+            </li>
+            <li>
+              Astryx has a component for each role these pages use: text input,
+              table, select, banner, button, link, stack, card, layout (<a
+                href="#evidence-components"
+                >component list</a
+              >).
+            </li>
+            <li>
+              Two of them do not behave like the native elements they replace.
+              Astryx's <code>Selector</code> is a custom combobox button, not a
+              native <code>&lt;select&gt;</code>, and its <code>Table</code>
+              types show no caption or row-header support. Tests that use
+              <code>selectOptions</code>, <code>rowheader</code> or the table
+              caption are affected (<a href="#evidence-components"
+                >component list</a
+              >).
+            </li>
+            <li>
+              The Agent's voice bars are styled with Tailwind classes, so they
+              need new CSS once Tailwind goes (<a href="#evidence-bars"
+                >voice bars styling</a
+              >).
+            </li>
+            <li>
+              The frontend tests and the e2e tests find things by role or label,
+              not by CSS class (<a href="#evidence-tests"
+                >how tests find elements</a
+              >).
+            </li>
+            <li>
+              Astryx's <code>init</code> command writes its guide into
+              <code>AGENTS.md</code> / <code>CLAUDE.md</code>, and this repo's
+              <code>CLAUDE.md</code> is its checked-in instructions (<a
+                href="#evidence-init"
+                >Astryx init</a
+              >).
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>My call</h3>
+          <ul>
+            <li>
+              Pin <code>@astryxdesign/core</code>, the stone theme and the CLI
+              to exactly 0.7.17, because the project is beta and its README
+              tells exact-pinned projects to match versions (<a
+                href="#evidence-beta"
+                >beta and version</a
+              >).
+            </li>
+            <li>
+              The mode toggle shows on every page, including sign-in and
+              register, as a small control in the top-right corner (where the
+              signed-in links already sit). Today those two pages have no
+              header, so they get this one control. A signed-out person on a
+              dark device must be able to change the mode.
+            </li>
+            <li>
+              The existing tests are the contract for behavior, not for how they
+              poke the page. The plan may rewrite how a test interacts (for
+              example, opening Astryx's Selector and clicking an option instead
+              of <code>selectOptions</code>) and may adjust a query when Astryx
+              adds a second live region. It may not weaken or delete an
+              assertion. The e2e specs should pass as they are; change one only
+              if Astryx forces it, and keep the change minimal.
+            </li>
+            <li>
+              Where an Astryx component cannot keep something the app does today
+              (the Users table's row headers and caption, the role select's "You
+              can't change your own Role." description), use the closest option
+              in this order: another Astryx component, then a swizzled copy of
+              that component, then a native element styled with Astryx tokens.
+              Each such exception is listed in the plan so you can see it. This
+              is the one place "Astryx only" bends, and only to keep
+              accessibility.
+            </li>
+            <li>
+              The mode toggle is a two-state switch (light or dark). First visit
+              follows the device setting; after the person toggles, their choice
+              is saved in the browser and wins. Trade-off: once chosen, there is
+              no way back to "follow the device" short of clearing site data.
+              Easy to add a third state later.
+            </li>
+            <li>
+              The saved choice lives in <code>localStorage</code>, read and
+              written inside try/catch so the page still works when storage is
+              blocked.
+            </li>
+            <li>
+              Do not run <code>astryx init</code> against the root
+              <code>CLAUDE.md</code> or <code>AGENTS.md</code>. If the Astryx
+              guide is wanted for agents, put it in its own file and link it (<a
+                href="#evidence-init"
+                >Astryx init</a
+              >, <a href="#evidence-gates">project rules</a>).
+            </li>
+            <li>
+              Keep the app's visible text and heading names exactly as they are,
+              so existing tests and e2e queries keep working (<a
+                href="#evidence-tests"
+                >how tests find elements</a
+              >).
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>You decided</h3>
+          <ul>
+            <li>Use Astryx for the whole UI, replacing everything.</li>
+            <li>Why: "UI đẹp hơn" (a nicer UI).</li>
+            <li>
+              Astryx only: remove Tailwind and shadcn rather than keep them next
+              to Astryx.
+            </li>
+            <li>
+              Theme: <strong>stone</strong>, because the app is an English
+              learning site for office workers.
+            </li>
+            <li>Both light and dark modes.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>The design</h2>
+        <h3>Intent and why</h3>
+        <p>
+          Open Lang is an English-learning site for people who work in offices.
+          They talk to an AI tutor by voice. The current UI works but looks
+          plain. The owner wants it to look better and chose Meta's Astryx
+          design system, with its calm stone theme, in light and dark, across
+          the entire frontend.
+        </p>
+        <h3>Goals</h3>
+        <ul>
+          <li>Every page uses Astryx components and the stone theme.</li>
+          <li>
+            Light and dark both look finished on every page, including error
+            messages, the admin table and the Agent's voice bars.
+          </li>
+          <li>
+            Nothing a person could do before stops working: sign in, register,
+            sign out, start and end a Conversation, mute the microphone, and all
+            admin actions.
+          </li>
+          <li>
+            Accessibility does not get worse: roles, labels, keyboard use and
+            live-region announcements stay.
+          </li>
+        </ul>
+        <h3>Non-goals</h3>
+        <ul>
+          <li>New features, new pages, or changed flows.</li>
+          <li>Changing any visible wording or translating the UI.</li>
+          <li>Other Astryx themes, a theme picker, or a custom brand theme.</li>
+          <li>
+            Changes to the backend, the Agent, or <code>packages/shared</code>.
+          </li>
+        </ul>
+        <h3>Anti-goals</h3>
+        <ul>
+          <li>
+            A UI that looks fine in light but has unreadable text, invisible
+            borders or a broken visualizer in dark.
+          </li>
+          <li>
+            Two styling systems left running side by side, or leftover shadcn
+            and Tailwind code that nobody uses.
+          </li>
+          <li>
+            Passing the quality gates by weakening them (no suppressions, no
+            lowered thresholds).
+          </li>
+        </ul>
+        <h3>Constraints</h3>
+        <ul>
+          <li>
+            Astryx is beta. Pin exact versions and keep the upgrade path simple.
+          </li>
+          <li>
+            The project's rules apply: <code>pnpm check</code> and
+            <code>pnpm sonar</code> must pass, and because this touches the
+            Conversation flow and auth, so must <code>pnpm test:e2e</code> (<a
+              href="#evidence-gates"
+              >project rules</a
+            >).
+          </li>
+          <li>
+            React 19 is already in use, which Astryx requires (<a
+              href="#evidence-vite"
+              >Astryx setup for Vite</a
+            >).
+          </li>
+          <li>LiveKit's React components stay; only their styling changes.</li>
+          <li>
+            Self-hosted fonts: the stone theme's font files must load from the
+            app, not from a third-party site, if the package ships them. See
+            "Left to the builder".
+          </li>
+        </ul>
+        <h3>Approaches</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Approach</th>
+              <th>Trades off</th>
+              <th>Chosen</th>
+            </tr>
+            <tr>
+              <td>Astryx only; remove Tailwind, shadcn, Radix, cva</td>
+              <td>
+                One consistent look and less to maintain. Every existing
+                Tailwind class gets rewritten.
+              </td>
+              <td>Yes, you chose it.</td>
+            </tr>
+            <tr>
+              <td>Astryx plus Tailwind kept, bridged by Astryx's token file</td>
+              <td>
+                Less rewriting. Two style systems, and a wrong CSS layer order
+                silently breaks the cascade.
+              </td>
+              <td>No: you asked to replace everything.</td>
+            </tr>
+            <tr>
+              <td>Copy Astryx component source into the repo (swizzle)</td>
+              <td>
+                Full control of the code. We own upgrades and maintenance.
+              </td>
+              <td>
+                No as the main route. Possible for a single component that
+                cannot be styled enough.
+              </td>
+            </tr>
+          </table>
+        </div>
+        <h3>How it gets made</h3>
+        <ul>
+          <li>
+            Use Astryx's pre-built CSS and typed components with the stone
+            theme, wrapped in Astryx's theme provider at the app root. No Astryx
+            build plugin.
+          </li>
+          <li>
+            Map today's pieces to Astryx: Button, text inputs with labels,
+            Table, Selector for the role select, Banner or Text for errors and
+            status, Link or the router's links styled by Astryx, TopNav or Stack
+            for the header, Card/Layout for page structure. Exact choices are
+            the builder's.
+          </li>
+          <li>
+            Voice bars: keep LiveKit's visualizer, style it with plain CSS in
+            <code>voice-bars.css</code> using Astryx color tokens so it follows
+            light and dark.
+          </li>
+          <li>
+            Mode: the theme provider's <code>mode</code> comes from a small
+            piece of state (device default, then the saved choice), toggled from
+            the header (my call).
+          </li>
+          <li>
+            Remove Tailwind, shadcn, Radix and related packages and files once
+            nothing imports them, and confirm with a search that none remain.
+          </li>
+        </ul>
+        <h3>How it will be verified</h3>
+        <ul>
+          <li>
+            Open the sign-in page: a stone-themed form appears. Flip the toggle
+            to dark: everything switches. Reload: dark is still on.
+          </li>
+          <li>
+            In a fresh browser profile set to dark on the device, the first
+            visit is dark; set to light, it is light.
+          </li>
+          <li>
+            Register, sign in and sign out work with the same messages as
+            before, including the error shown when sign-in fails.
+          </li>
+          <li>
+            Start a Conversation: the status line still reads "The Agent is
+            listening.", the voice bars move and are visible in both modes, the
+            microphone toggle and End work.
+          </li>
+          <li>
+            As an admin, the Users table shows every user, and locking,
+            unlocking, changing a role and setting a password work as before,
+            readable in both modes.
+          </li>
+          <li>
+            Everything above is reachable by keyboard alone, with the same
+            accessible names.
+          </li>
+        </ul>
+        <p>
+          All three levels apply. <strong>Unit:</strong> the mode logic (device
+          default, saved choice wins, toggle flips and saves, blocked storage
+          does not crash). <strong>Integration:</strong> the existing
+          Testing-Library page specs, which run each page against a mocked
+          backend, must keep passing. Their interactions and queries may change
+          where Astryx widgets differ (see "My call"), but no assertion is
+          weakened. <strong>End to end:</strong> the existing Playwright specs
+          pass as they are, plus one new spec that toggles dark on the sign-in
+          page and checks it survives a reload. Because the pass criteria come
+          from this document, tests for the new mode behavior are written from
+          it, not from the finished code.
+        </p>
+        <h3>Left to the builder</h3>
+        <ul>
+          <li>
+            Which exact Astryx component fills each role, and the page layouts,
+            as long as wording, roles and flows are unchanged.
+          </li>
+          <li>
+            Whether the saved mode needs a tiny script in
+            <code>index.html</code> to avoid a flash of the wrong mode before
+            the app loads. Astryx documents the flash for server-rendered apps
+            (<a href="#evidence-mode">the mode setting</a>); this app is a Vite
+            single-page app.
+          </li>
+          <li>
+            Whether the stone package ships its font files. In my check, the
+            <code>fonts.css</code> path from Astryx's README returned 404 on the
+            CDN for all seven themes, which may only mean the CDN path differs.
+            Check the installed package; if there are no fonts, use the theme's
+            fallback stack.
+          </li>
+          <li>
+            First task of the plan: prove one Astryx component renders and is
+            queryable in this project's jsdom test setup. If a component needs
+            test setup (for example <code>matchMedia</code>), add it there. If
+            Astryx cannot run in jsdom at all, stop and tell the owner before
+            continuing; I have not verified this.
+          </li>
+          <li>The toggle's look and its exact accessible name.</li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Evidence</h2>
+        <article id="evidence-vite">
+          <h3>Astryx setup for Vite</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://github.com/meta/astryx/blob/8ce4a965c29ab1f014f98a09cb1f5314cccc16a0/packages/core/README.md"
+              >@astryxdesign/core README, Quick Start, Vite</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            Same CSS imports and providers as above. No build plugins needed;
+            Astryx ships pre-built. (Also: "Astryx requires React 19 or later".)
+          </blockquote>
+        </article>
+        <article id="evidence-stone-dark">
+          <h3>The stone theme has light and dark values</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://cdn.jsdelivr.net/npm/@astryxdesign/theme-stone@0.7.17/dist/theme.css"
+              >@astryxdesign/theme-stone@0.7.17 dist/theme.css</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            --color-background-body: light-dark(#f0f0f7, #101018);
+          </blockquote>
+        </article>
+        <article id="evidence-mode">
+          <h3>The mode setting, and the flash-before-hydration note</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://cdn.jsdelivr.net/npm/@astryxdesign/core@0.7.17/dist/theme/types.d.ts"
+              >core@0.7.17 dist/theme/types.d.ts</a
+            >
+            and
+            <a
+              href="https://cdn.jsdelivr.net/npm/@astryxdesign/core@0.7.17/dist/theme/Theme.d.ts"
+              >Theme.d.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            export type ThemeMode = 'system' | 'light' | 'dark'; · "For RSC /
+            SSR, set `data-theme` on `&lt;html&gt;` in your root server layout
+            to avoid a flash of wrong theme before hydration"
+          </blockquote>
+        </article>
+        <article id="evidence-beta">
+          <h3>Astryx is beta; the current version is 0.7.17</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://github.com/meta/astryx/blob/8ce4a965c29ab1f014f98a09cb1f5314cccc16a0/README.md"
+              >Astryx README</a
+            >
+            and the read-only query
+            <code>npm view @astryxdesign/&lt;pkg&gt; version</code> for core and
+            the seven themes · 2026-11-22
+          </p>
+          <blockquote>
+            "Currently in Beta" · every one of the eight packages returned
+            0.7.17.
+          </blockquote>
+        </article>
+        <article id="evidence-components">
+          <h3>Astryx has the components these pages need</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://cdn.jsdelivr.net/npm/@astryxdesign/core@0.7.17/dist/index.js"
+              >core@0.7.17 dist/index.js</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            Exports include Button, TextInput, Table, Selector, Banner, Link,
+            Stack, Card, Layout, TopNav, Switch, ToggleButton and IconButton.
+            TextInput takes a <code>label</code> prop. Selector's types describe
+            "the element that carries the combobox role" and a
+            <code>disabledMessage</code> prop. The Table types in
+            <code>dist/Table/Table.d.ts</code> mention no caption or row header.
+            I checked the type files only, not the rendered output.
+          </blockquote>
+        </article>
+        <article id="evidence-bars">
+          <h3>The voice bars are styled with Tailwind classes</h3>
+          <p class="src">
+            Source:
+            <a
+              href="../../../apps/frontend/src/conversation/agent-status.tsx#L32"
+              >agent-status.tsx:32</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            className="flex h-24 items-center justify-center gap-2 *:w-4
+            *:rounded-full *:bg-muted ...
+            *:data-[lk-highlighted=true]:bg-primary"
+          </blockquote>
+        </article>
+        <article id="evidence-tests">
+          <h3>Tests find elements by role or label</h3>
+          <p class="src">
+            Source: count of Testing-Library queries in
+            <code>apps/frontend/test/*.tsx</code>, and
+            <a href="../../../e2e/tests/conversation.spec.ts"
+              >e2e/tests/conversation.spec.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            138 ByRole, 6 ByLabelText, 4 ByText. The e2e specs use
+            <code>getByRole('heading', { name: 'Sign in' })</code>,
+            <code>getByRole('button', { name: 'Start' })</code> and
+            <code>getByLabel('Email')</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-init">
+          <h3>Astryx init writes into AGENTS.md / CLAUDE.md</h3>
+          <p class="src">
+            Source:
+            <a
+              href="https://github.com/meta/astryx/blob/8ce4a965c29ab1f014f98a09cb1f5314cccc16a0/README.md"
+              >Astryx README, Getting Started</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "It ... saves the Astryx guide to `AGENTS.md`/`CLAUDE.md` so you and
+            your agents build with Astryx instead of guessing"
+          </blockquote>
+        </article>
+        <article id="evidence-gates">
+          <h3>Project rules: checks, Sonar, e2e, no suppressions</h3>
+          <p class="src">
+            Source: <a href="../../../CLAUDE.md">CLAUDE.md</a>, "Quality gates"
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Before a task is done, `pnpm check` and `pnpm sonar` must both
+            pass. Run `pnpm test:e2e` too when the change touches the
+            Conversation flow, auth or the Agent."
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
