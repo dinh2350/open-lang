@@ -78,8 +78,11 @@ describe('Admin Users page: locking Users', () => {
       name: `Lock ${GRACE}`,
     });
 
-    expect(lockSelf).toBeDisabled();
+    // Astryx keeps a disabled Button focusable, so it is aria-disabled.
+    expect(lockSelf).toHaveAttribute('aria-disabled', 'true');
     expect(lockSelf).toHaveAccessibleDescription("You can't lock yourself.");
+    await userEvent.click(lockSelf);
+    expect(isLockedOnBackend(GRACE)).toBe(false);
   });
 
   it('shows a 409 inline, next to that User, and keeps them unlocked', async () => {

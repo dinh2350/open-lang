@@ -6,6 +6,7 @@ import { adminRequestAuthorizations } from './admin-backend';
 import {
   ADA,
   backendHasAdminAndMember,
+  chooseRole,
   GRACE,
   openUsersPageAsAdmin,
   rowOf,
@@ -70,12 +71,12 @@ describe('Admin Users page', () => {
       within(await rowOf(GRACE)).getByRole('combobox', {
         name: `Role of ${GRACE}`,
       }),
-    ).toHaveDisplayValue('Admin');
+    ).toHaveTextContent(/^Admin$/);
     expect(
       within(await rowOf(ADA)).getByRole('combobox', {
         name: `Role of ${ADA}`,
       }),
-    ).toHaveDisplayValue('Member');
+    ).toHaveTextContent(/^Member$/);
   });
 
   it('names the Users table, and the region it scrolls in, by its caption', async () => {
@@ -105,12 +106,12 @@ describe('Admin Users page', () => {
       name: `Role of ${ADA}`,
     });
 
-    await userEvent.selectOptions(roleOfAda, 'Admin');
+    await chooseRole(roleOfAda, 'Admin');
 
     await vi.waitFor(() => {
       expect(roleOnBackend(ADA)).toBe('admin');
     });
-    expect(roleOfAda).toHaveDisplayValue('Admin');
+    expect(roleOfAda).toHaveTextContent(/^Admin$/);
     expect(within(await rowOf(ADA)).queryByRole('alert')).toBeNull();
   });
 
@@ -121,10 +122,13 @@ describe('Admin Users page', () => {
       name: `Role of ${GRACE}`,
     });
 
-    expect(ownRole).toBeDisabled();
+    // Astryx keeps a disabled Selector focusable, so it is aria-disabled.
+    expect(ownRole).toHaveAttribute('aria-disabled', 'true');
     expect(ownRole).toHaveAccessibleDescription(
       "You can't change your own Role.",
     );
+    await userEvent.click(ownRole);
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
   });
 
   it("shows a 409 inline, next to that User, and keeps the User's Role", async () => {
@@ -143,7 +147,7 @@ describe('Admin Users page', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Manage Users' }));
     const adaRow = await rowOf(ADA);
 
-    await userEvent.selectOptions(
+    await chooseRole(
       within(adaRow).getByRole('combobox', { name: `Role of ${ADA}` }),
       'Member',
     );
@@ -153,7 +157,7 @@ describe('Admin Users page', () => {
     );
     expect(
       within(adaRow).getByRole('combobox', { name: `Role of ${ADA}` }),
-    ).toHaveDisplayValue('Admin');
+    ).toHaveTextContent(/^Admin$/);
     expect(within(await rowOf(GRACE)).queryByRole('alert')).toBeNull();
   });
 
@@ -167,7 +171,7 @@ describe('Admin Users page', () => {
     await openUsersPageAsAdmin();
     const adaRow = await rowOf(ADA);
 
-    await userEvent.selectOptions(
+    await chooseRole(
       within(adaRow).getByRole('combobox', { name: `Role of ${ADA}` }),
       'Admin',
     );

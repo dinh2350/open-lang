@@ -38,3 +38,15 @@ export async function rowOf(email: string): Promise<HTMLElement> {
   }
   return row;
 }
+
+/**
+ * Picks a Role in a User's Role control: Astryx's Selector is a combobox
+ * button that opens a list of options.
+ */
+export async function chooseRole(
+  combobox: HTMLElement,
+  role: 'Member' | 'Admin',
+): Promise<void> {
+  await userEvent.click(combobox);
+  await userEvent.click(await screen.findByRole('option', { name: role }));
+}

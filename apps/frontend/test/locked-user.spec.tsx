@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { chooseRole } from './admin-page';
 import { PASSWORD, renderApp, submitCredentials } from './app';
 import {
   ACCOUNT_LOCKED_MESSAGE,
@@ -36,7 +37,7 @@ describe('A Locked User', () => {
 
     // Another Admin locks Grace while her Users page is open.
     changeLockedOnBackend(grace.id, true);
-    await userEvent.selectOptions(roleOfAda, 'Admin');
+    await chooseRole(roleOfAda, 'Admin');
 
     expect(
       await screen.findByRole('heading', { name: 'Sign in' }),

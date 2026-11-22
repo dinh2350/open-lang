@@ -7,6 +7,7 @@ import { ADA, openUsersPageAsAdmin, rowOf } from './admin-page';
 import { PASSWORD } from './app';
 import { passwordOnBackend } from './auth-backend';
 import { backend } from './backend';
+import { findStatusMessage } from './status-message';
 
 const NEW_PASSWORD = 'a brand new password for Ada';
 
@@ -39,7 +40,7 @@ describe('Admin Users page: setting a new password', () => {
 
     await submitNewPassword(adaRow, NEW_PASSWORD);
 
-    expect(await within(adaRow).findByRole('status')).toHaveTextContent(
+    expect(await findStatusMessage(adaRow)).toHaveTextContent(
       `New password set. ${ADA} is signed out everywhere.`,
     );
     expect(passwordOnBackend(ADA)).toBe(NEW_PASSWORD);

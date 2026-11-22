@@ -5,7 +5,10 @@ import {
   type UserDetails,
 } from '@open-lang/shared';
 import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { FormLayout } from '@astryxdesign/core/FormLayout';
 import { Heading } from '@astryxdesign/core/Heading';
+import { Selector } from '@astryxdesign/core/Selector';
 import { Stack } from '@astryxdesign/core/Stack';
 import {
   Table,
@@ -16,17 +19,12 @@ import {
   TableRow,
 } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { VisuallyHidden } from '@astryxdesign/core/VisuallyHidden';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SubmitEvent, useId, useState } from 'react';
 import { BackendRefusal } from '@/auth/auth-api';
 import { useAuth } from '@/auth/auth-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '@/components/ui/native-select';
 import { changeLocked, changeRole, listUsers, setPassword } from './users-api';
 
 const USERS_QUERY_KEY = ['admin', 'users'] as const;
@@ -169,6 +167,9 @@ function useUserChange<Variables>(
   });
 }
 
+// Text has no error color; the theme's status text token gives one.
+const errorTextStyle = { color: 'var(--color-text-error)' } as const;
+
 /**
  * A hint, or else the error of a refused change such as a `409`, shown
  * under a control in a User's row, and the id that describes the control.
@@ -185,19 +186,30 @@ function useControlNotes(hint: string | null, error: Error | null) {
   const notes = (
     <>
       {hint !== null && (
-        <p id={hintId} className="text-muted-foreground text-xs">
+        <Text as="p" id={hintId} type="supporting" color="secondary">
           {hint}
-        </p>
+        </Text>
       )}
       {error !== null && (
-        <p id={errorId} role="alert" className="text-destructive text-xs">
+        <Text
+          as="p"
+          id={errorId}
+          role="alert"
+          type="supporting"
+          style={errorTextStyle}
+        >
           {errorMessage(error)}
-        </p>
+        </Text>
       )}
     </>
   );
   return { describedBy, notes };
 }
+
+const roleOptions = roleSchema.options.map((role) => ({
+  value: role,
+  label: roleNames[role],
+}));
 
 function RoleControl({ user, isSignedInUser }: UserRowProps) {
   const { authorizedFetch } = useAuth();
@@ -212,25 +224,21 @@ function RoleControl({ user, isSignedInUser }: UserRowProps) {
   const shownRole = roleChange.isPending ? roleChange.variables : user.role;
 
   return (
-    <>
-      <NativeSelect
+    <Stack gap={1}>
+      <Selector
         size="sm"
-        aria-label={`Role of ${user.email}`}
+        label={`Role of ${user.email}`}
+        isLabelHidden
         aria-describedby={describedBy}
+        options={roleOptions}
         value={shownRole}
-        disabled={isSignedInUser || roleChange.isPending}
-        onChange={(event) => {
-          roleChange.mutate(roleSchema.parse(event.target.value));
+        isDisabled={isSignedInUser || roleChange.isPending}
+        onChange={(role) => {
+          roleChange.mutate(roleSchema.parse(role));
         }}
-      >
-        {roleSchema.options.map((role) => (
-          <NativeSelectOption key={role} value={role}>
-            {roleNames[role]}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+      />
       {notes}
-    </>
+    </Stack>
   );
 }
 
@@ -247,14 +255,13 @@ function LockControl({ user, isSignedInUser }: UserRowProps) {
   const action = user.locked ? 'Unlock' : 'Lock';
 
   return (
-    <div className="flex flex-col items-start gap-1">
-      <span>{user.locked ? 'Locked' : 'Active'}</span>
+    <Stack gap={1} align="start">
+      <Text>{user.locked ? 'Locked' : 'Active'}</Text>
       <Button
-        size="xs"
-        variant="outline"
-        aria-label={`${action} ${user.email}`}
+        size="sm"
+        label={`${action} ${user.email}`}
         aria-describedby={describedBy}
-        disabled={isSignedInUser || lockChange.isPending}
+        isDisabled={isSignedInUser || lockChange.isPending}
         onClick={() => {
           lockChange.mutate(!user.locked);
         }}
@@ -262,7 +269,7 @@ function LockControl({ user, isSignedInUser }: UserRowProps) {
         {action}
       </Button>
       {notes}
-    </div>
+    </Stack>
   );
 }
 
@@ -273,25 +280,23 @@ function LockControl({ user, isSignedInUser }: UserRowProps) {
 function PasswordControl({ user }: { readonly user: UserDetails }) {
   const { authorizedFetch } = useAuth();
   const [formOpen, setFormOpen] = useState(false);
+  const [password, setPasswordValue] = useState('');
   const [invalidPassword, setInvalidPassword] = useState<string | null>(null);
   const passwordChange = useMutation({
-    mutationFn: (password: string) =>
-      setPassword(authorizedFetch, user.id, password),
+    mutationFn: (newPassword: string) =>
+      setPassword(authorizedFetch, user.id, newPassword),
     onSuccess: () => {
       setFormOpen(false);
     },
   });
-  const inputId = useId();
-  const hintId = useId();
+  const labelSuffixId = useId();
   const error =
     invalidPassword ??
     (passwordChange.error === null ? null : errorMessage(passwordChange.error));
 
   function submit(event: SubmitEvent<HTMLFormElement>): void {
     event.preventDefault();
-    const request = setPasswordRequestSchema.safeParse({
-      password: new FormData(event.currentTarget).get('password'),
-    });
+    const request = setPasswordRequestSchema.safeParse({ password });
     if (!request.success) {
       setInvalidPassword(
         request.error.issues.map((issue) => issue.message).join(' '),
@@ -304,65 +309,70 @@ function PasswordControl({ user }: { readonly user: UserDetails }) {
 
   if (!formOpen) {
     return (
-      <div className="flex flex-col items-start gap-1">
+      <Stack gap={1} align="start">
         <Button
-          size="xs"
-          variant="outline"
-          aria-label={`Set new password for ${user.email}`}
+          size="sm"
+          label={`Set new password for ${user.email}`}
           onClick={() => {
             passwordChange.reset();
             setInvalidPassword(null);
+            setPasswordValue('');
             setFormOpen(true);
           }}
         >
           Set new password
         </Button>
         {passwordChange.isSuccess && (
-          <p role="status" className="text-muted-foreground text-xs">
+          <Text as="p" role="status" type="supporting" color="secondary">
             New password set. {user.email} is signed out everywhere.
-          </p>
+          </Text>
         )}
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <form noValidate onSubmit={submit} className="flex flex-col gap-1">
-      <Label htmlFor={inputId} className="text-xs">
-        New password<span className="sr-only"> for {user.email}</span>
-      </Label>
-      <Input
-        id={inputId}
-        name="password"
-        type="password"
-        autoComplete="new-password"
-        required
-        aria-describedby={hintId}
-        className="h-8"
-      />
-      <p id={hintId} className="text-muted-foreground text-xs">
-        At least 12 characters.
-      </p>
-      {error !== null && (
-        <p role="alert" className="text-destructive text-xs">
-          {error}
-        </p>
-      )}
-      <div className="flex gap-1">
-        <Button size="xs" type="submit" disabled={passwordChange.isPending}>
-          Save password
-        </Button>
-        <Button
-          size="xs"
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setFormOpen(false);
-          }}
-        >
-          Cancel
-        </Button>
-      </div>
+    <form noValidate onSubmit={submit}>
+      <Stack gap={1}>
+        <FormLayout defaultOptionality="required">
+          <TextInput
+            size="sm"
+            label="New password"
+            aria-labelledby={labelSuffixId}
+            htmlName="password"
+            type="password"
+            autoComplete="new-password"
+            isRequired
+            description="At least 12 characters."
+            value={password}
+            onChange={setPasswordValue}
+          />
+        </FormLayout>
+        {/* Joined to the visible label, so each row's field has its own name. */}
+        <VisuallyHidden id={labelSuffixId}>for {user.email}</VisuallyHidden>
+        {error !== null && (
+          <Text as="p" role="alert" type="supporting" style={errorTextStyle}>
+            {error}
+          </Text>
+        )}
+        <Stack direction="horizontal" gap={1}>
+          <Button
+            size="sm"
+            type="submit"
+            variant="primary"
+            label="Save password"
+            isDisabled={passwordChange.isPending}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            label="Cancel"
+            onClick={() => {
+              setFormOpen(false);
+            }}
+          />
+        </Stack>
+      </Stack>
     </form>
   );
 }
