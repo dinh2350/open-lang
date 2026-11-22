@@ -6,10 +6,12 @@ const validEnvironment = {
   LIVEKIT_API_KEY: 'devkey',
   LIVEKIT_API_SECRET: 'secret',
   AGENT_NAME: 'open-lang',
+  BACKEND_URL: 'http://localhost:3000',
+  AGENT_API_KEY: 'agent-api-key-of-at-least-32-characters',
 };
 
 describe('Agent environment', () => {
-  it('reads the LiveKit connection settings and the AGENT_NAME the Agent registers with', () => {
+  it('reads the LiveKit connection settings, the AGENT_NAME the Agent registers with, and how it reaches the backend', () => {
     expect(
       loadAgentEnvironment({ ...validEnvironment, UNRELATED: 'ignored' }),
     ).toEqual(validEnvironment);
@@ -29,6 +31,8 @@ describe('Agent environment', () => {
     'LIVEKIT_API_KEY',
     'LIVEKIT_API_SECRET',
     'AGENT_NAME',
+    'BACKEND_URL',
+    'AGENT_API_KEY',
   ])('refuses to start, naming %s, when it is missing', (name) => {
     const environment = Object.fromEntries(
       Object.entries(validEnvironment).filter(([key]) => key !== name),
@@ -52,5 +56,29 @@ describe('Agent environment', () => {
         LIVEKIT_URL: 'http://localhost:7880',
       }),
     ).toThrow(/LIVEKIT_URL/);
+  });
+
+  it('requires BACKEND_URL and a 32-character AGENT_API_KEY', () => {
+    expect(() =>
+      loadAgentEnvironment({ ...validEnvironment, BACKEND_URL: 'localhost' }),
+    ).toThrow(/BACKEND_URL/);
+    expect(() =>
+      loadAgentEnvironment({
+        ...validEnvironment,
+        BACKEND_URL: 'ws://localhost:3000',
+      }),
+    ).toThrow(/BACKEND_URL/);
+    expect(() =>
+      loadAgentEnvironment({
+        ...validEnvironment,
+        AGENT_API_KEY: 'x'.repeat(31),
+      }),
+    ).toThrow(/AGENT_API_KEY/);
+    expect(
+      loadAgentEnvironment({
+        ...validEnvironment,
+        AGENT_API_KEY: 'x'.repeat(32),
+      }).AGENT_API_KEY,
+    ).toBe('x'.repeat(32));
   });
 });

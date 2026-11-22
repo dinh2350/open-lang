@@ -21,6 +21,8 @@ Always read the latest LiveKit documentation before using a LiveKit API. Trainin
 - `src/conversation-choice.ts`: `readConversationChoice`, which parses the job's metadata into the Member's Scenario and speed, and throws when it is missing or invalid.
 - `src/scenario-instructions.ts`: the persona instructions, the opening line and the greeting instruction of each Scenario, for the chosen speed.
 - `src/agent.ts`: the `ConversationAgent` class, which plays the chosen Scenario, with no tools.
+- `src/transcript-recorder.ts`: `recordTranscript`, which sends each user and assistant message to the backend, in order, timed by the speaking intervals of LiveKit's state events.
+- `src/backend-client.ts`: `createBackendClient`, which posts turns and Misses to the backend with `AGENT_API_KEY`, retries, and never rejects.
 - `src/config/`: the validated environment, the models and the `AgentSession` options.
 - `test/`: unit and integration tests. `test/live/` needs real Provider keys and runs with `pnpm test:live`.
 

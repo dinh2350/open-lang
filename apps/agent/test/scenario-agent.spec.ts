@@ -5,7 +5,16 @@ import {
   type ScenarioId,
   SPEEDS,
 } from '@open-lang/shared';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
 import conversationAgent, {
   startConversation,
@@ -15,6 +24,11 @@ import {
   scenarioInstructions,
 } from '../src/scenario-instructions.ts';
 import { firstAgentMessage } from './agent-messages.ts';
+import {
+  type FakeBackend,
+  startFakeBackend,
+  TEST_AGENT_API_KEY,
+} from './fake-backend.ts';
 import { dispatchToRoom } from './fake-job.ts';
 import { startFakeRealtimeApi } from './fake-realtime-api.ts';
 import { LiteralLLM } from './literal-llm.ts';
@@ -120,9 +134,21 @@ describe('The Scenario instructions', () => {
 });
 
 describe('Agent dispatched with a Scenario', () => {
+  let backend: FakeBackend;
+
+  beforeAll(async () => {
+    backend = await startFakeBackend();
+  });
+
+  afterAll(async () => {
+    await backend.close();
+  });
+
   beforeEach(() => {
     vi.stubEnv('AGENT_MODE', 'realtime');
     vi.stubEnv('REALTIME_PROVIDER', 'fake');
+    vi.stubEnv('BACKEND_URL', backend.url);
+    vi.stubEnv('AGENT_API_KEY', TEST_AGENT_API_KEY);
   });
 
   afterEach(() => {

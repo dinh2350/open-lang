@@ -7,8 +7,11 @@ import {
   modelsOf,
 } from './config/index.ts';
 import { ConversationAgent } from './agent.ts';
+import { loadBackendEnvironment } from './agent-environment.ts';
+import { createBackendClient } from './backend-client.ts';
 import { readConversationChoice } from './conversation-choice.ts';
 import { greetingInstructions } from './scenario-instructions.ts';
+import { recordTranscript } from './transcript-recorder.ts';
 
 /**
  * Starts a Conversation: the Agent joins the room, if there is one, in the
@@ -45,6 +48,7 @@ export default defineAgent({
     const logger = log();
     const roomName = ctx.job.room?.name;
     const config = loadAgentConfig(process.env);
+    const { BACKEND_URL, AGENT_API_KEY } = loadBackendEnvironment(process.env);
     const choice = readConversationChoice(ctx.job.metadata);
 
     const session = new voice.AgentSession(
@@ -55,6 +59,18 @@ export default defineAgent({
     });
 
     await startConversation(session, choice, ctx.room);
+    // Each turn goes to the backend as soon as it is in the history, so a
+    // Conversation that ends abruptly keeps its transcript.
+    if (roomName) {
+      recordTranscript(
+        session,
+        createBackendClient({
+          backendUrl: BACKEND_URL,
+          agentApiKey: AGENT_API_KEY,
+        }),
+        roomName,
+      );
+    }
     logger.info(
       { roomName, ...choice, ...modelsOf(config) },
       'Conversation started',

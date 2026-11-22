@@ -72,6 +72,8 @@ export async function dispatchToRoom(
   await runWithJobContextAsync(ctx, () => agent.entry(ctx));
 
   return {
+    /** The Conversation's AgentSession, once the job has started it. */
+    session: (): voice.AgentSession | undefined => ctx._primaryAgentSession,
     /** Whether the Agent joined the room it was dispatched to. */
     joinedRoom: () => joinedRoom,
     /** The Agent's structured log records so far, oldest first. */

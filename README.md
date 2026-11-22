@@ -9,8 +9,8 @@ Use Node 24 (`.nvmrc`) and pnpm 10 (`corepack enable pnpm`), then:
 ```sh
 pnpm install                        # also generates the Prisma client
 cp .env.example .env
-cp apps/backend/.env.example apps/backend/.env   # then set JWT_SECRET (openssl rand -base64 48) and SEED_ADMIN_PASSWORD
-cp apps/agent/.env.example apps/agent/.env
+cp apps/backend/.env.example apps/backend/.env   # then set JWT_SECRET (openssl rand -base64 48), AGENT_API_KEY and SEED_ADMIN_PASSWORD
+cp apps/agent/.env.example apps/agent/.env       # then set the same AGENT_API_KEY
 cp apps/frontend/.env.example apps/frontend/.env
 docker compose up --detach --wait   # the LiveKit server and Postgres
 pnpm db:migrate                     # creates the tables
@@ -19,6 +19,8 @@ pnpm dev                            # frontend, backend and Agent
 ```
 
 Open http://localhost:5173 and register, or sign in as the first Admin (`SEED_ADMIN_EMAIL`) to manage Users. If another Postgres already uses port 5432, set `POSTGRES_PORT` in `.env` and the same port in `DATABASE_URL` in `apps/backend/.env`.
+
+The Agent sends the transcript of each Conversation to the backend at `BACKEND_URL` (see `apps/agent/.env.example`; the default is `http://localhost:3000`). It authenticates with `AGENT_API_KEY`: set the same value in `apps/backend/.env` and `apps/agent/.env` (`openssl rand -base64 48` makes one). Both refuse to start without it.
 
 The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER` in `apps/agent/.env` to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY` or Vertex AI (see `apps/agent/.env.example`). To try Pipeline mode instead, set `AGENT_MODE=pipeline` and choose `openai` or `google` for each of `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER`; the Providers may be mixed. The Agent refuses to start, naming the variable, when its configuration is invalid.
 

@@ -26,6 +26,10 @@ const DATABASE_URL = `postgresql://open_lang:open_lang@localhost:${postgresPort}
 // inherit it through the environment, so they see the same name.
 process.env.E2E_AGENT_NAME ??= `e2e-agent-${randomUUID()}`;
 
+// A new key every run, shared by the backend and the Agent, which sends the
+// transcript with it.
+const AGENT_API_KEY = randomBytes(48).toString('base64url');
+
 const liveKitEnv = {
   LIVEKIT_URL,
   LIVEKIT_API_KEY: 'devkey',
@@ -88,7 +92,7 @@ export default defineConfig({
         DATABASE_URL,
         // A new secret every run: no Auth Token outlives it.
         JWT_SECRET: randomBytes(32).toString('base64url'),
-        AGENT_API_KEY: randomBytes(48).toString('base64url'),
+        AGENT_API_KEY,
       },
       reuseExistingServer: false,
       timeout: 60_000,
@@ -98,7 +102,13 @@ export default defineConfig({
       command: 'pnpm --filter @open-lang/agent start',
       url: AGENT_HEALTH_URL,
       // The fake Provider needs no API key and makes no AI calls.
-      env: { ...liveKitEnv, AGENT_MODE: 'realtime', REALTIME_PROVIDER: 'fake' },
+      env: {
+        ...liveKitEnv,
+        AGENT_MODE: 'realtime',
+        REALTIME_PROVIDER: 'fake',
+        BACKEND_URL,
+        AGENT_API_KEY,
+      },
       // Shows the Agent's Conversation start and end logs in the test output.
       stdout: 'pipe',
       reuseExistingServer: false,

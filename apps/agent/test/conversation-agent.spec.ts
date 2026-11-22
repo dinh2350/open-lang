@@ -1,5 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { llm, voice } from '@livekit/agents';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import conversationAgent from '../src/conversation-agent.ts';
+import {
+  type FakeBackend,
+  startFakeBackend,
+  TEST_AGENT_API_KEY,
+} from './fake-backend.ts';
 import { dispatchToRoom } from './fake-job.ts';
 
 /** What the backend sets as the job's metadata. */
@@ -9,9 +24,21 @@ const standupAtNormalSpeed = JSON.stringify({
 });
 
 describe('Agent dispatched into a Conversation room', () => {
+  let backend: FakeBackend;
+
+  beforeAll(async () => {
+    backend = await startFakeBackend();
+  });
+
+  afterAll(async () => {
+    await backend.close();
+  });
+
   beforeEach(() => {
     vi.stubEnv('AGENT_MODE', 'realtime');
     vi.stubEnv('REALTIME_PROVIDER', 'fake');
+    vi.stubEnv('BACKEND_URL', backend.url);
+    vi.stubEnv('AGENT_API_KEY', TEST_AGENT_API_KEY);
   });
 
   afterEach(() => {
@@ -95,4 +122,55 @@ describe('Agent dispatched into a Conversation room', () => {
       }),
     );
   });
+
+  it("sends each turn of the Conversation to the backend, under the room's name", async () => {
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-transcript',
+      standupAtNormalSpeed,
+    );
+    job.session()?.emit(
+      voice.AgentSessionEventTypes.ConversationItemAdded,
+      voice.createConversationItemAddedEvent(
+        llm.ChatMessage.create({
+          id: 'item_answer',
+          role: 'user',
+          content: 'I fixed the login bug.',
+        }),
+      ),
+    );
+
+    const request = await vi.waitFor(() => {
+      const found = backend.requests.find(
+        ({ url }) =>
+          url === '/api/agent/conversations/conversation-transcript/turns',
+      );
+      expect(found).toBeDefined();
+      return found;
+    });
+    expect(request).toMatchObject({
+      authorization: `Bearer ${TEST_AGENT_API_KEY}`,
+      body: {
+        itemId: 'item_answer',
+        role: 'user',
+        text: 'I fixed the login bug.',
+      },
+    });
+    await job.end();
+  });
+
+  it.each(['BACKEND_URL', 'AGENT_API_KEY'])(
+    'a job fails, naming %s, when it is missing',
+    async (name) => {
+      vi.stubEnv(name, undefined);
+
+      await expect(
+        dispatchToRoom(
+          conversationAgent,
+          'conversation-unconfigured',
+          standupAtNormalSpeed,
+        ),
+      ).rejects.toThrow(new RegExp(name));
+    },
+  );
 });

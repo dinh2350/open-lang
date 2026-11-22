@@ -11,6 +11,8 @@ import { loadAgentConfig } from './config/index.ts';
 // the framework's IPC channel, which makes the agent server fail at startup.
 delete process.env.WATCH_REPORT_DEPENDENCIES;
 
+// Refuses to start, naming the variable, without the LiveKit settings, the
+// BACKEND_URL or a valid AGENT_API_KEY.
 const { AGENT_NAME } = loadAgentEnvironment(process.env);
 // Refuses to start on a bad Agent Mode, Provider, API key or model, before
 // the agent server registers with LiveKit. Each job reads it again.
