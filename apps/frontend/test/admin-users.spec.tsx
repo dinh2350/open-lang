@@ -46,6 +46,30 @@ describe('Admin Users page', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('marks the admin nav link to the page you are on as the current page', async () => {
+    await openUsersPageAsAdmin();
+    const nav = screen.getByRole('navigation', { name: 'Admin' });
+
+    expect(
+      within(nav).getByRole('link', { name: 'Manage Users' }),
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      within(nav).getByRole('link', { name: 'Conversation' }),
+    ).not.toHaveAttribute('aria-current');
+
+    await userEvent.click(
+      within(nav).getByRole('link', { name: 'Conversation' }),
+    );
+    await screen.findByRole('heading', { name: 'Talk to the Agent' });
+
+    expect(
+      within(nav).getByRole('link', { name: 'Conversation' }),
+    ).toHaveAttribute('aria-current', 'page');
+    expect(
+      within(nav).getByRole('link', { name: 'Manage Users' }),
+    ).not.toHaveAttribute('aria-current');
+  });
+
   it('sends a Member who opens the Users page to the Conversation page', async () => {
     browserIsSignedInAs(ADA, PASSWORD);
 
