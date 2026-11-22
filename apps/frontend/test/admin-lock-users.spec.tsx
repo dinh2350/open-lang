@@ -15,7 +15,7 @@ import {
   changeLockedOnBackend,
   isLockedOnBackend,
 } from './auth-backend';
-import { backend } from './backend';
+import { allRequestsAnswered, backend } from './backend';
 
 describe('Admin Users page: locking Users', () => {
   it('shows whether each User is locked', async () => {
@@ -81,7 +81,17 @@ describe('Admin Users page: locking Users', () => {
     // Astryx keeps a disabled Button focusable, so it is aria-disabled.
     expect(lockSelf).toHaveAttribute('aria-disabled', 'true');
     expect(lockSelf).toHaveAccessibleDescription("You can't lock yourself.");
+    let lockRequests = 0;
+    const countLockRequests = ({ request }: { request: Request }): void => {
+      if (new URL(request.url).pathname.endsWith('/locked')) {
+        lockRequests += 1;
+      }
+    };
+    backend.events.on('request:start', countLockRequests);
     await userEvent.click(lockSelf);
+    await allRequestsAnswered();
+    backend.events.removeListener('request:start', countLockRequests);
+    expect(lockRequests).toBe(0);
     expect(isLockedOnBackend(GRACE)).toBe(false);
   });
 
