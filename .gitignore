@@ -19,6 +19,9 @@ blob-report/
 .env.*
 !.env.example
 
+# Verification evidence (videos, screenshots, traces) is local only
+docs/superpowers/evidence/
+
 # Local Claude Code state
 .claude/worktrees/
 .claude/settings.local.json
