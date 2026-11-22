@@ -2,7 +2,7 @@ import { LinkProvider } from '@astryxdesign/core/Link';
 import { Theme } from '@astryxdesign/core/theme';
 import { stoneTheme } from '@astryxdesign/theme-stone/built';
 import type { ReactElement, ReactNode } from 'react';
-import { RouterLink } from './router-link';
+import { Link } from 'react-router';
 import type { ThemeMode } from './theme-mode';
 
 export function AppTheme({
@@ -14,7 +14,7 @@ export function AppTheme({
 }): ReactElement {
   return (
     <Theme theme={stoneTheme} mode={mode}>
-      <LinkProvider component={RouterLink}>{children}</LinkProvider>
+      <LinkProvider component={Link}>{children}</LinkProvider>
     </Theme>
   );
 }
