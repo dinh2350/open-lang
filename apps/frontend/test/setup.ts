@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll } from 'vitest';
+import { afterEach, beforeAll, vi } from 'vitest';
 import { allRequestsAnswered, backend, resetBackend } from './backend';
 
 // The backend stays up until the test process exits, without `close()`:
@@ -12,6 +12,9 @@ beforeAll(() => {
 
 afterEach(async () => {
   cleanup();
+  vi.unstubAllGlobals();
+  localStorage.clear();
+  document.documentElement.removeAttribute('data-theme');
   await allRequestsAnswered();
   resetBackend();
 });

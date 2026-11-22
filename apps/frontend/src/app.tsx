@@ -11,6 +11,7 @@ import { RequireSignedIn } from './auth/require-signed-in';
 import { SignedInHeader } from './auth/signed-in-header';
 import { SignInPage } from './auth/sign-in-page';
 import { ConversationPage } from './conversation/conversation-page';
+import { ThemeModeProvider } from './theme/theme-mode-provider';
 
 interface AppProps {
   /** The LiveKit Room the Conversation page connects through. */
@@ -24,29 +25,31 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <SignedInHeader>
-          <AdminNav />
-        </SignedInHeader>
-        <Routes>
-          <Route path="/sign-in" element={<SignInPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route element={<RequireSignedIn />}>
-            <Route
-              path="/"
-              element={
-                <ConversationPage
-                  room={room}
-                  agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
-                />
-              }
-            />
-            <Route element={<RequireAdmin />}>
-              <Route path="/admin/users" element={<UsersPage />} />
+      <ThemeModeProvider>
+        <AuthProvider>
+          <SignedInHeader>
+            <AdminNav />
+          </SignedInHeader>
+          <Routes>
+            <Route path="/sign-in" element={<SignInPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route element={<RequireSignedIn />}>
+              <Route
+                path="/"
+                element={
+                  <ConversationPage
+                    room={room}
+                    agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
+                  />
+                }
+              />
+              <Route element={<RequireAdmin />}>
+                <Route path="/admin/users" element={<UsersPage />} />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </ThemeModeProvider>
     </QueryClientProvider>
   );
 }
