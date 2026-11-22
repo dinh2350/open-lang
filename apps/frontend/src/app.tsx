@@ -5,10 +5,10 @@ import { Route, Routes } from 'react-router';
 import { AdminNav } from './admin/admin-nav';
 import { RequireAdmin } from './admin/require-admin';
 import { UsersPage } from './admin/users-page';
+import { AppHeader } from './app-header';
 import { AuthProvider } from './auth/auth-context';
 import { RegisterPage } from './auth/register-page';
 import { RequireSignedIn } from './auth/require-signed-in';
-import { SignedInHeader } from './auth/signed-in-header';
 import { SignInPage } from './auth/sign-in-page';
 import { ConversationPage } from './conversation/conversation-page';
 import { ThemeModeProvider } from './theme/theme-mode-provider';
@@ -27,9 +27,9 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeModeProvider>
         <AuthProvider>
-          <SignedInHeader>
+          <AppHeader>
             <AdminNav />
-          </SignedInHeader>
+          </AppHeader>
           <Routes>
             <Route path="/sign-in" element={<SignInPage />} />
             <Route path="/register" element={<RegisterPage />} />
