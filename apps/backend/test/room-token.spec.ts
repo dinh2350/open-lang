@@ -38,7 +38,19 @@ describe('POST /api/token (Room Token endpoint)', () => {
       : call.auth(authToken, { type: 'bearer' });
   }
 
-  async function requestRoomToken(body: RoomTokenRequest = {}) {
+  function choiceRequest(
+    overrides: Readonly<Record<string, unknown>> = {},
+  ): RoomTokenRequest {
+    return {
+      participant_metadata: JSON.stringify({
+        scenarioId: 'daily-standup',
+        speed: 0.85,
+        ...overrides,
+      }),
+    };
+  }
+
+  async function requestRoomToken(body: RoomTokenRequest = choiceRequest()) {
     const response = await postRoomTokenRequest(body, signedIn.authToken);
     expect(response.status).toBe(201);
     const roomToken = roomTokenResponseSchema.parse(response.body);
@@ -104,10 +116,10 @@ describe('POST /api/token (Room Token endpoint)', () => {
 
   it('ignores every client-supplied field', async () => {
     const { claims } = await requestRoomToken({
+      ...choiceRequest({ role: 'admin' }),
       room_name: 'someone-elses-room',
       participant_identity: 'someone-else',
       participant_name: 'Someone Else',
-      participant_metadata: '{"role":"admin"}',
       participant_attributes: { role: 'admin' },
       room_config: { agents: [{ agent_name: 'another-agent' }] },
     });
@@ -123,12 +135,51 @@ describe('POST /api/token (Room Token endpoint)', () => {
   it('issues an Admin a Room Token too, as for any Member', async () => {
     const admin = await signInFirstAdmin(app);
 
-    const response = await postRoomTokenRequest({}, admin.authToken);
+    const response = await postRoomTokenRequest(
+      choiceRequest(),
+      admin.authToken,
+    );
 
     expect(response.status).toBe(201);
     const roomToken = roomTokenResponseSchema.parse(response.body);
     const claims = await verifier.verify(roomToken.participant_token);
     expect(claims.sub).toBe(admin.user.id);
+  });
+
+  it('returns 400 without participant_metadata', async () => {
+    const response = await postRoomTokenRequest({}, signedIn.authToken);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('returns 400 for an unknown Scenario', async () => {
+    const response = await postRoomTokenRequest(
+      choiceRequest({ scenarioId: 'no-such-scenario' }),
+      signedIn.authToken,
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it('returns 400 for a speed that is not 0.7, 0.85 or 1', async () => {
+    const response = await postRoomTokenRequest(
+      choiceRequest({ speed: 2 }),
+      signedIn.authToken,
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it('dispatches the Agent with the choice as its metadata', async () => {
+    const { claims } = await requestRoomToken(
+      choiceRequest({ scenarioId: 'client-delay-call', speed: 0.7 }),
+    );
+
+    const agents = claims.roomConfig?.agents ?? [];
+    expect(JSON.parse(agents[0]?.metadata ?? 'null')).toEqual({
+      scenarioId: 'client-delay-call',
+      speed: 0.7,
+    });
   });
 
   it('rejects a body that is not in the standard token request shape', async () => {

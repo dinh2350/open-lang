@@ -31,6 +31,7 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
+  conversations Conversation[]
 }
 
 /// Keeps a User signed in for 7 days without their password (ADR 0003).
@@ -51,4 +52,69 @@ model RefreshToken {
   createdAt  DateTime      @default(now())
 
   @@index([userId])
+}
+
+/// Which side of a Conversation spoke a Turn.
+enum TurnRole {
+  agent
+  user
+}
+
+/// How far a Report has got.
+enum ReportStatus {
+  generating
+  ready
+  failed
+}
+
+/// One listening role-play of a User: created with the Room Token, in the room
+/// it names.
+model Conversation {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The LiveKit room of the Conversation, `conversation-<uuid>`.
+  roomName   String   @unique
+  scenarioId String
+  /// How fast the Agent speaks: 0.7, 0.85 or 1.
+  speed      Float
+  createdAt  DateTime @default(now())
+  turns      Turn[]
+  misses     Miss[]
+  report     Report?
+
+  @@index([userId, createdAt])
+}
+
+/// One thing said in a Conversation, by the Agent or the User.
+model Turn {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// The id of the item in the Agent's chat context, so a Turn is stored once.
+  itemId         String
+  role           TurnRole
+  text           String
+  startedAt      DateTime
+  endedAt        DateTime?
+
+  @@unique([conversationId, itemId])
+}
+
+/// A press of "I did not catch that".
+model Miss {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  pressedAt      DateTime
+}
+
+/// The feedback on a finished Conversation.
+model Report {
+  conversationId String       @id @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  status         ReportStatus
+  content        Json?
+  startedAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }

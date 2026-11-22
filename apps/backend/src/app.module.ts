@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { minutes, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module.js';
 import { backendEnvSchema } from './config/env.schema.js';
+import { ConversationsModule } from './conversations/conversations.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LiveKitModule } from './livekit/livekit.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -10,6 +11,7 @@ import { UsersModule } from './users/users.module.js';
 @Module({
   imports: [
     AuthModule,
+    ConversationsModule,
     HealthModule,
     LiveKitModule,
     UsersModule,
