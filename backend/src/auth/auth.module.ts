@@ -1,29 +1,21 @@
-import { parseEnv } from '@open-live-agent/shared';
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { z } from 'zod';
+import type { BackendEnv } from '../config/env.schema.js';
+import { RefreshTokensModule } from '../refresh-tokens/refresh-tokens.module.js';
+import { UsersModule } from '../users/users.module.js';
 import { AuthTokenService } from './auth-token.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { RefreshTokensModule } from '../refresh-tokens/refresh-tokens.module.js';
-import { UsersModule } from '../users/users.module.js';
 import { AuthenticationGuard } from './guards/authentication.guard.js';
-
-const authEnvSchema = z.object({
-  // HS256 needs a key of at least 256 bits.
-  JWT_SECRET: z.string().min(32),
-});
 
 @Module({
   imports: [
     JwtModule.registerAsync({
-      useFactory: () => ({
-        secret: parseEnv(
-          authEnvSchema,
-          process.env,
-          'Invalid Auth settings in the backend environment',
-        ).JWT_SECRET,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<BackendEnv, true>) => ({
+        secret: config.getOrThrow('JWT_SECRET', { infer: true }),
         signOptions: { algorithm: 'HS256', expiresIn: '15m' },
         verifyOptions: { algorithms: ['HS256'] },
       }),

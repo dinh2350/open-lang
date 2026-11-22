@@ -1,12 +1,16 @@
 import { randomUUID } from 'node:crypto';
-import type { RoomTokenResponse, User } from '@open-live-agent/shared';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import type {
+  LiveKitEnv,
+  RoomTokenResponse,
+  User,
+} from '@open-live-agent/shared';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   AccessToken,
   RoomAgentDispatch,
   RoomConfiguration,
 } from 'livekit-server-sdk';
-import { LIVEKIT_CONFIG, type LiveKitConfig } from './livekit-config.js';
 
 const ROOM_TOKEN_TTL = '10m';
 
@@ -14,9 +18,7 @@ const ROOM_TOKEN_TTL = '10m';
 export class RoomTokenService {
   private readonly logger = new Logger(RoomTokenService.name);
 
-  constructor(
-    @Inject(LIVEKIT_CONFIG) private readonly liveKit: LiveKitConfig,
-  ) {}
+  constructor(private readonly config: ConfigService<LiveKitEnv, true>) {}
 
   /**
    * Issues a Room Token for a new Conversation of the User: a new room, the
@@ -28,8 +30,8 @@ export class RoomTokenService {
     const roomName = `conversation-${randomUUID()}`;
 
     const roomToken = new AccessToken(
-      this.liveKit.apiKey,
-      this.liveKit.apiSecret,
+      this.config.getOrThrow('LIVEKIT_API_KEY', { infer: true }),
+      this.config.getOrThrow('LIVEKIT_API_SECRET', { infer: true }),
       { identity: user.id, ttl: ROOM_TOKEN_TTL },
     );
     roomToken.addGrant({
@@ -39,7 +41,11 @@ export class RoomTokenService {
       canSubscribe: true,
     });
     roomToken.roomConfig = new RoomConfiguration({
-      agents: [new RoomAgentDispatch({ agentName: this.liveKit.agentName })],
+      agents: [
+        new RoomAgentDispatch({
+          agentName: this.config.getOrThrow('AGENT_NAME', { infer: true }),
+        }),
+      ],
     });
 
     this.logger.log({
@@ -48,7 +54,7 @@ export class RoomTokenService {
       roomName,
     });
     return {
-      server_url: this.liveKit.url,
+      server_url: this.config.getOrThrow('LIVEKIT_URL', { infer: true }),
       participant_token: await roomToken.toJwt(),
     };
   }

@@ -102,6 +102,14 @@ describe('The backend source layout', () => {
     );
   });
 
+  it('reads the environment only through ConfigService', () => {
+    expect(filesContaining('process.env')).toEqual([]);
+    expect(filesContaining('parseEnv')).toEqual(['users/first-admin.ts']);
+    expect(sourceFiles().map(({ path: file }) => file)).not.toContain(
+      'livekit/livekit-config.ts',
+    );
+  });
+
   it('has no global module', () => {
     expect(filesContaining('@Global(')).toEqual([]);
   });
