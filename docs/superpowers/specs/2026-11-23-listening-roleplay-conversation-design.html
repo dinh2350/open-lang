@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Role-play công sở có hỗ trợ nghe và báo cáo sau buổi</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --fact-bg: #def3f0;
+        --call: #a85a06;
+        --call-bg: #fdf0d2;
+        --human: #1e4fd1;
+        --human-bg: #dde8fd;
+        --chg: #b0306a;
+        --chg-bg: #fbe3ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --fact-bg: #12302d;
+          --call: #f3b34a;
+          --call-bg: #3a2a0c;
+          --human: #86a9ff;
+          --human-bg: #172650;
+          --chg: #ff8fbd;
+          --chg-bg: #3b1526;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .pair {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .pair svg {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      figure {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        min-width: 0;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        color: var(--muted);
+      }
+      svg .box {
+        fill: var(--surface);
+        stroke: var(--line);
+        stroke-width: 1.5;
+      }
+      svg .box.chg {
+        fill: var(--chg-bg);
+        stroke: var(--chg);
+        stroke-width: 2;
+      }
+      svg .ln {
+        stroke: var(--muted);
+        stroke-width: 1.5;
+        fill: none;
+      }
+      svg text {
+        fill: var(--fg);
+        font:
+          12.5px system-ui,
+          sans-serif;
+      }
+      svg .tb {
+        font-weight: 600;
+      }
+      svg .ts {
+        fill: var(--muted);
+        font-size: 11px;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      .tree {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 0;
+        overflow-x: auto;
+        font:
+          13.5px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .tree .add,
+      .tree .mod,
+      .tree .del,
+      .legend .add,
+      .legend .mod,
+      .legend .del {
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .tree .add,
+      .legend .add {
+        background: var(--fact-bg);
+        color: var(--fact);
+      }
+      .tree .mod,
+      .legend .mod {
+        background: var(--chg-bg);
+        color: var(--chg);
+      }
+      .tree .del,
+      .legend .del {
+        background: var(--call-bg);
+        color: var(--call);
+        text-decoration: line-through;
+      }
+      .tree .note {
+        color: var(--muted);
+      }
+      .legend {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Chờ bạn duyệt · 2026-11-23</p>
+        <h1>Role-play công sở có hỗ trợ nghe và báo cáo sau buổi</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Tóm tắt</h2>
+        <p class="summary">
+          Biến Agent giọng nói hiện tại, đang là trợ lý đa năng, thành một người
+          đồng nghiệp trong một tình huống công sở bạn chọn. Bạn chỉnh tốc độ
+          nói, bấm "chưa nghe kịp" khi lạc, và sau buổi nhận một báo cáo gồm
+          những câu bạn nghe sót (kèm giải thích tiếng Việt), lỗi ngữ pháp kèm
+          câu đúng, và vài chỉ số trôi chảy. Mục tiêu là luyện kỹ năng bạn yếu
+          nhất, nghe, trong giai đoạn bạn tự dùng. Điều cần để ý: ta dùng chế độ
+          Realtime theo lựa chọn của bạn, nên Agent không thể nói lại đúng
+          nguyên câu, và lời thoại đến muộn. Vì vậy ta lưu lời thoại ngay trong
+          buổi và "chưa nghe kịp" sẽ diễn đạt lại thay vì phát lại.
+        </p>
+      </section>
+
+      <section id="overview">
+        <h2>Tổng quan</h2>
+        <div class="pair">
+          <figure>
+            <svg
+              viewBox="0 0 410 66"
+              role="img"
+              aria-label="Trước: trình duyệt nói chuyện với một Agent đa năng qua LiveKit, không lưu gì"
+            >
+              <defs>
+                <marker
+                  id="ah-before"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                LiveKit
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                Agent chung
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">
+                giọng nói
+              </text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                âm thanh
+              </text>
+            </svg>
+            <figcaption>
+              Trước: Agent là trợ lý đa năng, chào cố định "Hello, how can I
+              help?", và không lưu gì sau buổi nói.
+            </figcaption>
+          </figure>
+          <figure>
+            <svg
+              viewBox="0 0 410 170"
+              role="img"
+              aria-label="Sau: Agent đóng vai theo Scenario, ghi lời thoại vào Backend, Backend tạo báo cáo gửi lại trình duyệt"
+            >
+              <defs>
+                <marker
+                  id="ah-after"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                LiveKit
+              </text>
+              <rect
+                class="box chg"
+                x="310"
+                y="10"
+                width="90"
+                height="44"
+                rx="6"
+              />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                Agent đóng vai
+              </text>
+              <rect
+                class="box chg"
+                x="160"
+                y="100"
+                width="90"
+                height="44"
+                rx="6"
+              />
+              <text class="tb" x="205" y="127" text-anchor="middle">
+                Backend + DB
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">
+                giọng nói
+              </text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                âm thanh
+              </text>
+              <path
+                class="ln"
+                d="M355,54 V122 H250"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="302" y="114" text-anchor="middle">
+                ghi lời thoại
+              </text>
+              <path
+                class="ln"
+                d="M160,122 H55 V56"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="108" y="114" text-anchor="middle">
+                báo cáo
+              </text>
+            </svg>
+            <figcaption>
+              Sau: Agent đóng vai theo Scenario và ghi từng lượt thoại vào
+              Backend ngay trong buổi. Backend lưu vào Postgres, tạo báo cáo, và
+              trình duyệt hiển thị. Phần mới được tô màu.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h2>Cấu trúc thư mục</h2>
+        <pre class="tree">open-lang/
+├── apps/
+│   ├── agent/
+│   │   ├── src/<span class="mod">agent.ts</span>   <span class="note">← lớp ConversationAgent: vai và hướng dẫn lấy từ Scenario</span>
+│   │   ├── src/<span class="mod">conversation-agent.ts</span>   <span class="note">← đọc Scenario và tốc độ của buổi, gắn bộ ghi lời thoại và xử lý "chưa nghe kịp"</span>
+│   │   ├── src/<span class="add">transcript-recorder.ts</span>   <span class="note">← gửi từng lượt thoại sang Backend khi nó được thêm vào lịch sử</span>
+│   │   ├── src/<span class="add">listening-help.ts</span>   <span class="note">← nhận tín hiệu "chưa nghe kịp": ngắt, diễn đạt lại chậm hơn, đánh dấu</span>
+│   │   └── <span class="mod">scenarios.yaml</span>   <span class="note">← thêm kịch bản mô phỏng cho vai, nút trợ giúp, nói tiếng Anh</span>
+│   ├── backend/
+│   │   ├── prisma/<span class="mod">schema.prisma</span>   <span class="note">← thêm Conversation, Turn, Miss, Report; mọi dòng gắn với userId</span>
+│   │   ├── src/<span class="add">conversations/</span>   <span class="note">← nhận lời thoại từ Agent, liệt kê và đọc buổi của từng người</span>
+│   │   ├── src/<span class="add">reports/</span>   <span class="note">← tạo báo cáo từ lời thoại; chạy lại được độc lập với buổi nói</span>
+│   │   └── src/livekit/<span class="mod">room-token.service.ts</span>   <span class="note">← nhận Scenario và tốc độ (đã kiểm tra), truyền cho Agent</span>
+│   └── frontend/src/
+│       ├── conversation/<span class="mod">conversation-page.tsx</span>   <span class="note">← chọn Scenario và tốc độ trước khi bắt đầu</span>
+│       ├── conversation/<span class="add">listening-help-button.tsx</span>   <span class="note">← nút "chưa nghe kịp"</span>
+│       └── <span class="add">reports/</span>   <span class="note">← danh sách buổi đã luyện và trang báo cáo</span>
+├── packages/shared/src/
+│   ├── <span class="add">scenario.ts</span>   <span class="note">← danh sách Scenario và tốc độ hợp lệ, dùng chung ba nơi</span>
+│   └── <span class="add">conversation-report.ts</span>   <span class="note">← hình dạng dữ liệu của báo cáo</span>
+├── e2e/tests/<span class="add">listening-roleplay.spec.ts</span>   <span class="note">← luồng chọn, nói, bấm nút, kết thúc, xem báo cáo</span>
+└── docs/superpowers/specs/<span class="add">2026-11-23-listening-roleplay-conversation-design.html</span></pre>
+        <p class="legend">
+          <span class="add">mới</span> <span class="mod">đã có, thay đổi</span>
+          · Cố ý không đụng: đăng nhập, trang Admin, giao diện sáng/tối. Tên các
+          thư mục và tệp mới là gợi ý, người xây có thể đổi.
+        </p>
+      </section>
+
+      <section id="review">
+        <h2>Để bạn xem xét</h2>
+        <div class="group fact">
+          <h3>Đã xác nhận</h3>
+          <ul>
+            <li>
+              Agent hiện là trợ lý đa năng, chào cố định bằng một câu, và repo
+              đã hỗ trợ cả hai chế độ Realtime và Pipeline qua cấu hình (<a
+                href="#evidence-agent-today"
+                >Agent hiện tại</a
+              >, <a href="#evidence-modes">hai chế độ</a>).
+            </li>
+            <li>
+              Database mới chỉ có User và RefreshToken, chưa có gì về buổi luyện
+              (<a href="#evidence-db">schema.prisma</a>).
+            </li>
+            <li>
+              Với OpenAI Realtime, tốc độ nói chỉnh được từ 0.25 đến 1.5, nhưng
+              chỉ đổi giữa các lượt (<a href="#evidence-speed">tốc độ</a>).
+            </li>
+            <li>
+              Realtime không cho Agent nói đúng một kịch bản có sẵn, và lời
+              thoại của người dùng thường đến muộn, hay sau câu trả lời của
+              Agent (<a href="#evidence-realtime-limits">giới hạn Realtime</a>).
+            </li>
+            <li>
+              Agent nhận tin nhắn chữ từ trình duyệt qua kênh
+              <code>lk.chat</code> và ngắt câu đang nói để trả lời; có thể tự xử
+              lý tin nhắn này (<a href="#evidence-text-input">nhập chữ</a>).
+            </li>
+            <li>
+              Lời thoại lấy được từng lượt qua sự kiện
+              <code>conversation_item_added</code>, và toàn bộ qua
+              <code>session.history</code> khi kết thúc; có báo cáo người dùng
+              rằng sự kiện kết thúc đôi khi không chạy (<a
+                href="#evidence-history"
+                >lịch sử hội thoại</a
+              >).
+            </li>
+            <li>
+              Phản hồi nói rõ lỗi cho kết quả tốt hơn phản hồi ngầm; yêu cầu
+              người học tự sửa làm họ sửa nhiều hơn nhưng chưa chắc làm điểm
+              kiểm tra cao hơn (<a href="#evidence-feedback"
+                >nghiên cứu phản hồi</a
+              >).
+            </li>
+            <li>
+              Shadowing có bằng chứng khá nhất cho luyện nghe, từ các nghiên cứu
+              nhỏ (<a href="#evidence-shadowing">shadowing</a>). Khó khăn nghe ở
+              công sở thường là hiểu, không phải nghe thấy (<a
+                href="#evidence-comprehension"
+                >hiểu so với nghe</a
+              >).
+            </li>
+            <li>
+              Loora, app gần mục tiêu nhất, bị chê phản hồi chung chung và không
+              có giáo trình (<a href="#evidence-loora">Loora</a>). TalkPal có
+              "Daily feedback" nhưng dàn trải 11 chế độ (<a
+                href="#evidence-talkpal"
+                >TalkPal</a
+              >).
+            </li>
+            <li>
+              Frontend dùng Astryx của Meta (0.7.17, theme stone, sáng và tối)
+              làm lớp UI duy nhất, và Astryx có sẵn các thành phần ta cần (<a
+                href="#evidence-astryx"
+                >Astryx</a
+              >).
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>Tôi đã quyết (dễ đổi lại)</h3>
+          <ul>
+            <li>
+              Màn hình trước buổi luyện là một màn hình: ba thẻ Scenario, ba mức
+              tốc độ, một nút Bắt đầu. Tôi đề xuất phương án này và bạn chưa bấm
+              chọn riêng, nên bạn có thể đổi.
+            </li>
+            <li>
+              Tốc độ chọn trước khi bắt đầu buổi, vì nó chỉ đổi giữa các lượt và
+              chưa xác minh được việc đổi giữa buổi trong Node (<a
+                href="#evidence-speed"
+                >tốc độ</a
+              >). Mặc định 0.85, các mức: 0.7, 0.85, 1.0.
+            </li>
+            <li>
+              "Chưa nghe kịp" gửi một tin nhắn chữ cố định qua
+              <code>lk.chat</code>; Agent ngắt câu đang nói và diễn đạt lại bằng
+              tiếng Anh chậm hơn, đơn giản hơn. Vì Realtime không nói lại đúng
+              nguyên câu, đây là diễn đạt lại, không phải phát lại (<a
+                href="#evidence-text-input"
+                >nhập chữ</a
+              >, <a href="#evidence-realtime-limits">giới hạn Realtime</a>).
+            </li>
+            <li>
+              Mỗi lần bấm nút ghi lại thời điểm. Sau buổi, thời điểm đó được
+              ghép với lượt thoại của Agent đang phát lúc bấm, hoặc lượt gần
+              nhất nếu bấm giữa hai lượt; vì lời thoại đến muộn nên không thể
+              xác định ngay lúc bấm (<a href="#evidence-realtime-limits"
+                >giới hạn Realtime</a
+              >).
+            </li>
+            <li>
+              "Nghe sót" ở phần 1 chỉ gồm các lần bạn bấm nút. Tự phát hiện chỗ
+              bạn nghe sai mà không bấm (hỏi lại, trả lời lạc đề) để phần sau.
+            </li>
+            <li>
+              Backend tạo bản ghi buổi luyện ngay khi cấp token, theo tên phòng
+              và <code>userId</code>, cùng Scenario và tốc độ đã kiểm tra. Agent
+              gửi lời thoại về theo tên phòng đó.
+            </li>
+            <li>
+              Agent gửi từng lượt thoại sang Backend ngay khi nó xuất hiện,
+              không chờ sự kiện kết thúc; Backend là nơi duy nhất ghi vào
+              Postgres. Nhờ vậy đóng tab giữa chừng cũng không mất lời thoại (<a
+                href="#evidence-history"
+                >lịch sử hội thoại</a
+              >).
+            </li>
+            <li>
+              Backend tạo báo cáo sau buổi bằng một model ngôn ngữ, và việc này
+              chạy lại được nếu lỗi mà không ảnh hưởng lời thoại đã lưu. Backend
+              cần cấu hình model riêng, theo cùng kiểu và cùng hai nhà cung cấp
+              (OpenAI hoặc Google) như Agent, cộng nhà cung cấp
+              <code>fake</code>
+              cho kiểm thử.
+            </li>
+            <li>
+              Báo cáo viết giải thích bằng tiếng Việt, ví dụ và câu đúng bằng
+              tiếng Anh. Agent vẫn chỉ nói tiếng Anh như hiện nay (<a
+                href="#evidence-agent-today"
+                >Agent hiện tại</a
+              >).
+            </li>
+            <li>
+              Ba Scenario đầu: họp standup hằng ngày, họp 1:1 với quản lý, cuộc
+              gọi khách về việc trễ hạn. Nội dung cụ thể bạn sẽ chỉnh khi xem
+              thử.
+            </li>
+            <li>
+              Chỉ số trôi chảy gồm tốc độ nói, độ dài lượt thoại, tỷ lệ nói/nghe
+              và số từ đệm. Số từ đệm ghi là ước lượng vì bộ chuyển giọng nói
+              thành chữ có thể bỏ sót chúng (chưa kiểm chứng).
+            </li>
+            <li>
+              Mọi dữ liệu của buổi gắn với <code>userId</code> ngay từ đầu để
+              giai đoạn bạn bè không phải làm lại.
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>Bạn đã quyết</h3>
+          <ul>
+            <li>
+              Chiến lược: tự dùng trước, rồi giới thiệu bạn bè, cuối cùng thương
+              mại hóa.
+            </li>
+            <li>Không sao chép TalkPal, chỉ học những tính năng hay.</li>
+            <li>
+              Điểm yếu theo thứ tự: nghe, ngữ pháp, rồi phát âm và trôi chảy,
+              cuối cùng là chọn từ.
+            </li>
+            <li>
+              Luyện nghe chọn "C, bắt đầu bằng A": trước hết ngay trong buổi
+              role-play, sau đó biến câu nghe sai thành bài shadowing nhỏ.
+            </li>
+            <li>"Hiện tại thì dùng Realtime."</li>
+            <li>
+              Màn hình trong buổi luyện: chỉ có sóng âm và hai nút "Chưa nghe
+              kịp", "Kết thúc"; không hiện chữ trong lúc nghe (bạn chọn A trong
+              ba phác thảo).
+            </li>
+            <li>
+              Trang báo cáo: một trang cuộn dọc, ba con số tóm tắt ở đầu rồi ba
+              phần theo thứ tự nghe sót, ngữ pháp, trôi chảy (bạn chọn A).
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>Thiết kế</h2>
+        <h3>Ý định và lý do</h3>
+        <p>
+          Bạn muốn một app luyện nói tiếng Anh cho người đi làm văn phòng, trước
+          hết cho chính bạn dùng. Kỹ năng bạn yếu nhất là nghe, nên vòng luyện
+          đầu tiên phải rèn nghe trong tình huống công sở thật, rồi cho bạn thấy
+          mình đã nghe sót gì và nói sai gì. Phần 1 là vòng lõi đó; các bài
+          shadowing, chấm phát âm, bảng hỏi onboarding và tiến độ là các phần
+          sau.
+        </p>
+        <h3>Mục tiêu</h3>
+        <ul>
+          <li>
+            Chọn một Scenario công sở và nói chuyện bằng giọng với Agent đóng
+            vai đồng nghiệp, quản lý hoặc khách.
+          </li>
+          <li>
+            Chỉnh tốc độ nói của Agent trước buổi, và bấm "chưa nghe kịp" bất cứ
+            lúc nào để Agent diễn đạt lại chậm hơn, đơn giản hơn.
+          </li>
+          <li>
+            Sau buổi, xem báo cáo gồm: các câu bạn nghe sót kèm giải thích bằng
+            tiếng Việt (thành ngữ, âm nối, phrasal verb, từ viết tắt), 3 đến 5
+            lỗi ngữ pháp kèm câu đúng, và chỉ số trôi chảy.
+          </li>
+          <li>Xem lại danh sách các buổi đã luyện và báo cáo của từng buổi.</li>
+          <li>Không mất lời thoại khi đóng tab hoặc mất mạng giữa buổi.</li>
+        </ul>
+        <h3>Không phải mục tiêu</h3>
+        <ul>
+          <li>
+            Chấm phát âm, bài shadowing, bước "nói lại câu đúng", bảng hỏi
+            onboarding, theo dõi tiến độ, flashcard: là các phần sau.
+          </li>
+          <li>
+            Huy hiệu, streak, chứng chỉ, thanh toán, giới hạn thời gian, mời bạn
+            bè.
+          </li>
+          <li>Ngôn ngữ khác tiếng Anh, ứng dụng di động, chế độ chat chữ.</li>
+          <li>Lưu hoặc phát lại âm thanh thật; ta chỉ lưu chữ.</li>
+          <li>
+            Xóa từng buổi luyện trên giao diện; dữ liệu của một người dùng chỉ
+            bị xóa khi người dùng đó bị xóa.
+          </li>
+        </ul>
+        <h3>Phản mục tiêu</h3>
+        <ul>
+          <li>
+            Báo cáo chung chung kiểu "bạn làm tốt lắm" mà không nêu câu cụ thể
+            và cách sửa: chính là điểm Loora bị chê.
+          </li>
+          <li>
+            Nút "chưa nghe kịp" làm buổi nói đứt đoạn hoặc Agent đáp lung tung.
+          </li>
+          <li>Một người xem được lời thoại hay báo cáo của người khác.</li>
+          <li>
+            Mất lời thoại vì báo cáo lỗi, hoặc vì sự kiện kết thúc buổi không
+            chạy.
+          </li>
+        </ul>
+        <h3>Ràng buộc</h3>
+        <ul>
+          <li>
+            Theo CLAUDE.md: <code>pnpm check</code> và <code>pnpm sonar</code>
+            phải qua; vì đụng luồng Conversation và Agent nên phải chạy cả
+            <code>pnpm test:e2e</code>. Không dùng <code>NOSONAR</code>,
+            <code>@ts-ignore</code> hay nới ngưỡng. Test viết trước.
+          </li>
+          <li>
+            Chế độ Realtime; tham số <code>speed</code> chỉ xác nhận cho OpenAI
+            Realtime. Với Google (Gemini Live) chưa xác minh, nên tốc độ có thể
+            phải đi qua chỉ dẫn trong prompt.
+          </li>
+          <li>
+            Khóa API và bí mật không được ghi vào tệp commit; dùng biến môi
+            trường như hiện nay.
+          </li>
+          <li>
+            Nhà cung cấp <code>fake</code> vẫn phải chạy được để e2e không cần
+            khóa.
+          </li>
+          <li>
+            Giao diện chỉ dùng Astryx của Meta (<code>@astryxdesign/core</code>
+            và theme stone, phiên bản ghim 0.7.17), là lớp UI duy nhất của
+            frontend. Không thêm thư viện UI hay Tailwind; CSS thuần chỉ cho
+            sóng âm như hiện nay. Mọi màn mới phải đẹp ở cả chế độ sáng và tối,
+            và màu, kiểu chữ lấy từ Astryx, không theo màu trong các phác thảo
+            (<a href="#evidence-astryx">Astryx</a>).
+          </li>
+        </ul>
+        <h3>Các cách tiếp cận</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Cách</th>
+              <th>Đánh đổi</th>
+              <th>Chọn</th>
+            </tr>
+            <tr>
+              <td>Realtime (một model nghe và nói)</td>
+              <td>
+                Tự nhiên, độ trễ thấp. Không nói lại đúng nguyên câu, lời thoại
+                đến muộn.
+              </td>
+              <td>Có, theo lựa chọn của bạn.</td>
+            </tr>
+            <tr>
+              <td>Pipeline (STT, LLM, TTS tách riêng)</td>
+              <td>
+                Có chữ chính xác từng câu Agent nói, phát lại được đúng câu,
+                chọn được giọng. Độ trễ cao hơn, kém tự nhiên.
+              </td>
+              <td>
+                Không bây giờ. Repo hỗ trợ sẵn nên có thể chuyển sau nếu
+                Realtime kém ở phần nghe.
+              </td>
+            </tr>
+            <tr>
+              <td>Lai (model realtime nghe, TTS riêng nói)</td>
+              <td>
+                Hiểu giọng người học tốt và kiểm soát được lời nói của Agent,
+                nhưng phải vận hành cả hai.
+              </td>
+              <td>Không bây giờ; cân nhắc ở bước sau.</td>
+            </tr>
+          </table>
+        </div>
+        <h3>Cách xây</h3>
+        <ul>
+          <li>
+            Mỗi buổi gồm: Scenario, tốc độ, các lượt thoại (ai nói, nội dung,
+            thời điểm), các lần "chưa nghe kịp" và báo cáo. Tất cả gắn với
+            <code>userId</code> (tôi quyết).
+          </li>
+          <li>
+            Scenario và tốc độ chỉ nhận từ danh sách cố định ở
+            <code>packages/shared</code>, và được kiểm tra ở Backend trước khi
+            cấp token. Điều này giữ nguyên nguyên tắc hiện có là client không
+            chọn được phòng, danh tính hay Agent (<a href="#evidence-token"
+              >cấp token</a
+            >).
+          </li>
+          <li>
+            Báo cáo là một đối tượng có cấu trúc: danh sách câu nghe sót, danh
+            sách lỗi ngữ pháp, chỉ số; được kiểm tra hình dạng trước khi lưu
+            (tôi quyết).
+          </li>
+          <li>
+            Phản hồi ngữ pháp nêu rõ lỗi và câu đúng, không chỉ nhắc lại câu
+            đúng (<a href="#evidence-feedback">nghiên cứu phản hồi</a>).
+          </li>
+        </ul>
+        <h3>Giao diện</h3>
+        <ul>
+          <li>
+            <b>Trước buổi:</b> tiêu đề "Luyện nói hôm nay", ba thẻ Scenario
+            ngang nhau (tên và một dòng mô tả, thẻ đang chọn được viền nổi), một
+            hàng ba mức tốc độ (Chậm, Vừa là mặc định, Bình thường), nút Bắt
+            đầu.
+          </li>
+          <li>
+            <b>Trong buổi:</b> ở giữa là nhãn Scenario và tốc độ, dòng "Sam
+            (Agent) đang nói…", sóng âm, rồi hai nút "Chưa nghe kịp" (nút chính)
+            và "Kết thúc". Không có chữ nào của hội thoại.
+          </li>
+          <li>
+            <b>Báo cáo:</b> tiêu đề (Scenario, thời lượng, ngày, tốc độ), ba ô
+            số (câu nghe sót, lỗi ngữ pháp, từ/phút), rồi ba phần đánh số: "Câu
+            bạn nghe sót" (câu của Agent, từ khóa in đậm, giải thích tiếng
+            Việt), "Lỗi ngữ pháp" (câu sai gạch ngang, câu đúng in xanh, lý do),
+            "Trôi chảy" (một dòng chỉ số, số từ đệm ghi là ước lượng).
+          </li>
+          <li>
+            Các phác thảo đã duyệt nằm ở thư mục cục bộ
+            <code>.superpowers/brainstorm/</code> (không commit); mô tả ở trên
+            là bản chính thức. Các phác thảo chỉ minh họa bố cục; hình thức thật
+            do Astryx quyết.
+          </li>
+          <li>
+            Gợi ý ghép thành phần Astryx 0.7.17 (người xây xác nhận trong tài
+            liệu của nó): thẻ Scenario dùng <code>SelectableCard</code>, ba mức
+            tốc độ dùng <code>SegmentedControl</code>, ô số và mục báo cáo dùng
+            <code>Card</code> với <code>Text</code>, danh sách buổi dùng
+            <code>Table</code> và <code>Pagination</code>, trạng thái đang tạo
+            báo cáo dùng <code>Spinner</code> hoặc <code>Skeleton</code>, lỗi
+            dùng <code>Banner</code> như các trang hiện có (<a
+              href="#evidence-astryx"
+              >Astryx</a
+            >).
+          </li>
+        </ul>
+        <h3>Cách kiểm chứng</h3>
+        <ul>
+          <li>
+            Trong lúc Agent nói, màn hình chỉ có sóng âm và hai nút; không chữ
+            nào của hội thoại hiện ra cho đến khi bạn mở báo cáo.
+          </li>
+          <li>
+            Bạn chọn "họp standup", tốc độ 0.85 và bắt đầu: Agent chào đúng vai
+            và hỏi bạn đã làm gì hôm qua.
+          </li>
+          <li>
+            Giữa buổi bạn bấm "chưa nghe kịp": Agent ngắt, nói lại chậm và đơn
+            giản hơn, rồi buổi nói tiếp tục bình thường.
+          </li>
+          <li>
+            Bạn kết thúc buổi: trong khoảng một phút có báo cáo, trong đó câu
+            Agent nói ở lúc bạn bấm nút nằm trong danh sách "nghe sót" kèm giải
+            thích tiếng Việt.
+          </li>
+          <li>
+            Bạn cố ý nói sai một câu: báo cáo nêu câu đó, chỉ ra lỗi và câu
+            đúng.
+          </li>
+          <li>
+            Bạn đóng tab giữa chừng: mở lại trang lịch sử vẫn thấy buổi đó với
+            phần lời thoại đã có, và vẫn lấy được báo cáo.
+          </li>
+          <li>Một người dùng khác đăng nhập không thấy buổi nào của bạn.</li>
+        </ul>
+        <p>
+          Kiểm thử đơn vị chứng minh các phần logic: danh sách Scenario và tốc
+          độ hợp lệ, ghép lần bấm nút với lượt thoại, tính chỉ số trôi chảy, và
+          kiểm tra hình dạng báo cáo. Kiểm thử tích hợp chứng minh Backend: nhận
+          lời thoại từ Agent, cách ly dữ liệu giữa hai người dùng, tạo báo cáo
+          với model giả, và chạy lại báo cáo lỗi (Postgres thật qua
+          Testcontainers như hiện nay). Kiểm thử end-to-end bằng Playwright với
+          nhà cung cấp <code>fake</code> và model báo cáo giả chứng minh luồng
+          chọn, bắt đầu, bấm nút, kết thúc, xem báo cáo; hành vi thật của model
+          (vai, diễn đạt lại, chất lượng báo cáo) được thử bằng các kịch bản mô
+          phỏng của LiveKit và bài kiểm tra live có sẵn, và bạn tự đánh giá khi
+          dùng thật.
+        </p>
+        <h3>Để người xây quyết</h3>
+        <ul>
+          <li>
+            Tên bảng và cột, tên endpoint, và cách xác thực giữa Agent và
+            Backend (một khóa bí mật chung là hướng hợp lý).
+          </li>
+          <li>
+            Cách Scenario và tốc độ tới được Agent (siêu dữ liệu của lần gọi
+            Agent vào phòng là hướng dự kiến, cần xác nhận).
+          </li>
+          <li>
+            Văn bản chỉ dẫn cho từng vai, cách Agent dùng thành ngữ và âm nối tự
+            nhiên, và nội dung chi tiết của ba Scenario.
+          </li>
+          <li>
+            Cách phát hiện buổi đã kết thúc (người dùng bấm kết thúc, rời phòng,
+            hay quá thời gian chờ) và khi nào tạo báo cáo.
+          </li>
+          <li>
+            Với Google Gemini Live: có chỉnh tốc độ được không, hay phải dùng
+            chỉ dẫn trong prompt.
+          </li>
+          <li>
+            Kiểm tra thực tế xem lời thoại Realtime của Agent đủ chính xác để
+            lập danh sách "nghe sót"; nếu không, đề xuất chuyển sang Pipeline.
+          </li>
+          <li>
+            Chi tiết trực quan trên Astryx (khoảng cách, màu, trạng thái tải và
+            lỗi), câu chữ tiếng Việt, phân trang danh sách buổi.
+          </li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Bằng chứng</h2>
+        <article id="evidence-agent-today">
+          <h3>Agent hiện là trợ lý đa năng, chào cố định, chỉ nói tiếng Anh</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/agent/src/agent.ts"
+              >apps/agent/src/agent.ts</a
+            >
+            và
+            <a href="../../../apps/agent/src/conversation-agent.ts"
+              >apps/agent/src/conversation-agent.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "You are a helpful general-purpose voice assistant. Always answer in
+            English, briefly and clearly, because your answers are spoken
+            aloud." và lời chào: "Hello, how can I help?"
+          </blockquote>
+        </article>
+        <article id="evidence-modes">
+          <h3>Repo hỗ trợ cả Realtime và Pipeline</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/agent/src/config/agent-config.ts"
+              >apps/agent/src/config/agent-config.ts</a
+            >
+            và
+            <a href="../../../apps/agent/src/config/models.ts"
+              >apps/agent/src/config/models.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Realtime mode: one model listens and speaks." / "Pipeline mode:
+            separate models transcribe, think and speak." Mặc định Realtime:
+            openai <code>gpt-realtime-2.1</code>, google
+            <code>gemini-3.8-live</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-db">
+          <h3>Database chưa có gì về buổi luyện</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/backend/prisma/schema.prisma"
+              >apps/backend/prisma/schema.prisma</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            Chỉ có hai model: <code>User</code> và <code>RefreshToken</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-token">
+          <h3>Backend cấp token mà không nhận gì từ yêu cầu của client</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/backend/src/livekit/room-token.service.ts"
+              >apps/backend/src/livekit/room-token.service.ts</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "It takes nothing from the client's request, so a client can't join
+            another room, pose as someone else or dispatch another agent."
+          </blockquote>
+        </article>
+        <article id="evidence-speed">
+          <h3>
+            Tốc độ nói của OpenAI Realtime chỉnh được, nhưng chỉ giữa các lượt
+          </h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.livekit.io/agents/models/realtime/openai/"
+              >LiveKit docs, OpenAI Realtime API</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Speed of the model's spoken response, as a multiple of the original
+            speed. Valid values are between 0.25 and 1.5. The speed changes only
+            between model turns, not during a response."
+          </blockquote>
+        </article>
+        <article id="evidence-realtime-limits">
+          <h3>
+            Giới hạn của Realtime: lời thoại đến muộn và không nói đúng kịch bản
+          </h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.livekit.io/agents/models/realtime/"
+              >LiveKit docs, Realtime models overview</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Realtime models don't provide interim transcription results, and in
+            general the user input transcriptions can be considerably delayed
+            and often arrive after the agent's response." Và: "Realtime models
+            don't offer a method to directly generate speech from a text script,
+            such as with the say method."
+          </blockquote>
+        </article>
+        <article id="evidence-text-input">
+          <h3>Agent nhận tin nhắn chữ từ trình duyệt và có thể tự xử lý</h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.livekit.io/agents/multimodality/text/"
+              >LiveKit docs, Text and transcriptions</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Your agent monitors the lk.chat text stream topic for incoming text
+            messages from its linked participant. The agent interrupts its
+            current speech, if any, to process the message and generate a new
+            response." Có thể thay hành vi mặc định bằng
+            <code>textInputCallback</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-history">
+          <h3>
+            Lấy lời thoại từng lượt, và sự kiện kết thúc có thể không chạy
+          </h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.livekit.io/agents/observability/data"
+              >LiveKit docs, Data hooks</a
+            >
+            và
+            <a
+              href="https://community.livekit.io/t/urgent-on-session-end-not-called-for-some-sessions-need-reliable-transcription-delivery-in-production/630"
+              >bài trên cộng đồng LiveKit</a
+            >
+            · 2026-11-22. Phần cộng đồng chỉ đọc qua tóm tắt tìm kiếm, chưa mở
+            toàn văn.
+          </p>
+          <blockquote>
+            "To create a live dashboard or collect conversation history as it
+            happens, subscribe to the conversation_item_added event." Tiêu đề
+            bài cộng đồng: "on_session_end Not Called for Some Sessions — Need
+            Reliable Transcription Delivery in Production".
+          </blockquote>
+        </article>
+        <article id="evidence-feedback">
+          <h3>Phản hồi nói rõ lỗi tốt hơn phản hồi ngầm</h3>
+          <p class="src">
+            Nguồn:
+            <a
+              href="https://www.cambridge.org/core/product/CDE67D4A4E286921DA4BE9C40BAD9FE6"
+              >Ellis, Loewen &amp; Erlam 2006</a
+            >
+            và
+            <a
+              href="https://www.cambridge.org/core/product/D40572E69C10AE175B8FFE785D5EF94C"
+              >Loewen &amp; Philp 2006</a
+            >
+            · 2026-11-22. Đọc qua tóm tắt tìm kiếm, chưa mở toàn văn.
+          </p>
+          <blockquote>
+            Tóm tắt tìm kiếm: Ellis và cộng sự báo cáo "a clear advantage for
+            explicit feedback over implicit feedback"; Loewen và Philp thấy
+            người học sửa theo nhiều hơn khi được yêu cầu tự sửa (83,1% so với
+            59,6%) nhưng điều đó "did not necessarily lead to significantly
+            higher scores on the posttest".
+          </blockquote>
+        </article>
+        <article id="evidence-shadowing">
+          <h3>
+            Shadowing có bằng chứng khá nhất cho luyện nghe, từ nghiên cứu nhỏ
+          </h3>
+          <p class="src">
+            Nguồn:
+            <a
+              href="https://jalt-publications.org/sites/default/files/pdf-article/jj47.1-art1.pdf"
+              >JALT Journal 47.1</a
+            >
+            · 2026-11-22. Đọc qua tóm tắt tìm kiếm, chưa mở toàn văn.
+          </p>
+          <blockquote>
+            Tóm tắt tìm kiếm: nghiên cứu 2025 trên 30 sinh viên Nhật cho thấy
+            luyện shadowing cải thiện khả năng nghe hiểu; các tác giả coi bằng
+            chứng "vẫn đang phát triển".
+          </blockquote>
+        </article>
+        <article id="evidence-comprehension">
+          <h3>Ở công sở, khó khăn thường là hiểu, không phải nghe thấy</h3>
+          <p class="src">
+            Nguồn:
+            <a
+              href="https://www.inclusiveleadership.com/research-insights/listening-in-a-cross-cultural-environment/"
+              >Inclusive Leadership, Listening in a cross-cultural
+              environment</a
+            >
+            · 2026-11-22. Bài viết thực hành, không phải thí nghiệm kiểm soát;
+            đọc qua tóm tắt tìm kiếm.
+          </p>
+          <blockquote>
+            "In most cases, the challenge for the non-native speaker is not
+            hearing." Thủ phạm thường gặp: thành ngữ, từ viết tắt, phrasal verb.
+          </blockquote>
+        </article>
+        <article id="evidence-loora">
+          <h3>Loora bị chê phản hồi chung chung và không có giáo trình</h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://www.midoo.ai/reviews/loora-review"
+              >Midoo, Loora Review</a
+            >
+            · 2026-11-22. Trang đánh giá có thể có liên kết tiếp thị; đọc qua
+            tóm tắt tìm kiếm.
+          </p>
+          <blockquote>
+            Liệt kê nhược điểm: phản hồi "often vague and lacks depth".
+          </blockquote>
+        </article>
+        <article id="evidence-talkpal">
+          <h3>TalkPal có 11 chế độ và "Daily feedback"</h3>
+          <p class="src">
+            Nguồn: quan sát thụ động bằng REA lên trang dashboard của
+            app.talkpal.ai sau khi bạn đăng nhập, 2026-11-22. Kết quả thô đã
+            được xóa theo yêu cầu bảo vệ dữ liệu tài khoản.
+          </p>
+          <blockquote>
+            Các chế độ: Chat, Sentence, Word, Dialogue, Flashcards, Podcasts,
+            Call, Roleplays, Characters, Debates, Photo. Mục "Daily feedback":
+            "Practice in AI modes and receive personalized daily feedback."
+          </blockquote>
+        </article>
+        <article id="evidence-astryx">
+          <h3>Frontend dùng Astryx của Meta làm lớp UI duy nhất</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/frontend/package.json"
+              >apps/frontend/package.json</a
+            >, thông tin gói <code>@astryxdesign/core</code> 0.7.17 trong
+            node_modules, và
+            <a href="2026-11-22-astryx-ui-design.html"
+              >bản thiết kế Astryx UI</a
+            >
+            · 2026-11-23
+          </p>
+          <blockquote>
+            Gói: tác giả "Meta Open Source", "accessible, themeable React
+            components with built-in spacing, dark mode, and StyleX styling."
+            Bản thiết kế: "Replace the whole look of apps/frontend ... with
+            Meta's Astryx design system, using its stone theme in both light and
+            dark" và "Astryx is the only UI layer". Gói có 121 thành phần, gồm
+            SelectableCard, SegmentedControl, Card, Table, Pagination, Spinner,
+            Skeleton, Banner.
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
