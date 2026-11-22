@@ -3,9 +3,9 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { API_PREFIX, AUTH_PATH } from '../src/routes.js';
-import { refreshCookieSetBy } from './refresh-cookies.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { PASSWORD } from './users.js';
+import { refreshCookieSetBy } from './support/refresh-cookies.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { PASSWORD } from './support/users.js';
 
 describe('The route constants', () => {
   let app: INestApplication<App>;

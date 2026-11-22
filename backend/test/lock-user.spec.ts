@@ -8,11 +8,11 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { adminApi, detailsOf } from './admin-api.js';
-import { signInFirstAdmin, signInUser } from './admins.js';
+import { adminApi, detailsOf } from './support/admin-api.js';
+import { signInFirstAdmin, signInUser } from './support/admins.js';
 import { holdUserChanges } from './database/user-changes.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { registerUser } from './users.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { registerUser } from './support/users.js';
 
 describe('PUT /api/admin/users/:id/locked (lock and unlock a User)', () => {
   let app: INestApplication<App>;

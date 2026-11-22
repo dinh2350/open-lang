@@ -2,9 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { refreshCookieSetBy } from './refresh-cookies.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { PASSWORD, registerUser } from './users.js';
+import { refreshCookieSetBy } from './support/refresh-cookies.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { PASSWORD, registerUser } from './support/users.js';
 
 const SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60;
 

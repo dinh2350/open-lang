@@ -7,9 +7,9 @@ import {
   refreshTokenSetBy,
   signInForRefreshToken,
   signOut,
-} from './refresh-cookies.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { registerUser } from './users.js';
+} from './support/refresh-cookies.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { registerUser } from './support/users.js';
 
 describe('POST /api/auth/sign-out', () => {
   let app: INestApplication<App>;

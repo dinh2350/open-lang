@@ -7,12 +7,12 @@ import type { INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { adminApi } from './admin-api.js';
-import { signInFirstAdmin } from './admins.js';
+import { adminApi } from './support/admin-api.js';
+import { signInFirstAdmin } from './support/admins.js';
 import { holdOldestRefreshTokenOf } from './database/user-changes.js';
-import { refresh, signInForRefreshToken } from './refresh-cookies.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { PASSWORD, registerUser } from './users.js';
+import { refresh, signInForRefreshToken } from './support/refresh-cookies.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { PASSWORD, registerUser } from './support/users.js';
 
 const ACCOUNT_LOCKED_MESSAGE =
   'Your account is locked. Ask an Admin to unlock it.';

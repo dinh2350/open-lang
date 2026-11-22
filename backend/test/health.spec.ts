@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { startTestApp, stopTestApp } from './test-app.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
 
 describe('GET /api/health', () => {
   let app: INestApplication<App>;

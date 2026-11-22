@@ -5,8 +5,8 @@ import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { seedFirstAdmin } from '../src/users/first-admin.js';
 import { UsersService } from '../src/users/users.service.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { PASSWORD, registerUser } from './users.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { PASSWORD, registerUser } from './support/users.js';
 
 describe('Seeding the first Admin (pnpm db:seed)', () => {
   let app: INestApplication<App>;

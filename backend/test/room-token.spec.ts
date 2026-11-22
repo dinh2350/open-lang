@@ -8,9 +8,9 @@ import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { signInFirstAdmin } from './admins.js';
-import { startTestApp, stopTestApp, testEnv } from './test-app.js';
-import { registerUser } from './users.js';
+import { signInFirstAdmin } from './support/admins.js';
+import { startTestApp, stopTestApp, testEnv } from './support/test-app.js';
+import { registerUser } from './support/users.js';
 
 const TEN_MINUTES_IN_SECONDS = 600;
 

@@ -102,6 +102,18 @@ describe('The backend source layout', () => {
     );
   });
 
+  it('has no global module', () => {
+    expect(filesContaining('@Global(')).toEqual([]);
+  });
+
+  it('keeps shared test helpers in test/support, not loose in test/', () => {
+    const loose = readdirSync(import.meta.dirname, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && !entry.name.endsWith('.spec.ts'))
+      .map((entry) => entry.name);
+
+    expect(loose).toEqual([]);
+  });
+
   it('keeps the modules free of cycles', () => {
     const files = sourceFiles();
     const importsOf = (folder: string, pattern: RegExp) =>

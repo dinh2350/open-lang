@@ -6,9 +6,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { verifyAuthToken } from './auth-tokens.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { PASSWORD } from './users.js';
+import { verifyAuthToken } from './support/auth-tokens.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { PASSWORD } from './support/users.js';
 
 describe('POST /api/auth/register', () => {
   let app: INestApplication<App>;

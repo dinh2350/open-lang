@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { startTestApp, type testEnv } from './test-app.js';
+import { startTestApp, type testEnv } from './support/test-app.js';
 
 const settingsNamedInErrors: Record<keyof typeof testEnv, string> = {
   LIVEKIT_URL: 'LiveKit',

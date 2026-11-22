@@ -2,15 +2,15 @@ import { authResponseSchema } from '@open-live-agent/shared';
 import type { INestApplication } from '@nestjs/common';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { verifyAuthToken } from './auth-tokens.js';
+import { verifyAuthToken } from './support/auth-tokens.js';
 import {
   refresh,
   refreshCookieSetBy,
   refreshTokenSetBy,
   signInForRefreshToken,
-} from './refresh-cookies.js';
-import { startTestApp, stopTestApp } from './test-app.js';
-import { registerUser } from './users.js';
+} from './support/refresh-cookies.js';
+import { startTestApp, stopTestApp } from './support/test-app.js';
+import { registerUser } from './support/users.js';
 
 const ONE_MINUTE = 60_000;
 const SEVEN_DAYS = 7 * 24 * 60 * ONE_MINUTE;
