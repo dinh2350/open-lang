@@ -78,6 +78,17 @@ describe('Admin Users page', () => {
     ).toHaveDisplayValue('Member');
   });
 
+  it('names the Users table, and the region it scrolls in, by its caption', async () => {
+    await openUsersPageAsAdmin();
+
+    expect(
+      await screen.findByRole('table', { name: 'Every User, oldest first.' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('group', { name: 'Every User, oldest first.' }),
+    ).toBeVisible();
+  });
+
   it("sends the Admin's Auth Token with every Admin API request", async () => {
     await openUsersPageAsAdmin();
     await screen.findByRole('table');

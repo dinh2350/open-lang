@@ -56,6 +56,7 @@ export function UsersPage() {
     // A refusal won't change on a retry.
     retry: false,
   });
+  const captionId = useId();
 
   return (
     <Stack
@@ -78,10 +79,13 @@ export function UsersPage() {
         <Banner status="error" role="alert" title={errorMessage(users.error)} />
       )}
       {users.data !== undefined && (
-        <Table verticalAlign="top">
+        // Table wraps the <table> in a scroll region (role="group") that
+        // takes its name from aria-labelledby, not from the caption.
+        <Table verticalAlign="top" aria-labelledby={captionId}>
           {/* Astryx has no caption component; children mode puts this
               native caption straight into the <table>. */}
           <caption
+            id={captionId}
             style={{
               captionSide: 'bottom',
               paddingBlockStart: 'var(--spacing-4)',
