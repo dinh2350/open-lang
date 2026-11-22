@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đưa backend về đúng khuyến nghị NestJS</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --call: #a85a06;
+        --human: #1e4fd1;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --call: #f3b34a;
+          --human: #86a9ff;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      pre,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      code {
+        font-size: 14px;
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Chờ bạn duyệt · 2026-11-22</p>
+        <h1>Đưa backend về đúng khuyến nghị NestJS</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Tóm tắt</h2>
+        <p class="summary">
+          Refactor <code>backend/</code> theo bốn mục: (1) module
+          <code>users</code> sở hữu bảng User, thay vì ba nơi cùng gọi
+          <code>prisma.user</code>; (2) đọc biến môi trường một chỗ bằng
+          <code>@nestjs/config</code> theo docs; (3) bỏ đường dẫn
+          <code>/api/auth</code> viết cứng; (4) tách file trong
+          <code>auth/</code>, bỏ <code>@Global()</code> của Prisma, dời
+          Throttler lên <code>AppModule</code>. API và hành vi không đổi, chỉ có
+          câu báo lỗi khi thiếu biến môi trường đổi sang định dạng của
+          <code>@nestjs/config</code>. Điểm cần chú ý nhất: để
+          <code>auth</code> và <code>users</code> không phụ thuộc vòng, mình
+          tách <code>RefreshTokenService</code> sang module riêng
+          <code>refresh-tokens/</code>.
+        </p>
+      </section>
+
+      <section id="review">
+        <h2>Để bạn xem lại</h2>
+        <div class="group fact">
+          <h3>Confirmed</h3>
+          <ul>
+            <li>
+              Có 10 chỗ gọi <code>prisma.user</code>/<code
+                >transaction.user</code
+              >
+              ở 4 file: <code>auth.service</code>,
+              <code>authentication.guard</code>, <code>users.service</code>,
+              <code>first-admin</code> (<a href="#ev-user-access"
+                >nơi truy cập bảng User</a
+              >).
+            </li>
+            <li>
+              Có 5 chỗ đọc <code>process.env</code>: <code>main.ts</code>,
+              <code>seed.ts</code>, <code>PrismaService</code>,
+              <code>AuthModule</code>, <code>LiveKitModule</code> (<a
+                href="#ev-env-reads"
+                >nơi đọc biến môi trường</a
+              >).
+            </li>
+            <li>
+              <code>@nestjs/config</code> 12.1.1 tương thích Nest 12 (<a
+                href="#ev-config-version"
+                >phiên bản @nestjs/config</a
+              >), và nhận schema zod qua <code>validationSchema</code> (<a
+                href="#ev-config-docs"
+                >docs cấu hình</a
+              >).
+            </li>
+            <li>
+              <code>/api/auth</code> bị viết cứng ở
+              <code>refresh-cookie.ts</code> trong khi prefix
+              <code>api</code> đặt ở <code>configure-app.ts</code> (<a
+                href="#ev-hardcoded-path"
+                >đường dẫn viết cứng</a
+              >).
+            </li>
+            <li>
+              <code>UsersService</code> đang dùng
+              <code>RefreshTokenService</code> của auth, nên nếu
+              <code>AuthService</code> gọi lại <code>UsersService</code> sẽ
+              thành vòng phụ thuộc (<a href="#ev-cycle">vòng phụ thuộc</a>).
+            </li>
+            <li>
+              Docs nói "Making everything global is not a good design decision"
+              (<a href="#ev-global">docs về module global</a>).
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>My call</h3>
+          <ul>
+            <li>
+              <strong>Cần bạn kiểm tra kỹ nhất:</strong> tách
+              <code>RefreshTokenService</code> ra module
+              <code>refresh-tokens/</code> (chỉ phụ thuộc Prisma) để đồ thị
+              module không có vòng. Dễ đổi lại bằng git vì chỉ là di chuyển
+              file.
+            </li>
+            <li>
+              Dùng một schema zod chung cho cả backend và
+              <code>ConfigService</code> có kiểu, thay vì
+              <code>registerAs</code> theo từng nhóm. Lý do: ít file hơn và docs
+              cũng ghi <code>validationSchema</code> là cách "recommended for
+              new projects" (<a href="#ev-config-docs">docs cấu hình</a>).
+            </li>
+            <li>
+              <code>ConfigModule</code> đặt <code>ignoreEnvFile: true</code>, vì
+              <code>node --env-file-if-exists=.env</code> trong script
+              <code>dev</code> và <code>start</code> đã nạp file
+              <code>.env</code>.
+            </li>
+            <li>
+              Lệnh seed dùng một <code>SeedModule</code> nhỏ (ConfigModule với
+              schema riêng: <code>DATABASE_URL</code> và biến
+              <code>SEED_*</code>) và
+              <code>NestFactory.createApplicationContext</code>, để seed không
+              đòi thêm <code>JWT_SECRET</code> hay biến LiveKit như hiện nay.
+            </li>
+            <li>
+              Giữ nguyên <code>health</code>, <code>@AdminOnly()</code> và guard
+              tự viết (xem Non-goals).
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>Bạn đã quyết</h3>
+          <ul>
+            <li>"làm cả bốn mục đi"</li>
+            <li>
+              Mục 2 làm "theo docs của nestjs", tức dùng
+              <code>@nestjs/config</code> chứ không tự gom
+              <code>parseEnv</code>.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>Thiết kế</h2>
+
+        <h3>Ý định và lý do</h3>
+        <p>
+          Bạn thấy code backend "rất loạn" và muốn biết NestJS có khuyên làm vậy
+          không. Review cho thấy phần lớn đã đúng khuyến nghị, nhưng có bốn chỗ
+          lệch làm code khó đọc. Mục tiêu là sửa bốn chỗ đó mà không đổi hành
+          vi.
+        </p>
+
+        <h3>Mục tiêu</h3>
+        <ul>
+          <li>
+            Chỉ <code>UsersService</code> đọc/ghi bảng User. Hàm
+            <code>toUser</code> và <code>toUserDetails</code> nằm trong
+            <code>users/</code>.
+          </li>
+          <li>
+            Mọi biến môi trường của backend được validate một lần lúc khởi động
+            bằng <code>@nestjs/config</code> và đọc qua
+            <code>ConfigService</code>. Không còn <code>process.env</code> trong
+            <code>src/</code>, trừ chỗ khai báo schema.
+          </li>
+          <li>
+            Prefix <code>api</code> và path <code>auth</code> khai báo một lần
+            trong <code>src/routes.ts</code>. Cookie refresh, controller và
+            <code>configureApp</code> cùng dùng.
+          </li>
+          <li>
+            <code>auth/</code> được tách thành <code>guards/</code>,
+            <code>decorators/</code>, <code>exceptions/</code>.
+            <code>AuthenticatedRequest</code> chỉ định nghĩa một lần. Kiểu
+            <code>ValidRegisterRequest</code>/<code>ValidSignInRequest</code>
+            ra khỏi service.
+          </li>
+          <li>
+            <code>PrismaModule</code> không còn <code>@Global()</code>; các
+            module cần thì import. <code>ThrottlerModule.forRoot</code> nằm
+            trong <code>AppModule</code>. Test helper chung gom vào
+            <code>test/support/</code>.
+          </li>
+        </ul>
+
+        <h3>Non-goals</h3>
+        <ul>
+          <li>
+            Không đổi API, mã trạng thái, thông điệp lỗi của route, schema DB
+            hay migration.
+          </li>
+          <li>
+            Không đụng <code>agent/</code>, <code>frontend/</code>, và không sửa
+            <code>shared/</code> (<code>parseEnv</code> vẫn còn cho nơi khác
+            dùng).
+          </li>
+          <li>
+            Không thêm <code>@nestjs/terminus</code>,
+            <code>@nestjs/passport</code> hay <code>@Roles()</code>.
+          </li>
+        </ul>
+
+        <h3>Anti-goals</h3>
+        <ul>
+          <li>
+            Sửa test cho khớp code mới ở chỗ hành vi thật bị đổi (ví dụ nới
+            validate để test xanh).
+          </li>
+          <li>
+            Backend khởi động được khi thiếu hoặc sai
+            <code>JWT_SECRET</code>, <code>DATABASE_URL</code>, biến LiveKit.
+          </li>
+          <li>
+            Dùng <code>NOSONAR</code>, <code>@ts-ignore</code>, hạ ngưỡng
+            lint/Sonar (cấm trong CLAUDE.md).
+          </li>
+        </ul>
+
+        <h3>Constraints</h3>
+        <ul>
+          <li>
+            Phụ thuộc giữa các module không được có vòng: Nest báo lỗi khi khởi
+            động nếu có, và <code>forwardRef</code> bị docs không khuyến khích.
+          </li>
+          <li>
+            Trước khi xong phải qua <code>pnpm check</code> và
+            <code>pnpm sonar</code>. Vì chạm vào auth nên phải chạy thêm
+            <code>pnpm test:e2e</code> (CLAUDE.md).
+          </li>
+          <li>Test backend cần Docker (Testcontainers).</li>
+        </ul>
+
+        <h3>Hướng phụ thuộc sau khi sửa</h3>
+        <pre>
+PrismaModule
+   ├── UsersModule          (UsersService: find/create + thao tác của Admin)
+   └── RefreshTokensModule  (RefreshTokenService)
+          ▲
+AuthModule ──imports──► UsersModule, RefreshTokensModule
+   │  (APP_GUARD, JwtModule, AuthController)
+   └── decorators/guards được users, livekit, health import theo file
+UsersModule ──imports──► RefreshTokensModule   (không import AuthModule)
+AppModule: ConfigModule (global), ThrottlerModule, các module trên</pre>
+
+        <h3>Approaches</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Chỗ cần quyết</th>
+              <th>Cách</th>
+              <th>Đánh đổi</th>
+              <th>Chọn</th>
+            </tr>
+            <tr>
+              <td rowspan="2">Tránh vòng auth ↔ users</td>
+              <td>Tách <code>RefreshTokensModule</code></td>
+              <td>
+                Thêm một module nhỏ, nhưng đồ thị sạch, không cần
+                <code>forwardRef</code>.
+              </td>
+              <td>Có (my call)</td>
+            </tr>
+            <tr>
+              <td><code>forwardRef</code> giữa hai module</td>
+              <td>Ít file hơn nhưng giữ vòng, docs không khuyến khích.</td>
+              <td>Không</td>
+            </tr>
+            <tr>
+              <td rowspan="2">Biến môi trường</td>
+              <td>
+                <code>@nestjs/config</code> + <code>validationSchema</code> zod
+              </td>
+              <td>
+                Đúng docs; thêm một dependency; câu lỗi đổi sang
+                <code>PATH: message</code>; phải sửa test khởi động.
+              </td>
+              <td>Có (bạn quyết)</td>
+            </tr>
+            <tr>
+              <td>Gom <code>parseEnv</code> vào <code>config/</code></td>
+              <td>Không đổi test, nhưng không phải cách docs khuyên.</td>
+              <td>Không</td>
+            </tr>
+            <tr>
+              <td rowspan="2">Kiểu cho config</td>
+              <td>Một schema + <code>ConfigService&lt;Env, true&gt;</code></td>
+              <td>Ít file; khóa config là tên biến môi trường.</td>
+              <td>Có (my call)</td>
+            </tr>
+            <tr>
+              <td>
+                <code>registerAs</code> theo nhóm + <code>ConfigType</code>
+              </td>
+              <td>Gọn khi gọi, nhưng thêm 3 file và 3 chỗ đăng ký.</td>
+              <td>Không</td>
+            </tr>
+          </table>
+        </div>
+
+        <h3>Cách làm</h3>
+        <ul>
+          <li>
+            <strong>Mục 1.</strong> <code>UsersService</code> thêm
+            <code>findById</code>, <code>findByEmail</code>,
+            <code>create</code>. <code>AuthService</code> và
+            <code>AuthenticationGuard</code> gọi qua đó; việc đổi lỗi unique
+            (P2002) thành <code>409</code> vẫn nằm ở <code>AuthService</code>.
+            <code>toUser</code> chuyển thành <code>users/user.mapper.ts</code>;
+            <code>auth/users.ts</code> bị xóa. <code>first-admin.ts</code> dùng
+            <code>UsersService</code> khi seed chạy trong ngữ cảnh Nest.
+            <em>(my call)</em>
+          </li>
+          <li>
+            <strong>Mục 2.</strong> Thêm <code>@nestjs/config</code>. Một schema
+            ở <code>src/config/env.schema.ts</code> ghép
+            <code>liveKitEnvSchema</code> (từ <code>shared</code>) với
+            <code>PORT</code> (mặc định 3000), <code>DATABASE_URL</code>,
+            <code>JWT_SECRET</code>. <code>PrismaService</code>,
+            <code>AuthModule</code> (JwtModule.registerAsync),
+            <code>RoomTokenService</code> và <code>main.ts</code> đọc qua
+            <code>ConfigService</code>. Bỏ <code>LIVEKIT_CONFIG</code> và
+            <code>loadLiveKitConfig</code>. Câu báo lỗi khi thiếu hoặc sai biến
+            đổi sang định dạng của <code>@nestjs/config</code>.
+          </li>
+          <li>
+            <strong>Mục 3.</strong> <code>src/routes.ts</code> xuất
+            <code>API_PREFIX</code> và <code>AUTH_PATH</code>. Path của cookie
+            tính từ hai hằng số này. <em>(my call)</em>
+          </li>
+          <li>
+            <strong>Mục 4.</strong> Như mục Mục tiêu. Tên file cụ thể (ví dụ
+            <code>public.decorator.ts</code>) theo quy ước docs.
+          </li>
+          <li>
+            Làm tuần tự: mục 3, mục 4, mục 1, mục 2. Mỗi bước chạy test backend
+            rồi mới sang bước sau. <em>(my call)</em>
+          </li>
+        </ul>
+
+        <h3>Cách kiểm chứng</h3>
+        <ul>
+          <li>
+            Toàn bộ spec hiện có của backend (đăng ký, đăng nhập, refresh, đăng
+            xuất, khóa User, đổi quyền, đặt mật khẩu, token phòng, giới hạn tốc
+            độ) vẫn qua, mà không phải sửa nội dung kiểm tra hành vi.
+          </li>
+          <li>
+            Thiếu <code>JWT_SECRET</code>, <code>DATABASE_URL</code> hoặc một
+            biến LiveKit thì backend từ chối khởi động và lỗi nêu đúng tên biến.
+            <code>LIVEKIT_URL</code> không phải WebSocket, hoặc
+            <code>JWT_SECRET</code> ngắn hơn 32 ký tự, vẫn bị từ chối.
+          </li>
+          <li>
+            Cookie refresh vẫn có <code>Path=/api/auth</code>; đổi hằng số thì
+            cả route và cookie đổi theo.
+          </li>
+          <li>
+            <code>pnpm db:seed</code> trên database trống tạo Admin chỉ với
+            <code>DATABASE_URL</code> và biến <code>SEED_*</code>, không cần
+            <code>JWT_SECRET</code>.
+          </li>
+          <li>
+            Trình duyệt: đăng nhập, mở phòng, đăng xuất chạy như trước (e2e
+            Playwright).
+          </li>
+        </ul>
+        <p>
+          <strong>Integration:</strong> các spec backend hiện có chạy với
+          Postgres thật; test khởi động và test seed được viết lại theo định
+          dạng lỗi mới. <strong>Unit:</strong> thêm test nhỏ cho schema môi
+          trường (hợp lệ, thiếu biến, sai định dạng, mặc định của
+          <code>PORT</code>). <strong>E2E:</strong> chạy
+          <code>pnpm test:e2e</code> vì thay đổi chạm vào auth.
+        </p>
+
+        <h3>Rủi ro cần xác minh khi bắt đầu làm</h3>
+        <ul>
+          <li>
+            Docs không nói <code>ConfigModule.forRoot()</code> validate lúc nào.
+            Nếu nó chạy ngay khi file module được import, thì
+            <code>vi.stubEnv</code> trong <code>test/test-app.ts</code> chạy quá
+            muộn. Khi đó test sẽ nạp <code>AppModule</code> bằng
+            <code>import()</code> động sau khi đặt biến môi trường. Bước đầu
+            tiên của kế hoạch là kiểm tra điều này.
+          </li>
+        </ul>
+
+        <h3>Để người thực hiện quyết</h3>
+        <ul>
+          <li>
+            Tên file và thư mục con cụ thể trong <code>auth/</code>, miễn theo
+            quy ước docs.
+          </li>
+          <li>
+            Thứ tự chia commit, miễn mỗi commit qua <code>pnpm check</code>.
+          </li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Evidence</h2>
+
+        <article id="ev-user-access">
+          <h3>Nơi truy cập bảng User</h3>
+          <p class="src">
+            Nguồn: <code>grep -rnE '(prisma|transaction)\.user\.' src</code> (bỏ
+            <code>generated</code>) · 2026-11-22
+          </p>
+          <blockquote>
+            auth.service.ts:72, authentication.guard.ts:62, users.service.ts (5
+            dòng), first-admin.ts (3 dòng): tổng cộng 10 kết quả ở 4 file.
+          </blockquote>
+        </article>
+
+        <article id="ev-env-reads">
+          <h3>Nơi đọc biến môi trường</h3>
+          <p class="src">
+            Nguồn: <code>grep -rn 'process\.env' src</code> (bỏ
+            <code>generated</code>) · 2026-11-22
+          </p>
+          <blockquote>
+            main.ts:10, seed.ts:9, auth/auth.module.ts:24,
+            prisma/prisma.service.ts:17, livekit/livekit.module.ts:12.
+          </blockquote>
+        </article>
+
+        <article id="ev-config-version">
+          <h3>Phiên bản @nestjs/config</h3>
+          <p class="src">
+            Nguồn: <code>npm view @nestjs/config version peerDependencies</code>
+            · 2026-11-22
+          </p>
+          <blockquote>
+            version 12.1.1; peerDependencies: "@nestjs/common": "^11.0.0 ||
+            ^12.0.0".
+          </blockquote>
+        </article>
+
+        <article id="ev-config-docs">
+          <h3>Docs cấu hình của NestJS</h3>
+          <p class="src">
+            Nguồn (qua context7):
+            <a
+              href="https://github.com/nestjs/docs.nestjs.com/blob/master/content/application/configuration.md"
+              >docs.nestjs.com, chương Configuration</a
+            >
+            và
+            <a
+              href="https://github.com/nestjs/docs.nestjs.com/blob/master/content/migration.md"
+              >chương Migration</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Pass a Standard Schema-compatible schema via
+            <code>validationSchema</code> to <code>ConfigModule.forRoot()</code>
+            … variables without defaults cause a bootstrap exception if
+            missing." Và: "Use @nestjs/config's validationSchema option with any
+            Standard Schema-compatible library, such as Zod. Recommended for new
+            projects."
+          </blockquote>
+        </article>
+
+        <article id="ev-hardcoded-path">
+          <h3>Đường dẫn viết cứng</h3>
+          <p class="src">
+            Nguồn: <code>grep -rnE "'/api|'api'" src</code> · 2026-11-22
+          </p>
+          <blockquote>
+            configure-app.ts:6 <code>app.setGlobalPrefix('api')</code>;
+            auth/refresh-cookie.ts:9
+            <code>const AUTH_ROUTES = '/api/auth'</code>.
+          </blockquote>
+        </article>
+
+        <article id="ev-cycle">
+          <h3>Vòng phụ thuộc auth ↔ users</h3>
+          <p class="src">
+            Nguồn: <code>users/users.service.ts</code> và
+            <code>users/users.module.ts</code> · 2026-11-22
+          </p>
+          <blockquote>
+            users.service.ts import
+            <code>RefreshTokenService</code> từ <code>../auth/…</code>, và
+            users.module.ts import <code>AuthModule</code>. Nếu
+            <code>AuthService</code> inject <code>UsersService</code>, hai
+            module import lẫn nhau.
+          </blockquote>
+        </article>
+
+        <article id="ev-global">
+          <h3>Docs về module global</h3>
+          <p class="src">
+            Nguồn (qua context7):
+            <a
+              href="https://github.com/nestjs/docs.nestjs.com/blob/master/content/modules.md"
+              >docs.nestjs.com, chương Modules</a
+            >
+            · 2026-11-22
+          </p>
+          <blockquote>
+            "Making everything global is not a good design decision."
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
