@@ -13,19 +13,24 @@ const pipelineWithFakes = {
 };
 
 describe('Agent in Pipeline mode, run with voice.testing', () => {
-  it('greets the User first, before the User says anything, with "Hello, how can I help?"', async () => {
+  it("opens first, before the User says anything, with the Scenario's opening line", async () => {
     initializeLogger({ pretty: false, level: 'error' });
     const session = new voice.AgentSession({
-      ...createSessionOptions(loadAgentConfig(pipelineWithFakes)),
+      ...createSessionOptions(loadAgentConfig(pipelineWithFakes), 1),
       llm: new LiteralLLM(),
     });
     const greeting = firstAgentMessage(session);
 
     try {
       // Without a room, as in LiveKit's testing docs: the User says nothing.
-      await startConversation(session);
+      await startConversation(session, {
+        scenarioId: 'daily-standup',
+        speed: 1,
+      });
 
-      expect((await greeting).textContent).toBe('Hello, how can I help?');
+      expect((await greeting).textContent).toBe(
+        "Morning! Let's start the standup. What did you work on yesterday?",
+      );
       expect(
         session.history.items
           .filter((item) => item instanceof llm.ChatMessage)

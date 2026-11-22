@@ -65,6 +65,7 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
         ...realtimeWithOpenAi,
         REALTIME_MODEL: 'gpt-realtime-2.1-mini',
       }),
+      1,
     );
 
     expect(options.llm).toBeInstanceOf(openai.realtime.RealtimeModel);
@@ -80,7 +81,10 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
     onTestFinished(() => {
       vi.unstubAllEnvs();
     });
-    const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
+    const options = createSessionOptions(
+      loadAgentConfig(realtimeWithOpenAi),
+      1,
+    );
 
     const connection = await realtimeApi.connect(options.llm);
 
@@ -98,7 +102,10 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
   });
 
   it("leaves turn detection to OpenAI's server, with no local VAD and no LiveKit Inference", () => {
-    const options = createSessionOptions(loadAgentConfig(realtimeWithOpenAi));
+    const options = createSessionOptions(
+      loadAgentConfig(realtimeWithOpenAi),
+      1,
+    );
 
     expect(options.turnHandling?.turnDetection).toBe('realtime_llm');
     expect(options.vad).toBeNull();
@@ -185,13 +192,13 @@ describe('Agent configuration in Realtime mode with the fake Provider', () => {
   });
 
   it("uses the framework's FakeLLM, so the Agent makes no AI calls", () => {
-    const options = createSessionOptions(loadAgentConfig(realtimeWithFake));
+    const options = createSessionOptions(loadAgentConfig(realtimeWithFake), 1);
 
     expect(options.llm).toBeInstanceOf(voice.testing.FakeLLM);
   });
 
   it('turns off the VAD and the turn detector, which would load local models or call LiveKit Inference', () => {
-    const options = createSessionOptions(loadAgentConfig(realtimeWithFake));
+    const options = createSessionOptions(loadAgentConfig(realtimeWithFake), 1);
 
     expect(options.vad).toBeNull();
     expect(options.turnHandling?.turnDetection).toBeNull();

@@ -15,7 +15,7 @@ import { hasGoogleCredentials } from './google-credentials.ts';
 describe.skipIf(!hasGoogleCredentials(process.env))(
   'Agent in Pipeline mode with Google (live)',
   () => {
-    it('greets the User first, then answers a simple question', async () => {
+    it('opens the standup first, then stays in role without correcting the User', async () => {
       initializeLogger({ pretty: true, level: 'warn' });
       const options = createSessionOptions(
         loadAgentConfig({
@@ -25,6 +25,7 @@ describe.skipIf(!hasGoogleCredentials(process.env))(
           LLM_PROVIDER: 'google',
           TTS_PROVIDER: 'google',
         }),
+        1,
       );
       // The judge is the Agent's own language model.
       const judge = options.llm;
@@ -34,20 +35,24 @@ describe.skipIf(!hasGoogleCredentials(process.env))(
 
       try {
         // Without a room, as LiveKit's testing docs do: the User types.
-        await startConversation(session);
+        await startConversation(session, {
+          scenarioId: 'daily-standup',
+          speed: 1,
+        });
         await assertAgentMessage(await greeting).judge(judge, {
           intent:
-            'Greets the user and offers to help, such as "Hello, how can I help?"',
+            'Opens a daily standup, such as "Morning! Let\'s start the standup. What did you work on yesterday?"',
         });
 
         const answer = await session
-          .run({ userInput: 'What is the capital of France?' })
+          .run({ userInput: 'Yesterday I fix a bug in the login page.' })
           .wait();
         await answer.expect
           .nextEvent()
           .isMessage({ role: 'assistant' })
           .judge(judge, {
-            intent: 'Says that the capital of France is Paris.',
+            intent:
+              'Answers in English as the standup lead, briefly, for example with a follow-up question, and does not correct the grammar of what the user said.',
           });
       } finally {
         await session.close();

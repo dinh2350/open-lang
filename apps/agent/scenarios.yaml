@@ -1,37 +1,106 @@
 # Scenarios for `lk agent simulate text --scenarios apps/agent/scenarios.yaml`.
 # The CLI offers to add the `id` each scenario needs on its first run.
 # Format: https://docs.livekit.io/testing/simulations/write-a-scenario/
+#
+# The Agent reads the Scenario and speed of a Conversation from the job's
+# metadata, which the simulator does not set
+# (https://docs.livekit.io/testing/simulations/#limitations). A simulation
+# therefore needs a job that carries that metadata, for example
+# {"scenarioId":"daily-standup","speed":1}, matching the scenario below.
 name: Conversation Agent
 scenarios:
-  - label: The Agent greets the User first
-    instructions: >
-      You are Jordan, a person who has just opened a voice conversation.
-      Say nothing at first and wait for the agent to speak. Once it has
-      spoken, end the conversation.
+  - label: The standup lead opens the daily standup in role
+    instructions: |
+      PERSONA: Dana, a software developer in a daily standup. You speak
+      English and answer one question at a time.
+      FACTS (reveal each only when asked, one per turn):
+      - yesterday you fixed a bug in the login page
+      - today you will write tests for it
+      - you are blocked waiting for a code review
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Answer each question the agent asks, briefly.
+      3. After the agent has asked about all three points, end the call.
     agent_expectations: >
-      The agent speaks first, before the user says anything, and its
-      greeting is "Hello, how can I help?".
+      The agent speaks first, before the user says anything, and its opening
+      line is "Morning! Let's start the standup. What did you work on
+      yesterday?". It stays in the role of Sam, the standup lead, speaks only
+      English, and keeps each turn to one to three short sentences with one
+      question at a time. Starting with any other greeting is a fail.
     tags:
-      feature: greeting
+      feature: scenario
+      scenario: daily_standup
 
-  - label: The Agent answers a general question briefly, in English
-    instructions: >
-      You are Jordan. Ask the agent why the sky is blue, in English. When it
-      has answered, thank it and end the conversation.
+  - label: The manager opens the one-on-one in role
+    instructions: |
+      PERSONA: Dana, a software developer in a one-on-one with your manager.
+      You speak English and answer one question at a time.
+      FACTS (reveal each only when asked, one per turn):
+      - your week was busy but good
+      - you would like to lead a small project next quarter
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Answer each question the agent asks, briefly.
+      3. After the agent has asked about your goals, end the call.
     agent_expectations: >
-      The agent answers in English in a few short sentences, in plain words
-      suited to being spoken aloud. A long answer, a list, or an answer in
-      another language is a fail.
+      The agent speaks first, and its opening line is "Hi, thanks for making
+      time. How has your week been going?". It stays in the role of Alex, the
+      user's manager, speaks only English, and asks about the user's week and
+      goals in short turns. Starting with any other greeting is a fail.
     tags:
-      feature: general_questions
+      feature: scenario
+      scenario: one_on_one
 
-  - label: The Agent answers in English even when the User speaks Vietnamese
-    instructions: >
-      You are Jordan, who speaks Vietnamese. Ask the agent in Vietnamese
-      what the capital of France is. When it has answered, thank it and end
-      the conversation.
+  - label: The client asks about the delayed delivery in role
+    instructions: |
+      PERSONA: Dana, a project lead whose delivery to a client is late. You
+      speak English and answer one question at a time.
+      FACTS (reveal each only when asked, one per turn):
+      - a vendor shipped the parts a week late
+      - the new delivery date is the 20th
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Explain the delay when asked and give the new date when asked.
+      3. After the agent has asked for the plan, end the call.
     agent_expectations: >
-      The agent understands the question and answers in English, naming
-      Paris. Answering in Vietnamese is a fail.
+      The agent speaks first, and its opening line is "Hello, this is Jordan
+      from the client team. I heard the delivery is delayed. What happened?".
+      It stays in the role of Jordan, the client, speaks only English, and
+      asks about the reason, the length of the delay and the plan in short
+      turns. Starting with any other greeting is a fail.
+    tags:
+      feature: scenario
+      scenario: client_delay_call
+
+  - label: The Agent does not correct the User's English
+    instructions: |
+      PERSONA: Dana, a developer in a daily standup who makes grammar
+      mistakes. You speak English.
+      OPENING LINE (after the agent speaks first): "Yesterday I fix a bug,
+      and today I am go to write the tests."
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Say the opening line, then answer the agent's next question
+         briefly, with another small mistake.
+      3. End the call after two answers.
+    agent_expectations: >
+      The agent never corrects, rephrases or comments on the user's grammar,
+      word choice or pronunciation, and never explains a word. It continues
+      the standup naturally in English. Any correction or teaching is a fail.
+    tags:
+      feature: scenario
+      behavior: no_correction
+
+  - label: The Agent answers in English when the User speaks Vietnamese
+    instructions: |
+      PERSONA: Dana, who speaks Vietnamese. The agent answers in English.
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Answer the agent's first question in Vietnamese: "Hôm qua tôi sửa
+         một lỗi ở trang đăng nhập."
+      3. End the call after the agent's next reply.
+    agent_expectations: >
+      The agent understands the answer and continues the standup in English
+      only. Replying in Vietnamese is a fail.
     tags:
       feature: language

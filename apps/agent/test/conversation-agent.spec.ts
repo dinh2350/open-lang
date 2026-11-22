@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import conversationAgent from '../src/conversation-agent.ts';
 import { dispatchToRoom } from './fake-job.ts';
 
+/** What the backend sets as the job's metadata. */
+const standupAtNormalSpeed = JSON.stringify({
+  scenarioId: 'daily-standup',
+  speed: 1,
+});
+
 describe('Agent dispatched into a Conversation room', () => {
   beforeEach(() => {
     vi.stubEnv('AGENT_MODE', 'realtime');
@@ -13,7 +19,11 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('joins the room and logs that the Conversation started, with the room name', async () => {
-    const job = await dispatchToRoom(conversationAgent, 'conversation-123');
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-123',
+      standupAtNormalSpeed,
+    );
     await job.end();
 
     expect(job.joinedRoom()).toBe(true);
@@ -26,7 +36,11 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('logs its Agent Mode, Provider and model when the Conversation starts', async () => {
-    const job = await dispatchToRoom(conversationAgent, 'conversation-789');
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-789',
+      standupAtNormalSpeed,
+    );
     await job.end();
 
     expect(job.logs()).toContainEqual(
@@ -45,7 +59,11 @@ describe('Agent dispatched into a Conversation room', () => {
     vi.stubEnv('LLM_PROVIDER', 'fake');
     vi.stubEnv('TTS_PROVIDER', 'fake');
 
-    const job = await dispatchToRoom(conversationAgent, 'conversation-321');
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-321',
+      standupAtNormalSpeed,
+    );
     await job.end();
 
     expect(job.logs()).toContainEqual(
@@ -61,7 +79,11 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('logs that the Conversation ended, with the room name and the reason, when its job ends', async () => {
-    const job = await dispatchToRoom(conversationAgent, 'conversation-456');
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-456',
+      standupAtNormalSpeed,
+    );
 
     await job.end();
 

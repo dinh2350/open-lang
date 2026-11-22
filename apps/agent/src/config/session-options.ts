@@ -8,6 +8,7 @@ import {
 } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
+import type { Speed } from '@open-lang/shared';
 import type {
   AgentConfig,
   ModelConfig,
@@ -21,14 +22,17 @@ import { DEFAULT_STT_MODEL } from './models.ts';
 
 /**
  * Turns the Agent's configuration into the models of its AgentSession. No
- * Agent Mode or Provider uses LiveKit Inference.
+ * Agent Mode or Provider uses LiveKit Inference. The OpenAI realtime model
+ * speaks at the chosen speed; no other model has a setting for it, so they
+ * keep the pace from the Agent's instructions alone.
  */
 export function createSessionOptions(
   config: AgentConfig,
+  speed: Speed,
 ): voice.AgentSessionOptions {
   const options =
     config.agentMode === 'realtime'
-      ? realtimeSessionOptions(config)
+      ? realtimeSessionOptions(config, speed)
       : pipelineSessionOptions(config);
   return {
     ...options,
@@ -42,10 +46,11 @@ export function createSessionOptions(
   };
 }
 
-function realtimeSessionOptions({
-  realtime,
-}: RealtimeConfig): voice.AgentSessionOptions {
-  return pluginOf(realtime.provider).realtime(realtime);
+function realtimeSessionOptions(
+  { realtime }: RealtimeConfig,
+  speed: Speed,
+): voice.AgentSessionOptions {
+  return pluginOf(realtime.provider).realtime(realtime, speed);
 }
 
 /**
@@ -74,7 +79,10 @@ function pipelineSessionOptions(
 /** What a Provider's plugin builds for each of the Agent's models. */
 interface Plugin<P extends Provider> {
   /** Realtime mode's AgentSession options, around one model that listens and speaks. */
-  realtime(config: SpeakingModelConfig<P>): voice.AgentSessionOptions;
+  realtime(
+    config: SpeakingModelConfig<P>,
+    speed: Speed,
+  ): voice.AgentSessionOptions;
   stt(config: ModelConfig<P>, vad: inference.VAD): stt.STT | undefined;
   llm(config: ModelConfig<P>): llm.LLM;
   tts(config: SpeakingModelConfig<P>): tts.TTS | undefined;
@@ -83,12 +91,13 @@ interface Plugin<P extends Provider> {
 /** Each Provider's plugin. */
 const PLUGINS: { readonly [P in Provider]: Plugin<P> } = {
   openai: {
-    realtime: ({ model, voice, apiKey }) =>
+    realtime: ({ model, voice, apiKey }, speed) =>
       serverDetectsTurns(
         new openai.realtime.RealtimeModel({
           model,
           voice,
           apiKey,
+          speed,
           // The plugin's default, gpt-4o-mini-transcribe, is deprecated.
           inputAudioTranscription: { model: DEFAULT_STT_MODEL.openai },
         }),
@@ -118,6 +127,8 @@ const PLUGINS: { readonly [P in Provider]: Plugin<P> } = {
       }),
   },
   google: {
+    // The Gemini Live API has no speaking-rate setting, and the plugin offers
+    // none, so Gemini's pace comes from the instructions alone.
     realtime: ({ model, voice, credentials }) =>
       serverDetectsTurns(
         new google.realtime.RealtimeModel({ model, voice, ...credentials }),

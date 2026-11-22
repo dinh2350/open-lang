@@ -23,9 +23,14 @@ const noInference: ipc.InferenceExecutor = {
  * Dispatches an Agent into a room the way the framework's job runner does,
  * but as a fake job without a LiveKit server, like the framework's own
  * console mode: `ctx.connect()` joins nothing, and the room never connects.
- * The Agent's JSON log lines on stdout are captured.
+ * The Agent's JSON log lines on stdout are captured. `metadata` is the job's
+ * metadata, as the dispatch sets it.
  */
-export async function dispatchToRoom(agent: AgentDefinition, roomName: string) {
+export async function dispatchToRoom(
+  agent: AgentDefinition,
+  roomName: string,
+  metadata?: string,
+) {
   initializeLogger({ pretty: false, level: 'info' });
   const logLines: string[] = [];
   // Not restored after the job ends: the framework keeps logging for a while
@@ -41,11 +46,16 @@ export async function dispatchToRoom(agent: AgentDefinition, roomName: string) {
   const ctx = new JobContext(
     new JobProcess(),
     {
-      acceptArguments: { name: '', identity: 'agent', metadata: '' },
+      acceptArguments: {
+        name: '',
+        identity: 'agent',
+        metadata: metadata ?? '',
+      },
       job: new Job({
         id: `job-for-${roomName}`,
         type: JobType.JT_ROOM,
         room: new RoomInfo({ name: roomName }),
+        metadata,
       }),
       url: '',
       token: '',
