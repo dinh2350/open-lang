@@ -71,11 +71,36 @@ describe('theme mode functions', () => {
 });
 
 function Consumer() {
-  const { mode, toggleMode } = useThemeMode();
+  const { mode, setMode } = useThemeMode();
   return (
-    <button type="button" onClick={toggleMode}>
-      toggle ({mode})
-    </button>
+    <>
+      <p>mode: {mode}</p>
+      <button
+        type="button"
+        onClick={() => {
+          setMode('dark');
+        }}
+      >
+        Dark
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setMode('light');
+        }}
+      >
+        Light
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setMode('dark');
+          setMode('dark');
+        }}
+      >
+        Dark twice
+      </button>
+    </>
   );
 }
 
@@ -88,21 +113,37 @@ function renderWithProvider(): void {
 }
 
 describe('ThemeModeProvider', () => {
-  it('toggleMode flips the mode, puts it on the page root and saves it', async () => {
+  it('setMode sets the mode, puts it on the page root and saves it', async () => {
     deviceUses('light');
     renderWithProvider();
-    await userEvent.click(screen.getByRole('button', { name: /toggle/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Dark' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(localStorage.getItem(THEME_MODE_STORAGE_KEY)).toBe('dark');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Light' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(localStorage.getItem(THEME_MODE_STORAGE_KEY)).toBe('light');
   });
 
-  it('toggleMode still switches the page when storage throws', async () => {
+  it('setMode sets the mode it is given, even when called twice at once', async () => {
+    deviceUses('light');
+    renderWithProvider();
+    await userEvent.click(screen.getByRole('button', { name: 'Dark twice' }));
+    expect(screen.getByText('mode: dark')).toBeVisible();
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(localStorage.getItem(THEME_MODE_STORAGE_KEY)).toBe('dark');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dark' }));
+    expect(screen.getByText('mode: dark')).toBeVisible();
+  });
+
+  it('setMode still switches the page when storage throws', async () => {
     deviceUses('light');
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
     });
     renderWithProvider();
-    await userEvent.click(screen.getByRole('button', { name: /toggle/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Dark' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
   });
 

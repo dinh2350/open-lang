@@ -12,24 +12,24 @@ import { initialMode, saveMode, type ThemeMode } from './theme-mode';
 
 interface ThemeModeValue {
   readonly mode: ThemeMode;
-  readonly toggleMode: () => void;
+  /** Switches the page to this mode and saves it as the choice. */
+  readonly setMode: (next: ThemeMode) => void;
 }
 
 const ThemeModeContext = createContext<ThemeModeValue | null>(null);
 
-/** Holds the light or dark mode, themes everything below it, and saves each toggle. */
+/** Holds the light or dark mode, themes everything below it, and saves each choice. */
 export function ThemeModeProvider({
   children,
 }: {
   readonly children: ReactNode;
 }): ReactElement {
-  const [mode, setMode] = useState<ThemeMode>(initialMode);
-  const toggleMode = useCallback(() => {
-    const next: ThemeMode = mode === 'light' ? 'dark' : 'light';
+  const [mode, setModeState] = useState<ThemeMode>(initialMode);
+  const setMode = useCallback((next: ThemeMode) => {
     saveMode(next);
-    setMode(next);
-  }, [mode]);
-  const value = useMemo(() => ({ mode, toggleMode }), [mode, toggleMode]);
+    setModeState(next);
+  }, []);
+  const value = useMemo(() => ({ mode, setMode }), [mode, setMode]);
   return (
     <ThemeModeContext.Provider value={value}>
       <AppTheme mode={mode}>{children}</AppTheme>
