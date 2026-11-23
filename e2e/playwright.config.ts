@@ -27,8 +27,10 @@ const DATABASE_URL = `postgresql://open_lang:open_lang@localhost:${postgresPort}
 process.env.E2E_AGENT_NAME ??= `e2e-agent-${randomUUID()}`;
 
 // A new key every run, shared by the backend and the Agent, which sends the
-// transcript with it.
-const AGENT_API_KEY = randomBytes(48).toString('base64url');
+// transcript with it. The tests send turns and Misses with it too, in the
+// Agent's place: Playwright workers inherit it through the environment.
+process.env.E2E_AGENT_API_KEY ??= randomBytes(48).toString('base64url');
+const AGENT_API_KEY = process.env.E2E_AGENT_API_KEY;
 
 const liveKitEnv = {
   LIVEKIT_URL,
@@ -93,6 +95,8 @@ export default defineConfig({
         // A new secret every run: no Auth Token outlives it.
         JWT_SECRET: randomBytes(32).toString('base64url'),
         AGENT_API_KEY,
+        // Canned Reports: no AI calls, and an outcome the tests can check.
+        REPORT_PROVIDER: 'fake',
       },
       reuseExistingServer: false,
       timeout: 60_000,

@@ -51,7 +51,7 @@ async function microphoneBytesSent(page: Page): Promise<number> {
     .reduce((total, report) => total + (report.bytesSent ?? 0), 0);
 }
 
-test('a person registers, starts a Conversation, the Agent joins its room and shows its state, and End leaves it', async ({
+test('a person registers, starts a Conversation, the Agent joins its room and shows its state, and Kết thúc leaves it', async ({
   page,
 }) => {
   await recordPeerConnections(page);
@@ -59,18 +59,20 @@ test('a person registers, starts a Conversation, the Agent joins its room and sh
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   await registerNewUser(page);
 
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.getByRole('button', { name: 'Bắt đầu' }).click();
 
-  // Every Astryx button renders an empty status region of its own.
+  // The first Scenario, Họp standup, is selected: Sam plays it. Every
+  // Astryx button renders an empty status region of its own.
   await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-    'The Agent is listening.',
+    'Sam đang nghe bạn nói.',
     {
       timeout: 30_000,
     },
   );
   await expect.poll(() => microphoneBytesSent(page)).toBeGreaterThan(0);
 
-  await page.getByRole('button', { name: 'End' }).click();
+  await page.getByRole('button', { name: 'Kết thúc' }).click();
 
-  await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
+  await expect(page).toHaveURL(/\/conversations\/conversation-[\w-]+$/);
+  await expect(page.getByRole('button', { name: 'Kết thúc' })).toHaveCount(0);
 });
