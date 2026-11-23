@@ -71,10 +71,13 @@ export function ConversationPage({
     setFailure(reason);
   }
 
-  function end(roomName: string): void {
+  /** A Conversation that never joined its room has no Report to show. */
+  function end(roomName: string | null): void {
     running.current = false;
     setAttempt(null);
-    onEnded(roomName);
+    if (roomName !== null) {
+      onEnded(roomName);
+    }
   }
 
   return (

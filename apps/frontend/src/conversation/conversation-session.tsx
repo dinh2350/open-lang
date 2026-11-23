@@ -12,7 +12,12 @@ import {
   SCENARIOS,
   SPEED_LABELS,
 } from '@open-lang/shared';
-import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
+import {
+  ConnectionState,
+  MediaDeviceFailure,
+  type Room,
+  RoomEvent,
+} from 'livekit-client';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useAuth } from '@/auth/auth-context';
 import { AgentStatus } from './agent-status';
@@ -35,8 +40,12 @@ interface ConversationSessionProps {
   readonly agentJoinTimeoutMilliseconds: number;
   /** Called once when the Conversation fails; it then leaves its room. */
   readonly onFailed: (failure: ConversationFailure) => void;
-  /** Called with the Room's name once the Member left the Room. */
-  readonly onEnded: (roomName: string) => void;
+  /**
+   * Called once when the Conversation ends: by Kết thúc, or because the Room
+   * disconnected after it joined. It gets the name of the room this
+   * Conversation joined, or null when it never joined one.
+   */
+  readonly onEnded: (roomName: string | null) => void;
 }
 
 /**
@@ -112,12 +121,42 @@ export function ConversationSession({
     }
   }, [failure, connectionState, end]);
 
-  async function endConversation(): Promise<void> {
-    // Read the name while the Room is still joined.
-    const roomName = room.name;
-    await session.end();
+  // The room this Conversation joined, from the moment it joined. The Room
+  // lives as long as the tab and keeps the name of the last room it joined,
+  // so its name means this Conversation's room only after this Connected.
+  const joinedRoom = useRef<string | null>(null);
+  // Set when the Conversation ends, so it ends once.
+  const ended = useRef(false);
+  async function finish(): Promise<void> {
+    if (ended.current) {
+      return;
+    }
+    ended.current = true;
+    const roomName = joinedRoom.current;
+    await end();
     onEnded(roomName);
   }
+  // The Room disconnecting after it joined, without Kết thúc or a failure,
+  // ends the Conversation too: the Agent ended it, or the room was deleted.
+  const disconnected = useEffectEvent(() => {
+    if (joinedRoom.current !== null && failure === null) {
+      void finish();
+    }
+  });
+  useEffect(() => {
+    const onConnected = () => {
+      joinedRoom.current = room.name;
+    };
+    const onDisconnected = () => {
+      disconnected();
+    };
+    room.on(RoomEvent.Connected, onConnected);
+    room.on(RoomEvent.Disconnected, onDisconnected);
+    return () => {
+      room.off(RoomEvent.Connected, onConnected);
+      room.off(RoomEvent.Disconnected, onDisconnected);
+    };
+  }, [room]);
 
   const scenario = SCENARIOS.find(({ id }) => id === choice.scenarioId);
   if (failure !== null || scenario === undefined) {
@@ -136,7 +175,7 @@ export function ConversationSession({
       />
       <Stack direction="horizontal" gap={3}>
         <ListeningHelpButton />
-        <Button label="Kết thúc" onClick={() => void endConversation()} />
+        <Button label="Kết thúc" onClick={() => void finish()} />
       </Stack>
       <RoomAudioRenderer />
     </SessionProvider>

@@ -263,4 +263,84 @@ describe('Conversation page', () => {
     expect(roomTokenRequestParticipantMetadata()).toHaveLength(1);
     expect(liveKit.connections()).toHaveLength(1);
   });
+
+  it('end before join returns to the picker and starts no navigation', async () => {
+    const liveKit = createUnconnectedRoom();
+    liveKit.holdConnections();
+    const onEnded = vi.fn();
+    renderConversationPage(liveKit, onEnded);
+    await pressStart();
+    await waitFor(() => {
+      expect(liveKit.connections()).toHaveLength(1);
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Bắt đầu' }),
+    ).toBeVisible();
+    expect(onEnded).not.toHaveBeenCalled();
+  });
+
+  it("a second Conversation ended before join does not open the first Conversation's Report", async () => {
+    const liveKit = createUnconnectedRoom();
+    const onEnded = vi.fn();
+    renderConversationPage(liveKit, onEnded);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+    const firstRoom = liveKit.room.name;
+    expect(onEnded).toHaveBeenCalledExactlyOnceWith(firstRoom);
+
+    liveKit.holdConnections();
+    await pressStart();
+    await waitFor(() => {
+      expect(liveKit.connections()).toHaveLength(2);
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    expect(
+      await screen.findByRole('button', { name: 'Bắt đầu' }),
+    ).toBeVisible();
+    expect(onEnded).toHaveBeenCalledExactlyOnceWith(firstRoom);
+  });
+
+  it("an unexpected disconnect after joining opens that Conversation's Report", async () => {
+    const liveKit = createUnconnectedRoom();
+    const onEnded = vi.fn();
+    renderConversationPage(liveKit, onEnded);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await findStatusMessage();
+
+    act(() => {
+      liveKit.serverDeletesRoom();
+    });
+
+    await waitFor(() => {
+      expect(onEnded).toHaveBeenCalledExactlyOnceWith(liveKit.room.name);
+    });
+    expect(liveKit.room.name).toMatch(/^conversation-/);
+  });
+
+  it('pressing Kết thúc twice ends once', async () => {
+    const liveKit = createUnconnectedRoom();
+    const onEnded = vi.fn();
+    renderConversationPage(liveKit, onEnded);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    await waitFor(() => {
+      expect(onEnded).toHaveBeenCalled();
+    });
+    expect(onEnded).toHaveBeenCalledExactlyOnceWith(liveKit.room.name);
+  });
 });

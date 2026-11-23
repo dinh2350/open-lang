@@ -60,10 +60,16 @@ export function createUnconnectedRoom() {
   let roomName = '';
   vi.spyOn(room, 'name', 'get').mockImplementation(() => roomName);
 
+  // While held, a connection never completes, as when the LiveKit server is
+  // slow to answer the join.
+  let connectionsHeld = false;
   vi.spyOn(room, 'prepareConnection').mockResolvedValue(undefined);
   vi.spyOn(room, 'connect').mockImplementation(
     (serverUrl, participantToken) => {
       connections.push({ serverUrl, participantToken });
+      if (connectionsHeld) {
+        return new Promise<void>(() => undefined);
+      }
       roomName = roomNameOf(participantToken);
       changeConnectionState(room, ConnectionState.Connected);
       room.emit(RoomEvent.Connected);
@@ -119,6 +125,20 @@ export function createUnconnectedRoom() {
     sendText,
     /** Every room this Room connected to, oldest first. */
     connections: (): readonly RoomConnection[] => connections,
+    /** From now on, joining a room never completes. */
+    holdConnections(): void {
+      connectionsHeld = true;
+    },
+    /**
+     * The Conversation ends without the User: the Agent left and the server
+     * deleted the room, so the Room disconnects.
+     */
+    serverDeletesRoom(): void {
+      microphoneOn = false;
+      room.remoteParticipants.clear();
+      changeConnectionState(room, ConnectionState.Disconnected);
+      room.emit(RoomEvent.Disconnected, DisconnectReason.ROOM_DELETED);
+    },
     /**
      * The User blocks the browser's microphone prompt. The Room asks the
      * browser for the microphone as it does for real, and the browser refuses
