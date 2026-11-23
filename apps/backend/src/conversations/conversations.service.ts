@@ -44,10 +44,16 @@ export class ConversationsService {
     });
   }
 
-  /** The User's Conversations, newest first. */
+  /**
+   * The User's Conversations, newest first. A Conversation the Agent recorded
+   * no turn and no Miss for is not a practice session, so it is left out.
+   */
   async list(user: User): Promise<ConversationSummary[]> {
     const conversations = await this.prisma.conversation.findMany({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        OR: [{ turns: { some: {} } }, { misses: { some: {} } }],
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: summarySelect,
     });

@@ -7,6 +7,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import {
   at,
   getConversation,
+  ingestMiss,
   ingestTurn,
   readConversation,
   requestReport,
@@ -43,6 +44,8 @@ describe('The Conversation API', () => {
       where: { roomName: 'room-new' },
       data: { createdAt: new Date('2026-11-23T09:00:00.000Z') },
     });
+    await ingestMiss(app, 'room-new', at(1));
+    await ingestMiss(app, 'room-grace', at(1));
     await ingestTurn(app, 'room-old', {
       itemId: 'a',
       role: 'agent',
@@ -79,6 +82,50 @@ describe('The Conversation API', () => {
         reportStatus: 'ready',
       },
     ]);
+  });
+
+  /** The room names the User's list shows. */
+  async function listedRooms(): Promise<string[]> {
+    const response = await request(app.getHttpServer())
+      .get('/api/conversations')
+      .auth(ada.authToken, { type: 'bearer' });
+    expect(response.status).toBe(200);
+    return conversationListSchema
+      .parse(response.body)
+      .conversations.map((conversation) => conversation.roomName);
+  }
+
+  it('does not list a Conversation that has no turns and no Misses', async () => {
+    await startConversation(app, ada.user, 'room-empty');
+
+    expect(await listedRooms()).toEqual([]);
+  });
+
+  it('lists a Conversation that has only a turn', async () => {
+    await startConversation(app, ada.user, 'room-turn');
+    await ingestTurn(app, 'room-turn', {
+      itemId: 'a',
+      role: 'agent',
+      text: 'Morning!',
+      startedAt: at(0),
+    });
+
+    expect(await listedRooms()).toEqual(['room-turn']);
+  });
+
+  it('lists a Conversation that has only a Miss', async () => {
+    await startConversation(app, ada.user, 'room-miss');
+    await ingestMiss(app, 'room-miss', at(1));
+
+    expect(await listedRooms()).toEqual(['room-miss']);
+  });
+
+  it('still returns an empty Conversation by its room name', async () => {
+    await startConversation(app, ada.user, 'room-empty');
+
+    const detail = await readConversation(app, ada.authToken, 'room-empty');
+
+    expect(detail).toMatchObject({ roomName: 'room-empty', report: null });
   });
 
   it('shows a Conversation without a Report, with a null report', async () => {
