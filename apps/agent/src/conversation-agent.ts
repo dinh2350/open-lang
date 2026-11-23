@@ -45,6 +45,11 @@ export async function startConversation(
   });
 }
 
+/** The session close reasons that mean the job is ending already. */
+const JOB_ENDING_REASONS: ReadonlySet<string> = new Set([
+  voice.CloseReason.JOB_SHUTDOWN,
+]);
+
 /**
  * The Agent's job: each dispatch into a Conversation's room runs that
  * Conversation in one AgentSession. The agent server loads this module in its
@@ -63,6 +68,12 @@ export default defineAgent({
     );
     session.on(voice.AgentSessionEventTypes.Close, (event) => {
       logger.info({ roomName, reason: event.reason }, 'Conversation ended');
+      // One session per job: once it closes (the User left, say), the job
+      // ends now, so its shutdown callbacks post the end marker at once
+      // instead of when the empty room times out.
+      if (!JOB_ENDING_REASONS.has(event.reason)) {
+        ctx.shutdown(event.reason);
+      }
     });
 
     const backend = createBackendClient({

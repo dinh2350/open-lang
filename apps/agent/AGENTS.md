@@ -17,7 +17,7 @@ Always read the latest LiveKit documentation before using a LiveKit API. Trainin
 ## File layout
 
 - `src/main.ts`: the process entrypoint. It validates the environment and hands over to the `@livekit/agents` CLI (`cli.runApp`).
-- `src/conversation-agent.ts`: the job module. The CLI loads it in each job process; its default export is the `defineAgent` entry that reads the Scenario and speed from the job's metadata and runs one Conversation in one `AgentSession`. When the job ends, its shutdown callback waits for the transcript and the Misses still being sent, then posts the end marker, which tells the backend the Report may be written.
+- `src/conversation-agent.ts`: the job module. The CLI loads it in each job process; its default export is the `defineAgent` entry that reads the Scenario and speed from the job's metadata and runs one Conversation in one `AgentSession`. The job ends as soon as its session closes (when the User leaves, for example); its shutdown callback then waits for the transcript and the Misses still being sent, then posts the end marker, which tells the backend the Report may be written.
 - `src/conversation-choice.ts`: `readConversationChoice`, which parses the job's metadata into the Member's Scenario and speed, and throws when it is missing or invalid.
 - `src/scenario-instructions.ts`: the persona instructions, the opening line and the greeting instruction of each Scenario, for the chosen speed.
 - `src/agent.ts`: the `ConversationAgent` class, which plays the chosen Scenario, with no tools.

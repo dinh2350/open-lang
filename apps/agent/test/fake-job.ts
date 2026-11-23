@@ -43,6 +43,7 @@ export async function dispatchToRoom(
   );
 
   let joinedRoom = false;
+  const shutdownReasons: string[] = [];
   const ctx = new JobContext(
     new JobProcess(),
     {
@@ -66,7 +67,9 @@ export async function dispatchToRoom(
     () => {
       joinedRoom = true;
     },
-    () => undefined,
+    (reason: string) => {
+      shutdownReasons.push(reason);
+    },
     noInference,
   );
   await runWithJobContextAsync(ctx, () => agent.entry(ctx));
@@ -74,6 +77,8 @@ export async function dispatchToRoom(
   return {
     /** The Conversation's AgentSession, once the job has started it. */
     session: (): voice.AgentSession | undefined => ctx._primaryAgentSession,
+    /** The reasons of each `ctx.shutdown()` the job asked for, oldest first. */
+    shutdownReasons: (): readonly string[] => shutdownReasons,
     /** Whether the Agent joined the room it was dispatched to. */
     joinedRoom: () => joinedRoom,
     /** The Agent's structured log records so far, oldest first. */

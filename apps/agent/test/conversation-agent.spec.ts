@@ -339,4 +339,23 @@ describe('Agent dispatched into a Conversation room', () => {
       start.mockRestore();
     }
   });
+
+  it('the job shuts down as soon as its session closes, so the end marker is not held up', async () => {
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-left',
+      standupAtNormalSpeed,
+    );
+    const session = job.session();
+    const closed = new Promise((resolve) => {
+      session?.once(voice.AgentSessionEventTypes.Close, resolve);
+    });
+
+    // As RoomIO does when the User leaves the room.
+    session?.shutdown({ reason: voice.CloseReason.PARTICIPANT_DISCONNECTED });
+    await closed;
+
+    // The session is closed already, so job.end() would wait for a second Close.
+    expect(job.shutdownReasons()).toEqual(['participant_disconnected']);
+  });
 });
