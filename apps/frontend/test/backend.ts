@@ -4,6 +4,10 @@ import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
 import { adminHandlers, resetAdminBackend } from './admin-backend';
 import {
+  conversationHandlers,
+  resetConversationsBackend,
+} from './conversations-backend';
+import {
   authHandlers,
   refusalOfAuthorization,
   resetAuthBackend,
@@ -79,6 +83,7 @@ export function roomTokenRequestParticipantMetadata(): readonly (
 export const backend = setupServer(
   ...authHandlers,
   ...adminHandlers,
+  ...conversationHandlers,
   http.post('/api/token', async ({ request }) => {
     const { participant_metadata: participantMetadata } =
       (await request.json()) as { participant_metadata?: string };
@@ -119,6 +124,7 @@ export function resetBackend(): void {
   roomTokenParticipantMetadata.length = 0;
   resetAuthBackend();
   resetAdminBackend();
+  resetConversationsBackend();
 }
 
 let requestsInFlight = 0;

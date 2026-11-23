@@ -11,6 +11,9 @@ import { RegisterPage } from './auth/register-page';
 import { RequireSignedIn } from './auth/require-signed-in';
 import { SignInPage } from './auth/sign-in-page';
 import { ConversationPage } from './conversation/conversation-page';
+import { AppNav } from './conversations/app-nav';
+import { HistoryPage } from './conversations/history-page';
+import { ReportPage } from './conversations/report-page';
 import { ThemeModeProvider } from './theme/theme-mode-provider';
 
 interface AppProps {
@@ -29,6 +32,7 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
       <ThemeModeProvider>
         <AuthProvider>
           <AppHeader>
+            <AppNav />
             <AdminNav />
           </AppHeader>
           <Routes>
@@ -47,6 +51,8 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
                   />
                 }
               />
+              <Route path="/conversations" element={<HistoryPage />} />
+              <Route path="/conversations/:roomName" element={<ReportPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="/admin/users" element={<UsersPage />} />
               </Route>
