@@ -1,3 +1,4 @@
+import { fluencySchema } from '@open-lang/shared';
 import { describe, expect, it } from 'vitest';
 import {
   computeFluency,
@@ -24,6 +25,27 @@ const words = (count: number): string =>
   Array.from({ length: count }, () => 'word').join(' ');
 
 describe('computeFluency', () => {
+  it('a turn that ends before it starts counts as untimed, so the fluency stays valid', () => {
+    const turns = [
+      turn('agent', 'hi', 0, 4),
+      turn('user', words(6), 10, 5),
+      turn('user', words(4), 12, 14),
+    ];
+    const fluency = computeFluency(turns);
+
+    expect(fluencySchema.safeParse(fluency).success).toBe(true);
+    expect(fluency).toEqual({
+      wordsPerMinute: 120,
+      talkRatio: 2 / 14,
+      fillerWordsEstimate: 0,
+      longestTurnSeconds: 2,
+    });
+    expect(
+      fluencySchema.safeParse(computeFluency([turn('user', words(3), 10, 2)]))
+        .success,
+    ).toBe(true);
+  });
+
   it("wordsPerMinute is the User's words over the User's timed speaking time", () => {
     const turns = [
       turn('user', words(5), 0, 3),

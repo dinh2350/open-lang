@@ -65,6 +65,31 @@ describe('Conversation Report contracts', () => {
     ).toBe(false);
   });
 
+  it('rejects a turn that ends before it starts', () => {
+    const turn = {
+      itemId: 'item-1',
+      role: 'user',
+      text: 'Hello there',
+      startedAt: '2026-11-23T09:00:05.000Z',
+    };
+
+    const reversed = turnIngestSchema.safeParse({
+      ...turn,
+      endedAt: '2026-11-23T09:00:04.999Z',
+    });
+
+    expect(reversed.success).toBe(false);
+    expect(reversed.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ['endedAt'],
+        message: 'endedAt must be at or after startedAt.',
+      }),
+    ]);
+    expect(
+      turnIngestSchema.safeParse({ ...turn, endedAt: turn.startedAt }).success,
+    ).toBe(true);
+  });
+
   it('rejects a talkRatio above 1', () => {
     expect(
       fluencySchema.safeParse({ ...fluency, talkRatio: 1.2 }).success,

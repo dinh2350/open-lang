@@ -31,7 +31,7 @@ describe('The Agent ingest API', () => {
 
   /** Posts to a room's ingest route with `key` as the bearer token, or with no key at all. */
   function ingest(
-    route: 'turns' | 'misses',
+    route: 'turns' | 'misses' | 'end',
     body: object,
     key: string | null = testEnv.AGENT_API_KEY,
     roomName = ROOM_NAME,
@@ -54,6 +54,13 @@ describe('The Agent ingest API', () => {
 
   const storedTurns = () => app.get(PrismaService).turn.findMany();
   const storedMisses = () => app.get(PrismaService).miss.findMany();
+  const storedEnd = async () =>
+    (
+      await app.get(PrismaService).conversation.findUniqueOrThrow({
+        where: { roomName: ROOM_NAME },
+        select: { endedAt: true },
+      })
+    ).endedAt;
 
   it('returns 401 without a key and with a wrong key', async () => {
     const calls = [
@@ -166,5 +173,44 @@ describe('The Agent ingest API', () => {
     const misses = await storedMisses();
     expect(misses).toHaveLength(1);
     expect(misses[0]?.pressedAt).toEqual(new Date(STARTED_AT));
+  });
+
+  it('rejects a turn that ends before it starts, and stores nothing', async () => {
+    const response = await ingest(
+      'turns',
+      turn({ startedAt: ENDED_AT, endedAt: STARTED_AT }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await storedTurns()).toEqual([]);
+  });
+
+  it('the end route is Agent-only, 404 for unknown rooms and idempotent', async () => {
+    const refused = await Promise.all([
+      ingest('end', {}, null),
+      ingest('end', {}, 'wrong-key'),
+      ingest('end', {}, signedIn.authToken),
+    ]);
+    expect(refused.map(({ status }) => status)).toEqual([401, 401, 401]);
+    expect(await storedEnd()).toBeNull();
+
+    const unknown = await ingest(
+      'end',
+      {},
+      testEnv.AGENT_API_KEY,
+      'no-such-room',
+    );
+    expect(unknown.status).toBe(404);
+
+    const before = Date.now();
+    const first = await ingest('end', {});
+    expect(first.status).toBe(204);
+    const endedAt = await storedEnd();
+    expect(endedAt?.getTime()).toBeGreaterThanOrEqual(before);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const second = await ingest('end', {});
+    expect(second.status).toBe(204);
+    expect(await storedEnd()).toEqual(endedAt);
   });
 });

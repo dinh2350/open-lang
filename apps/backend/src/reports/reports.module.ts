@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import type { BackendEnv } from '../config/env.schema.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { createReportModel } from './create-report-model.js';
+import { REPORT_END_WAIT } from './end-wait.js';
 import { REPORT_MODEL, type ReportModel } from './report-model.js';
-import { ReportService } from './report.service.js';
+import { defaultEndWait, ReportService } from './report.service.js';
 
 /** Writes the Reports of Conversations with the model `REPORT_PROVIDER` names. */
 @Module({
@@ -23,6 +24,7 @@ import { ReportService } from './report.service.js';
           GOOGLE_API_KEY: config.get('GOOGLE_API_KEY', { infer: true }),
         }),
     },
+    { provide: REPORT_END_WAIT, useValue: defaultEndWait },
     ReportService,
   ],
   exports: [ReportService],

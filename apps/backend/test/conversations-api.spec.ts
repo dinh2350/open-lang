@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import {
   at,
+  endConversation,
   getConversation,
   ingestMiss,
   ingestTurn,
@@ -53,6 +54,7 @@ describe('The Conversation API', () => {
       startedAt: at(0),
       endedAt: at(4.5),
     });
+    await endConversation(app, 'room-old');
     await requestReport(app, ada.authToken, 'room-old').expect(202);
     await vi.waitFor(async () => {
       const detail = await readConversation(app, ada.authToken, 'room-old');
@@ -118,6 +120,29 @@ describe('The Conversation API', () => {
     await ingestMiss(app, 'room-miss', at(1));
 
     expect(await listedRooms()).toEqual(['room-miss']);
+  });
+
+  it('lists a ready Report whose stored content breaks the contract as failed', async () => {
+    await startConversation(app, ada.user, 'room-broken');
+    await ingestMiss(app, 'room-broken', at(1));
+    const prisma = app.get(PrismaService);
+    const { id } = await prisma.conversation.findUniqueOrThrow({
+      where: { roomName: 'room-broken' },
+    });
+    await prisma.report.create({
+      data: { conversationId: id, status: 'ready', content: { fluency: 1 } },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/conversations')
+      .auth(ada.authToken, { type: 'bearer' });
+
+    expect(response.status).toBe(200);
+    expect(
+      conversationListSchema
+        .parse(response.body)
+        .conversations.map((conversation) => conversation.reportStatus),
+    ).toEqual(['failed']);
   });
 
   it('still returns an empty Conversation by its room name', async () => {

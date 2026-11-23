@@ -73,14 +73,24 @@ export const conversationDetailSchema = conversationSummarySchema.extend({
 
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 
-/** Body the Agent sends to the backend for each finished turn. */
-export const turnIngestSchema = z.object({
-  itemId: z.string().min(1),
-  role: z.enum(['agent', 'user']),
-  text: z.string().min(1),
-  startedAt: z.iso.datetime(),
-  endedAt: z.iso.datetime().optional(),
-});
+/**
+ * Body the Agent sends to the backend for each finished turn. A turn that
+ * has an end cannot end before it starts.
+ */
+export const turnIngestSchema = z
+  .object({
+    itemId: z.string().min(1),
+    role: z.enum(['agent', 'user']),
+    text: z.string().min(1),
+    startedAt: z.iso.datetime(),
+    endedAt: z.iso.datetime().optional(),
+  })
+  .refine(
+    (turn) =>
+      turn.endedAt === undefined ||
+      Date.parse(turn.endedAt) >= Date.parse(turn.startedAt),
+    { path: ['endedAt'], message: 'endedAt must be at or after startedAt.' },
+  );
 
 export type TurnIngest = z.infer<typeof turnIngestSchema>;
 

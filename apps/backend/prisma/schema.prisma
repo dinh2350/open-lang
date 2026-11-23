@@ -79,6 +79,9 @@ model Conversation {
   /// How fast the Agent speaks: 0.7, 0.85 or 1.
   speed      Float
   createdAt  DateTime @default(now())
+  /// When the Agent said it had sent every turn and Miss (the end marker);
+  /// null while the Conversation runs, or when the Agent never said so.
+  endedAt    DateTime?
   turns      Turn[]
   misses     Miss[]
   report     Report?
@@ -107,6 +110,8 @@ model Miss {
   conversationId String       @db.Uuid
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   pressedAt      DateTime
+
+  @@index([conversationId])
 }
 
 /// The feedback on a finished Conversation.

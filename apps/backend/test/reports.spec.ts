@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { App } from 'supertest/types.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { REPORT_END_WAIT, type EndWait } from '../src/reports/end-wait.js';
 import { FakeReportModel } from '../src/reports/fake-report-model.js';
 import {
   REPORT_MODEL,
@@ -13,6 +14,8 @@ import {
 } from '../src/reports/report-model.js';
 import {
   at,
+  endConversation,
+  getConversation,
   ingestMiss,
   ingestTurn,
   readConversation,
@@ -39,13 +42,20 @@ describe('Report generation', () => {
   let app: INestApplication<App>;
   let ada: AuthResponse;
 
-  /** Starts the app, with `model` in place of the configured ReportModel, and Ada's Conversation. */
-  async function start(model?: ReportModel): Promise<void> {
-    app = await startTestApp({}, (builder) =>
-      model === undefined
-        ? builder
-        : builder.overrideProvider(REPORT_MODEL).useValue(model),
-    );
+  /**
+   * Starts the app, with `model` in place of the configured ReportModel and
+   * `endWait` in place of the wait for the end marker, and Ada's Conversation.
+   */
+  async function start(model?: ReportModel, endWait?: EndWait): Promise<void> {
+    app = await startTestApp({}, (builder) => {
+      const withModel =
+        model === undefined
+          ? builder
+          : builder.overrideProvider(REPORT_MODEL).useValue(model);
+      return endWait === undefined
+        ? withModel
+        : withModel.overrideProvider(REPORT_END_WAIT).useValue(endWait);
+    });
     ada = await registerUser(app, 'ada@example.test');
     await startConversation(app, ada.user, ROOM);
   }
@@ -63,10 +73,26 @@ describe('Report generation', () => {
     });
   }
 
-  /** Asks for the Report and waits until it is no longer being written. */
+  /**
+   * The Agent ends the Conversation, then Ada asks for the Report; waits
+   * until it is no longer being written.
+   */
   async function reportOf() {
+    await endConversation(app, ROOM);
     await requestReport(app, ada.authToken, ROOM).expect(202);
     return settled();
+  }
+
+  /** The Report's stored row, read straight from the database. */
+  async function storedReport() {
+    const prisma = app.get(PrismaService);
+    const conversation = await prisma.conversation.findUniqueOrThrow({
+      where: { roomName: ROOM },
+      select: { id: true },
+    });
+    return prisma.report.findUnique({
+      where: { conversationId: conversation.id },
+    });
   }
 
   const agentTurn = (itemId: string, text: string, from: number, to: number) =>
@@ -245,6 +271,7 @@ describe('Report generation', () => {
     });
     await start({ draft });
     await agentTurn('a1', 'Any blockers today?', 0, 4);
+    await endConversation(app, ROOM);
 
     const first = await requestReport(app, ada.authToken, ROOM);
     const second = await requestReport(app, ada.authToken, ROOM);
@@ -306,5 +333,125 @@ describe('Report generation', () => {
     expect(response.status).toBe(404);
     expect(model.inputs).toHaveLength(0);
     expect(await app.get(PrismaService).report.count()).toBe(0);
+  });
+
+  it('a turn or Miss that arrives after the Report is requested but before the end marker still appears in the Report', async () => {
+    await start();
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+    await requestReport(app, ada.authToken, ROOM).expect(202);
+
+    // What the Agent sends while the room closes: the last sentence and a
+    // press just before Kết thúc.
+    await agentTurn('a2', 'Then let us wrap up.', 5, 8);
+    await ingestMiss(app, ROOM, at(6));
+    await endConversation(app, ROOM);
+    const detail = await settled();
+
+    expect(detail.reportStatus).toBe('ready');
+    expect(
+      detail.report?.listeningMisses.map((miss) => miss.agentText),
+    ).toEqual(['Then let us wrap up.']);
+  });
+
+  it('generation waits for the end marker', async () => {
+    const model = new SpyModel();
+    await start(model);
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+
+    await requestReport(app, ada.authToken, ROOM).expect(202);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(model.inputs).toHaveLength(0);
+    expect((await storedReport())?.status).toBe('generating');
+
+    await endConversation(app, ROOM);
+    const detail = await settled();
+
+    expect(detail.reportStatus).toBe('ready');
+    expect(model.inputs).toHaveLength(1);
+  });
+
+  it('generation proceeds after the bounded wait when no end marker arrives', async () => {
+    const model = new SpyModel();
+    await start(model, { timeoutMs: 50, pollMs: 10 });
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+
+    await requestReport(app, ada.authToken, ROOM).expect(202);
+    const detail = await settled();
+
+    expect(detail.reportStatus).toBe('ready');
+    expect(model.inputs).toHaveLength(1);
+  });
+
+  it('a Report that fails validation is stored as failed and asking again retries', async () => {
+    const fake = new FakeReportModel();
+    let calls = 0;
+    await start({
+      draft: async (input) => {
+        calls += 1;
+        const draft = await fake.draft(input);
+        if (calls > 1) return draft;
+        // Six issues where a Report holds five is capped; a said that is not
+        // text is not, and only the Report's contract catches it.
+        return {
+          ...draft,
+          grammarIssues: [
+            { said: 42, corrected: 'x', reason: 'y' } as unknown as {
+              said: string;
+              corrected: string;
+              reason: string;
+            },
+          ],
+        };
+      },
+    });
+    await ingestTurn(app, ROOM, {
+      itemId: 'u1',
+      role: 'user',
+      text: 'I am no blocker.',
+      startedAt: at(5),
+      endedAt: at(8),
+    });
+
+    const failed = await reportOf();
+
+    expect(failed.reportStatus).toBe('failed');
+    expect(failed.report).toBeNull();
+    expect((await storedReport())?.content).toBeNull();
+
+    const again = await reportOf();
+
+    expect(again.reportStatus).toBe('ready');
+    expect(calls).toBe(2);
+  });
+
+  it('stored content that fails validation reads as a failed Report, not a 500, and asking again regenerates it', async () => {
+    const model = new SpyModel();
+    await start(model);
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+    const prisma = app.get(PrismaService);
+    const conversation = await prisma.conversation.findUniqueOrThrow({
+      where: { roomName: ROOM },
+    });
+    await prisma.report.create({
+      data: {
+        conversationId: conversation.id,
+        status: 'ready',
+        content: { listeningMisses: 'not a list' },
+      },
+    });
+
+    const response = await getConversation(app, ada.authToken, ROOM);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      reportStatus: 'failed',
+      report: null,
+    });
+
+    const again = await reportOf();
+
+    expect(again.reportStatus).toBe('ready');
+    expect(model.inputs).toHaveLength(1);
   });
 });

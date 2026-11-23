@@ -1,17 +1,22 @@
 import {
   conversationDetailSchema,
   conversationSummarySchema,
-  conversationReportSchema,
   type ConversationChoice,
   type ConversationDetail,
   type ConversationSummary,
   type MissIngest,
+  type ReportStatus,
   type TurnIngest,
   type User,
 } from '@open-lang/shared';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { conversationDurationSeconds } from '../reports/fluency.js';
+import {
+  readStoredReport,
+  type ReadableReport,
+  type StoredReportContent,
+} from '../reports/stored-report.js';
 
 /** What a Conversation's summary is made of. */
 const summarySelect = {
@@ -20,12 +25,15 @@ const summarySelect = {
   speed: true,
   createdAt: true,
   turns: { select: { role: true, startedAt: true, endedAt: true } },
-  report: { select: { status: true } },
+  // The content too: a ready Report whose content breaks the contract is shown as failed.
+  report: { select: { status: true, content: true } },
 } as const;
 
 /** The Conversations of Users. */
 @Injectable()
 export class ConversationsService {
+  private readonly logger = new Logger(ConversationsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /** Records a new Conversation of the User, in the room the Room Token names. */
@@ -58,7 +66,9 @@ export class ConversationsService {
       select: summarySelect,
     });
     return conversations.map((conversation) =>
-      conversationSummarySchema.parse(summarize(conversation)),
+      conversationSummarySchema.parse(
+        summarize(conversation, this.reportOf(conversation)),
+      ),
     );
   }
 
@@ -66,23 +76,35 @@ export class ConversationsService {
   async get(user: User, roomName: string): Promise<ConversationDetail> {
     const conversation = await this.prisma.conversation.findFirst({
       where: { roomName, userId: user.id },
-      select: {
-        ...summarySelect,
-        report: { select: { status: true, content: true } },
-      },
+      select: summarySelect,
     });
     if (conversation === null) {
       throw new NotFoundException('There is no Conversation in that room.');
     }
-    const { report } = conversation;
-    const content =
-      report?.status === 'ready' && report.content !== null
-        ? conversationReportSchema.parse(report.content)
-        : null;
+    const report = this.reportOf(conversation);
     return conversationDetailSchema.parse({
-      ...summarize(conversation),
-      report: content,
+      ...summarize(conversation, report),
+      report: report?.content ?? null,
     });
+  }
+
+  /**
+   * The Conversation's Report as the User may see it, or null when none was
+   * started. Stored content that breaks the contract reads as failed, so
+   * asking again writes it anew; only the room is logged, never the content.
+   */
+  private reportOf(conversation: {
+    readonly roomName: string;
+    readonly report: StoredReportContent | null;
+  }): ReadableReport | null {
+    if (conversation.report === null) return null;
+    const { broken, ...report } = readStoredReport(conversation.report);
+    if (broken) {
+      this.logger.warn(
+        `The stored Report of room ${conversation.roomName} breaks the contract; it reads as failed.`,
+      );
+    }
+    return report;
   }
 
   /**
@@ -119,6 +141,21 @@ export class ConversationsService {
     });
   }
 
+  /**
+   * Stores the end marker of the Conversation in the room: the Agent has sent
+   * all it had. Only the first marker counts; a repeat changes nothing.
+   */
+  async recordEnd(roomName: string): Promise<void> {
+    const { count } = await this.prisma.conversation.updateMany({
+      where: { roomName, endedAt: null },
+      data: { endedAt: new Date() },
+    });
+    if (count === 0) {
+      // Ended already, or there is no such room: tell them apart.
+      await this.conversationIdOf(roomName);
+    }
+  }
+
   /** `404` when no Conversation was created for the room. */
   private async conversationIdOf(roomName: string): Promise<string> {
     const conversation = await this.prisma.conversation.findUnique({
@@ -133,24 +170,26 @@ export class ConversationsService {
 }
 
 /** The fields of a ConversationSummary, before they are checked against the contract. */
-function summarize(conversation: {
-  readonly roomName: string;
-  readonly scenarioId: string;
-  readonly speed: number;
-  readonly createdAt: Date;
-  readonly turns: readonly {
-    role: 'agent' | 'user';
-    startedAt: Date;
-    endedAt: Date | null;
-  }[];
-  readonly report: { readonly status: string } | null;
-}): Record<string, unknown> {
+function summarize(
+  conversation: {
+    readonly roomName: string;
+    readonly scenarioId: string;
+    readonly speed: number;
+    readonly createdAt: Date;
+    readonly turns: readonly {
+      role: 'agent' | 'user';
+      startedAt: Date;
+      endedAt: Date | null;
+    }[];
+  },
+  report: { readonly status: ReportStatus } | null,
+): Record<string, unknown> {
   return {
     roomName: conversation.roomName,
     scenarioId: conversation.scenarioId,
     speed: conversation.speed,
     createdAt: conversation.createdAt.toISOString(),
     durationSeconds: conversationDurationSeconds(conversation.turns),
-    reportStatus: conversation.report?.status ?? null,
+    reportStatus: report?.status ?? null,
   };
 }

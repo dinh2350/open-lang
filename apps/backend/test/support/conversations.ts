@@ -67,6 +67,21 @@ export async function ingestMiss(
   }
 }
 
+/** The Agent reports that the room's Conversation has ended: it sent all it had. */
+export async function endConversation(
+  app: INestApplication<App>,
+  roomName: string,
+): Promise<void> {
+  const response = await request(app.getHttpServer())
+    .post(`/api/agent/conversations/${roomName}/end`)
+    .auth(testEnv.AGENT_API_KEY, { type: 'bearer' });
+  if (response.status !== 204) {
+    throw new Error(
+      `Posting the end failed with status ${String(response.status)}`,
+    );
+  }
+}
+
 /** The User asks for the Report of the room's Conversation. */
 export function requestReport(
   app: INestApplication<App>,

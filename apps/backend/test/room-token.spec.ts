@@ -8,6 +8,7 @@ import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 import { signInFirstAdmin } from './support/admins.js';
 import { startTestApp, stopTestApp, testEnv } from './support/test-app.js';
 import { registerUser } from './support/users.js';
@@ -58,6 +59,8 @@ describe('POST /api/token (Room Token endpoint)', () => {
     return { roomToken, claims };
   }
 
+  const storedConversations = () => app.get(PrismaService).conversation.count();
+
   function agentNamesDispatchedBy(claims: ClaimGrants): string[] {
     return (claims.roomConfig?.agents ?? []).map((agent) => agent.agentName);
   }
@@ -66,6 +69,7 @@ describe('POST /api/token (Room Token endpoint)', () => {
     const response = await postRoomTokenRequest({});
 
     expect(response.status).toBe(401);
+    expect(await storedConversations()).toBe(0);
   });
 
   it('returns 201 with the LiveKit server URL and a Room Token signed with the LiveKit API key', async () => {
@@ -150,6 +154,7 @@ describe('POST /api/token (Room Token endpoint)', () => {
     const response = await postRoomTokenRequest({}, signedIn.authToken);
 
     expect(response.status).toBe(400);
+    expect(await storedConversations()).toBe(0);
   });
 
   it('returns 400 for an unknown Scenario', async () => {
@@ -159,6 +164,7 @@ describe('POST /api/token (Room Token endpoint)', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await storedConversations()).toBe(0);
   });
 
   it('returns 400 for a speed that is not 0.7, 0.85 or 1', async () => {
@@ -168,6 +174,7 @@ describe('POST /api/token (Room Token endpoint)', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await storedConversations()).toBe(0);
   });
 
   it('dispatches the Agent with the choice as its metadata', async () => {
@@ -189,5 +196,6 @@ describe('POST /api/token (Room Token endpoint)', () => {
     );
 
     expect(response.status).toBe(400);
+    expect(await storedConversations()).toBe(0);
   });
 });

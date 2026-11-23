@@ -40,4 +40,14 @@ export class AgentIngestController {
   ): Promise<void> {
     return this.conversations.recordMiss(roomName, miss);
   }
+
+  /**
+   * The end marker: the Agent has sent every turn and Miss of the
+   * Conversation, so its Report may be written. A repeat keeps the first time.
+   */
+  @Post(':roomName/end')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  recordEnd(@Param('roomName') roomName: string): Promise<void> {
+    return this.conversations.recordEnd(roomName);
+  }
 }
