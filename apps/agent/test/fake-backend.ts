@@ -22,6 +22,11 @@ export interface FakeBackend {
   url: string;
   /** Every request received so far, oldest first. */
   requests: ReceivedRequest[];
+  /**
+   * What happened, in order: `received <url>` once a request's body is in,
+   * `answered <url>` once its response is sent.
+   */
+  events: string[];
   close(): Promise<void>;
 }
 
@@ -35,6 +40,7 @@ export async function startFakeBackend(
   options: { responseDelayMs?: number } = {},
 ): Promise<FakeBackend> {
   const requests: ReceivedRequest[] = [];
+  const events: string[] = [];
   const server = createServer(
     (request: IncomingMessage, response: ServerResponse) => {
       const chunks: Buffer[] = [];
@@ -48,8 +54,12 @@ export async function startFakeBackend(
           contentType: request.headers['content-type'],
           body: body === '' ? undefined : JSON.parse(body),
         });
+        events.push(`received ${request.url ?? ''}`);
         response.statusCode = statuses.shift() ?? 204;
-        setTimeout(() => response.end(), options.responseDelayMs ?? 0);
+        setTimeout(() => {
+          events.push(`answered ${request.url ?? ''}`);
+          response.end();
+        }, options.responseDelayMs ?? 0);
       });
     },
   );
@@ -59,6 +69,7 @@ export async function startFakeBackend(
   return {
     url: `http://127.0.0.1:${String(port)}`,
     requests,
+    events,
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections();

@@ -6,13 +6,21 @@ import type { MissIngest, TurnIngest } from '@open-lang/shared';
 export interface BackendClient {
   sendTurn(roomName: string, turn: TurnIngest): Promise<void>;
   sendMiss(roomName: string, miss: MissIngest): Promise<void>;
+  /**
+   * The end marker: every turn and Miss of the Conversation has been sent,
+   * so its Report may be written.
+   */
+  sendEnd(roomName: string): Promise<void>;
 }
 
 const ATTEMPTS = 3;
 /** A backend that hangs must not hold up the transcript's queue for long. */
 const REQUEST_TIMEOUT_MS = 5000;
 
-/** Whether one POST succeeded, and the HTTP status, if there was a response. */
+/**
+ * Whether one POST succeeded, and the HTTP status, if there was a response.
+ * Without a body, the POST sends none.
+ */
 async function postOnce(
   url: URL,
   agentApiKey: string,
@@ -23,9 +31,9 @@ async function postOnce(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${agentApiKey}`,
-        'Content-Type': 'application/json',
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
       },
-      body: JSON.stringify(body),
+      ...(body !== undefined && { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     return { ok: response.ok, status: response.status };
@@ -46,8 +54,8 @@ export function createBackendClient(options: {
 
   async function post(
     roomName: string,
-    route: 'turns' | 'misses',
-    body: TurnIngest | MissIngest,
+    route: 'turns' | 'misses' | 'end',
+    body?: TurnIngest | MissIngest,
   ): Promise<void> {
     const url = new URL(
       `/api/agent/conversations/${encodeURIComponent(roomName)}/${route}`,
@@ -70,5 +78,36 @@ export function createBackendClient(options: {
   return {
     sendTurn: (roomName, turn) => post(roomName, 'turns', turn),
     sendMiss: (roomName, miss) => post(roomName, 'misses', miss),
+    sendEnd: (roomName) => post(roomName, 'end'),
+  };
+}
+
+/**
+ * A client that keeps track of the sends it has started, so the job can wait
+ * for them before it posts the end marker. `settled()` resolves once every
+ * send started so far has finished; the sends never reject.
+ */
+export function trackPendingSends(backend: BackendClient): {
+  client: BackendClient;
+  settled(): Promise<void>;
+} {
+  const pending = new Set<Promise<void>>();
+  const track = (send: Promise<void>): Promise<void> => {
+    pending.add(send);
+    const forget = () => {
+      pending.delete(send);
+    };
+    void send.then(forget, forget);
+    return send;
+  };
+  return {
+    client: {
+      sendTurn: (roomName, turn) => track(backend.sendTurn(roomName, turn)),
+      sendMiss: (roomName, miss) => track(backend.sendMiss(roomName, miss)),
+      sendEnd: (roomName) => track(backend.sendEnd(roomName)),
+    },
+    async settled() {
+      await Promise.allSettled([...pending]);
+    },
   };
 }

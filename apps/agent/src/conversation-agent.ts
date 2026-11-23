@@ -8,7 +8,7 @@ import {
 } from './config/index.ts';
 import { ConversationAgent } from './agent.ts';
 import { loadBackendEnvironment } from './agent-environment.ts';
-import { createBackendClient } from './backend-client.ts';
+import { createBackendClient, trackPendingSends } from './backend-client.ts';
 import { readConversationChoice } from './conversation-choice.ts';
 import { createListeningHelpHandler } from './listening-help.ts';
 import { greetingInstructions } from './scenario-instructions.ts';
@@ -69,6 +69,9 @@ export default defineAgent({
       backendUrl: BACKEND_URL,
       agentApiKey: AGENT_API_KEY,
     });
+    // The Misses still being sent when the job ends are awaited before the
+    // end marker.
+    const misses = trackPendingSends(backend);
     // "Chưa nghe kịp" reaches the Agent as a typed message in the room, and
     // is recorded as a Miss of this room's Conversation.
     await startConversation(
@@ -78,7 +81,7 @@ export default defineAgent({
       roomName
         ? {
             textInputCallback: createListeningHelpHandler({
-              backend,
+              backend: misses.client,
               roomName,
             }),
           }
@@ -87,10 +90,15 @@ export default defineAgent({
     // Each turn goes to the backend as soon as it is in the history, so a
     // Conversation that ends abruptly keeps its transcript. The job process
     // exits after its shutdown callbacks, so the last sends are awaited
-    // there; flush() is bounded and never rejects.
+    // there, then the end marker tells the backend the Report may be
+    // written. flush() is bounded and never rejects, nor do the sends, so
+    // the marker is sent even when the flush gives up.
     if (roomName) {
       const recorder = recordTranscript(session, backend, roomName);
-      ctx.addShutdownCallback(() => recorder.flush());
+      ctx.addShutdownCallback(async () => {
+        await Promise.all([recorder.flush(), misses.settled()]);
+        await backend.sendEnd(roomName);
+      });
     }
     logger.info(
       { roomName, ...choice, ...modelsOf(config) },

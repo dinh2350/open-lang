@@ -110,6 +110,17 @@ describe('Agent playing a Scenario, run with voice.testing', () => {
   });
 });
 
+/** The rule against correcting the User's English, word for word. */
+const NO_CORRECTING_RULE =
+  "Never comment on or correct the User's English (grammar, words, pronunciation); a report covers that later. Feedback on their work, in your role, is part of the role-play.";
+
+/** Who each Scenario's persona is to the User. */
+const ROLES: Readonly<Record<ScenarioId, string>> = {
+  'daily-standup': "the lead of the User's daily standup",
+  'one-on-one': "the User's manager",
+  'client-delay-call': 'a client',
+};
+
 describe('The Scenario instructions', () => {
   it.each(
     SCENARIOS.flatMap((scenario) =>
@@ -125,10 +136,33 @@ describe('The Scenario instructions', () => {
       expect(instructions).toContain(`You are ${personaName}`);
       expect(instructions).toContain(`Speak ${pace}`);
       expect(instructions).toMatch(/only in English/i);
-      expect(instructions).toMatch(/never teach or correct the user/i);
+      expect(instructions).toContain(NO_CORRECTING_RULE);
       for (const [, otherPace] of PACES.filter(([s]) => s !== speed)) {
         expect(instructions).not.toContain(otherPace);
       }
+    },
+  );
+
+  it.each(SCENARIOS)(
+    'give the persona of $id its own role, and no contradicting one',
+    ({ id, personaName }) => {
+      const instructions = scenarioInstructions({ scenarioId: id, speed: 1 });
+
+      expect(instructions).toContain(`You are ${personaName}, ${ROLES[id]},`);
+      expect(instructions).toContain(
+        'Talk the way a native speaker talks at work',
+      );
+      expect(instructions).not.toMatch(/real colleague/i);
+      expect(instructions).not.toMatch(/only play your role/i);
+    },
+  );
+
+  it.each(['one-on-one', 'client-delay-call'] as const)(
+    'never call the persona of %s a colleague',
+    (scenarioId) => {
+      expect(scenarioInstructions({ scenarioId, speed: 1 })).not.toMatch(
+        /colleague/i,
+      );
     },
   );
 });

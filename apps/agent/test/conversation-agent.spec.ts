@@ -1,4 +1,5 @@
 import { llm, voice } from '@livekit/agents';
+import { LISTENING_HELP_MESSAGE } from '@open-lang/shared';
 import {
   afterAll,
   afterEach,
@@ -184,9 +185,9 @@ describe('Agent dispatched into a Conversation room', () => {
       // The queue posts one turn at a time: the last is sent only after the
       // slow answer to the first.
       expect(
-        slowBackend.requests.map(
-          ({ body }) => (body as { itemId: string }).itemId,
-        ),
+        slowBackend.requests
+          .filter(({ url }) => url?.endsWith('/turns'))
+          .map(({ body }) => (body as { itemId: string }).itemId),
       ).toEqual(['item_first', 'item_last']);
     } finally {
       await slowBackend.close();
@@ -207,4 +208,135 @@ describe('Agent dispatched into a Conversation room', () => {
       ).rejects.toThrow(new RegExp(name));
     },
   );
+
+  /** Spies on AgentSession.start, which still runs, to see the options the job passes. */
+  function spyOnSessionStart() {
+    return vi.spyOn(voice.AgentSession.prototype, 'start');
+  }
+
+  /** The text input handler the job started its session with, if any. */
+  function textInputCallbackOf(
+    start: ReturnType<typeof spyOnSessionStart>,
+  ): voice.TextInputCallback | undefined {
+    return start.mock.calls[0]?.[0].inputOptions?.textInputCallback;
+  }
+
+  /** Emits a User message the session added to its history. */
+  function addUserMessage(session: voice.AgentSession | undefined, id: string) {
+    session?.emit(
+      voice.AgentSessionEventTypes.ConversationItemAdded,
+      voice.createConversationItemAddedEvent(
+        llm.ChatMessage.create({ id, role: 'user', content: 'Bye.' }),
+      ),
+    );
+  }
+
+  it('the job posts the end marker after the transcript flush', async () => {
+    const slowBackend = await startFakeBackend([], { responseDelayMs: 300 });
+    vi.stubEnv('BACKEND_URL', slowBackend.url);
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-end',
+        standupAtNormalSpeed,
+      );
+      addUserMessage(job.session(), 'item_first');
+      addUserMessage(job.session(), 'item_last');
+
+      await job.end();
+
+      const turns = '/api/agent/conversations/conversation-end/turns';
+      expect(slowBackend.events).toEqual([
+        `received ${turns}`,
+        `answered ${turns}`,
+        `received ${turns}`,
+        `answered ${turns}`,
+        'received /api/agent/conversations/conversation-end/end',
+        'answered /api/agent/conversations/conversation-end/end',
+      ]);
+    } finally {
+      await slowBackend.close();
+    }
+  });
+
+  it('the job starts its session with the listening help handler, which records a Miss for its room', async () => {
+    const start = spyOnSessionStart();
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-help-press',
+        standupAtNormalSpeed,
+      );
+      const session = job.session();
+      const textInputCallback = textInputCallbackOf(start);
+
+      expect(textInputCallback).toBeTypeOf('function');
+      if (session === undefined || textInputCallback === undefined) return;
+      await textInputCallback(session, { text: LISTENING_HELP_MESSAGE });
+
+      await vi.waitFor(() => {
+        expect(backend.requests).toContainEqual(
+          expect.objectContaining({
+            url: '/api/agent/conversations/conversation-help-press/misses',
+            body: { pressedAt: expect.any(String) as unknown },
+          }),
+        );
+      });
+      await job.end();
+    } finally {
+      start.mockRestore();
+    }
+  });
+
+  it('the job posts the end marker only after a Miss that is still being sent', async () => {
+    const slowBackend = await startFakeBackend([], { responseDelayMs: 300 });
+    vi.stubEnv('BACKEND_URL', slowBackend.url);
+    const start = spyOnSessionStart();
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-late-press',
+        standupAtNormalSpeed,
+      );
+      const session = job.session();
+      const textInputCallback = textInputCallbackOf(start);
+      if (session === undefined || textInputCallback === undefined) {
+        throw new Error('The job started no session with a text handler.');
+      }
+      await textInputCallback(session, { text: LISTENING_HELP_MESSAGE });
+
+      await job.end();
+
+      const misses = '/api/agent/conversations/conversation-late-press/misses';
+      const end = '/api/agent/conversations/conversation-late-press/end';
+      expect(slowBackend.events).toEqual([
+        `received ${misses}`,
+        `answered ${misses}`,
+        `received ${end}`,
+        `answered ${end}`,
+      ]);
+    } finally {
+      start.mockRestore();
+      await slowBackend.close();
+    }
+  });
+
+  it('a job without a room name keeps the SDK default text input and sends nothing', async () => {
+    const start = spyOnSessionStart();
+    const requestsBefore = backend.requests.length;
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        '',
+        standupAtNormalSpeed,
+      );
+      await job.end();
+
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(start.mock.calls[0]?.[0].inputOptions).toBeUndefined();
+      expect(backend.requests.slice(requestsBefore)).toEqual([]);
+    } finally {
+      start.mockRestore();
+    }
+  });
 });

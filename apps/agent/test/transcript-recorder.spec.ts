@@ -20,6 +20,7 @@ function stubBackend(
       return sendTurn(turn);
     }),
     sendMiss: vi.fn(() => Promise.resolve()),
+    sendEnd: vi.fn(() => Promise.resolve()),
   };
   return { backend, turns };
 }

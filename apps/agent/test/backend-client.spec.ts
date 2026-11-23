@@ -1,7 +1,10 @@
 import { initializeLogger } from '@livekit/agents';
 import type { TurnIngest } from '@open-lang/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBackendClient } from '../src/backend-client.ts';
+import {
+  createBackendClient,
+  trackPendingSends,
+} from '../src/backend-client.ts';
 import {
   type FakeBackend,
   startFakeBackend,
@@ -128,5 +131,68 @@ describe('Backend client', () => {
       }),
     ).resolves.toBeUndefined();
     expect(logLines.join('')).toContain('conversation-123');
+  });
+
+  it("posts the end marker to the room's end route, with the Bearer key and no body", async () => {
+    backend = await startFakeBackend([204]);
+    const client = createBackendClient({
+      backendUrl: backend.url,
+      agentApiKey: AGENT_API_KEY,
+    });
+
+    await client.sendEnd('conversation-123');
+
+    expect(backend.requests).toEqual([
+      {
+        method: 'POST',
+        url: '/api/agent/conversations/conversation-123/end',
+        authorization: `Bearer ${AGENT_API_KEY}`,
+        contentType: undefined,
+        body: undefined,
+      },
+    ]);
+  });
+
+  it('retries the end marker and gives up after three failures without throwing', async () => {
+    backend = await startFakeBackend([500, 500, 500, 500]);
+    const client = createBackendClient({
+      backendUrl: backend.url,
+      agentApiKey: AGENT_API_KEY,
+      retryDelayMs: 1,
+    });
+
+    await expect(client.sendEnd('conversation-123')).resolves.toBeUndefined();
+
+    expect(backend.requests).toHaveLength(3);
+    expect(logLines.join('')).toContain('conversation-123');
+  });
+
+  it('a tracked client settles once every send it started has finished', async () => {
+    backend = await startFakeBackend([], { responseDelayMs: 200 });
+    const tracked = trackPendingSends(
+      createBackendClient({
+        backendUrl: backend.url,
+        agentApiKey: AGENT_API_KEY,
+      }),
+    );
+    await expect(tracked.settled()).resolves.toBeUndefined();
+
+    void tracked.client.sendMiss('conversation-123', {
+      pressedAt: '2026-11-23T09:00:02.000Z',
+    });
+    void tracked.client.sendTurn('conversation-123', turn);
+    await tracked.settled();
+
+    // Both were answered before settled() resolved, in whichever order.
+    const answered = backend.events.filter((event) =>
+      event.startsWith('answered'),
+    );
+    expect(answered).toHaveLength(2);
+    expect(answered).toEqual(
+      expect.arrayContaining([
+        'answered /api/agent/conversations/conversation-123/misses',
+        'answered /api/agent/conversations/conversation-123/turns',
+      ]),
+    );
   });
 });

@@ -44,6 +44,7 @@ function stubBackend(sendMiss: BackendClient['sendMiss'], calls: string[]) {
   const backend: BackendClient = {
     sendTurn: () => Promise.resolve(),
     sendMiss: sendMissMock,
+    sendEnd: () => Promise.resolve(),
   };
   return { backend, sendMiss: sendMissMock };
 }
@@ -188,6 +189,7 @@ describe('Agent receiving the listening help message', () => {
         return Promise.resolve();
       },
       sendMiss,
+      sendEnd: () => Promise.resolve(),
     };
     const recorder = recordTranscript(session, recorderBackend, ROOM);
     const handler = createListeningHelpHandler({
