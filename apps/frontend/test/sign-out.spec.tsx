@@ -29,7 +29,7 @@ describe('Signing out', () => {
   it('ends a running Conversation', async () => {
     const liveKit = createUnconnectedRoom();
     await signInAs('ada@example.test', liveKit.room);
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
     await findStatusMessage();
 
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
@@ -55,7 +55,7 @@ describe('Signing out', () => {
       "Couldn't sign out. Try again.",
     );
     expect(
-      screen.getByRole('heading', { name: 'Talk to the Agent' }),
+      screen.getByRole('heading', { name: 'Luyện nói hôm nay' }),
     ).toBeVisible();
   });
 });

@@ -21,6 +21,14 @@ function changeConnectionState(room: Room, state: ConnectionState): void {
   room.emit(RoomEvent.ConnectionStateChanged, state);
 }
 
+/** The name of the room a Room Token is for, read from the token's claims. */
+function roomNameOf(participantToken: string): string {
+  const claims = JSON.parse(
+    Buffer.from(participantToken.split('.')[1] ?? '', 'base64url').toString(),
+  ) as { video?: { room?: string } };
+  return claims.video?.room ?? '';
+}
+
 /** The User's microphone as the Room publishes it, without a media track. */
 class LocalMicrophonePublication extends TrackPublication {
   readonly isLocal = true;
@@ -43,16 +51,20 @@ function stubBrowserMicrophone(
  * A real livekit-client Room that never connects to a LiveKit server, as in
  * LiveKit's own component tests. Connecting and disconnecting only change its
  * state, the microphone publishes nothing, and the test decides when the
- * Agent joins.
+ * Agent joins. Its name is that of the room of the last Room Token it
+ * connected with, and sending text to the Agent is a spy.
  */
 export function createUnconnectedRoom() {
   const room = new Room();
   const connections: RoomConnection[] = [];
+  let roomName = '';
+  vi.spyOn(room, 'name', 'get').mockImplementation(() => roomName);
 
   vi.spyOn(room, 'prepareConnection').mockResolvedValue(undefined);
   vi.spyOn(room, 'connect').mockImplementation(
     (serverUrl, participantToken) => {
       connections.push({ serverUrl, participantToken });
+      roomName = roomNameOf(participantToken);
       changeConnectionState(room, ConnectionState.Connected);
       room.emit(RoomEvent.Connected);
       return Promise.resolve();
@@ -78,6 +90,11 @@ export function createUnconnectedRoom() {
     );
     return Promise.resolve(undefined);
   };
+  // The stream's details are not the point, so the stub sets only some.
+  const sendText = vi.spyOn(localParticipant, 'sendText').mockResolvedValue({
+    id: 'text-stream',
+    topic: 'lk.chat',
+  } as Awaited<ReturnType<typeof localParticipant.sendText>>);
   const askBrowserForMicrophone =
     localParticipant.setMicrophoneEnabled.bind(localParticipant);
   const setMicrophoneEnabled = vi
@@ -98,6 +115,8 @@ export function createUnconnectedRoom() {
 
   return {
     room,
+    /** The spy on `room.localParticipant.sendText`, which sends nothing. */
+    sendText,
     /** Every room this Room connected to, oldest first. */
     connections: (): readonly RoomConnection[] => connections,
     /**

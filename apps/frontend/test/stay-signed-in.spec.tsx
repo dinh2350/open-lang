@@ -30,10 +30,10 @@ describe('Staying signed in', () => {
     reloadApp('/');
 
     expect(
-      await screen.findByRole('heading', { name: 'Talk to the Agent' }),
+      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
     ).toBeVisible();
     expect(authRequestsReceived()).toEqual(['/api/auth/sign-in']);
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
     await findStatusMessage();
     expect(roomTokenRequestAuthorizations().at(-1)).toBe(
       `Bearer ${String(authTokensIssued().at(-1))}`,
@@ -64,16 +64,21 @@ describe('Staying signed in', () => {
   it('gets a new Auth Token once and retries, when a request finds the Auth Token expired', async () => {
     await signInAs('ada@example.test');
 
-    // The Room Token prepared on load has expired too, so Start asks again.
+    // Every Room Token request from here on finds the Auth Token expired.
     travelForward(16 * ONE_MINUTE);
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
     expect(await findStatusMessage()).toBeVisible();
     const [expired, renewed] = authTokensIssued();
-    expect(roomTokenRequestAuthorizations().slice(-2)).toEqual([
-      `Bearer ${expired}`,
-      `Bearer ${renewed}`,
-    ]);
+    expect(authTokensIssued()).toHaveLength(2);
+    const authorizations = roomTokenRequestAuthorizations();
+    expect(authorizations.indexOf(`Bearer ${expired}`)).toBeGreaterThanOrEqual(
+      0,
+    );
+    expect(authorizations.indexOf(`Bearer ${renewed}`)).toBeGreaterThan(
+      authorizations.indexOf(`Bearer ${expired}`),
+    );
+    expect(authorizations.at(-1)).toBe(`Bearer ${renewed}`);
   });
 
   it('sends the User to sign-in when the Auth Token has expired and the refresh cookie no longer works', async () => {
@@ -82,7 +87,7 @@ describe('Staying signed in', () => {
     const roomTokenRequestsBefore = roomTokenRequestAuthorizations().length;
 
     travelForward(8 * ONE_DAY);
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Sign in' }),

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Room } from 'livekit-client';
 import { useState } from 'react';
-import { Route, Routes } from 'react-router';
+import { Route, Routes, useNavigate } from 'react-router';
 import { AdminNav } from './admin/admin-nav';
 import { RequireAdmin } from './admin/require-admin';
 import { UsersPage } from './admin/users-page';
@@ -23,6 +23,7 @@ interface AppProps {
 /** Every page of the app, inside the router that `main.tsx` or a test provides. */
 export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
   const [queryClient] = useState(() => new QueryClient());
+  const navigate = useNavigate();
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeModeProvider>
@@ -40,6 +41,9 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
                   <ConversationPage
                     room={room}
                     agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
+                    onEnded={(roomName) => {
+                      void navigate(`/conversations/${roomName}`);
+                    }}
                   />
                 }
               />

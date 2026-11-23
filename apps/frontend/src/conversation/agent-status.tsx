@@ -6,28 +6,42 @@ import {
 } from '@livekit/components-react';
 import './voice-bars.css';
 
-const AGENT_STATE_TEXT: Partial<Record<AgentState, string>> = {
-  listening: 'The Agent is listening.',
-  thinking: 'The Agent is thinking.',
-  speaking: 'The Agent is speaking.',
-};
+/** What the status line says about the persona in each state it reports. */
+function statusLine(personaName: string, agentState: AgentState): string {
+  switch (agentState) {
+    case 'listening':
+      return `${personaName} đang nghe bạn nói.`;
+    case 'thinking':
+      return `${personaName} đang suy nghĩ.`;
+    case 'speaking':
+      return `${personaName} đang nói…`;
+    default:
+      return `Đang chờ ${personaName}…`;
+  }
+}
 
 interface AgentStatusProps {
+  /** First name of the person the Agent plays in this Scenario. */
+  readonly personaName: string;
   readonly agentState: AgentState;
   /** The Agent's audio track, once the Agent publishes one. */
   readonly agentVoice: TrackReference | undefined;
 }
 
 /**
- * A visualizer that moves with the Agent's voice, and whether the Agent is
- * listening, thinking or speaking, so the User knows when to talk.
+ * A visualizer that moves with the Agent's voice, and whether the persona is
+ * listening, thinking or speaking, so the Member knows when to talk.
  */
-export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
+export function AgentStatus({
+  personaName,
+  agentState,
+  agentVoice,
+}: AgentStatusProps) {
   return (
     <>
       <BarVisualizer
         role="img"
-        aria-label="The Agent's voice"
+        aria-label={`Giọng nói của ${personaName}`}
         state={agentState}
         track={agentVoice}
         barCount={7}
@@ -35,7 +49,7 @@ export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
       />
       <div role="status">
         <Text as="p" color="secondary">
-          {AGENT_STATE_TEXT[agentState] ?? 'Waiting for the Agent…'}
+          {statusLine(personaName, agentState)}
         </Text>
       </div>
     </>

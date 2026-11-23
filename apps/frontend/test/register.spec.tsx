@@ -22,11 +22,11 @@ describe('Registering', () => {
     await submitCredentials('ada@example.test', PASSWORD, 'Register');
 
     expect(
-      await screen.findByRole('heading', { name: 'Talk to the Agent' }),
+      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
     ).toBeVisible();
     expect(registeredEmails()).toEqual(['ada@example.test']);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
     await findStatusMessage();
     expect(roomTokenRequestAuthorizations().at(-1)).toBe(
       `Bearer ${authTokensIssued()[0]}`,

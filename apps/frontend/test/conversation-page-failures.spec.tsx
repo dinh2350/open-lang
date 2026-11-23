@@ -36,19 +36,20 @@ describe('Conversation page failures', () => {
       <ConversationPage
         room={liveKit.room}
         agentJoinTimeoutMilliseconds={15_000}
+        onEnded={vi.fn()}
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Allow microphone access for this site',
+      'quyền dùng micro đang bị chặn',
     );
     await waitFor(() => {
       expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
     });
     expect(queryStatusMessage()).toBeNull();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeVisible();
   });
 
   it.each([
@@ -59,7 +60,7 @@ describe('Conversation page failures', () => {
         HttpResponse.json({ message: 'Service Unavailable' }, { status: 503 }),
     ],
   ])(
-    'shows an error, and offers Start again, when the Room Token request fails with %s',
+    'shows an error, and offers Bắt đầu again, when the Room Token request fails with %s',
     async (_failure, respond) => {
       backend.use(http.post('/api/token', respond));
       const liveKit = createUnconnectedRoom();
@@ -67,39 +68,41 @@ describe('Conversation page failures', () => {
         <ConversationPage
           room={liveKit.room}
           agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
         />,
       );
 
-      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        "Couldn't start the Conversation",
+        'Không bắt đầu được buổi luyện',
       );
-      expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeVisible();
       expect(liveKit.connections()).toEqual([]);
     },
   );
 
-  it('shows that the Agent is unavailable, and ends the Conversation, when the Agent has not joined 15 seconds after Start', async () => {
+  it('shows that the Agent is unavailable, and ends the Conversation, when the Agent has not joined 15 seconds after Bắt đầu', async () => {
     const user = startFakeTimers();
     const liveKit = createUnconnectedRoom();
     render(
       <ConversationPage
         room={liveKit.room}
         agentJoinTimeoutMilliseconds={15_000}
+        onEnded={vi.fn()}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    await screen.findByText('Waiting for the Agent…');
+    await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+    await screen.findByText('Đang chờ Sam…');
 
     await act(() => vi.advanceTimersByTimeAsync(14_000));
-    expect(getStatusMessage()).toHaveTextContent('Waiting for the Agent');
+    expect(getStatusMessage()).toHaveTextContent('Đang chờ Sam');
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
-    expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Agent không sẵn sàng');
     expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
     expect(queryStatusMessage()).toBeNull();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeVisible();
   });
 
   it('waits for the Agent as long as the frontend configures', async () => {
@@ -109,17 +112,18 @@ describe('Conversation page failures', () => {
       <ConversationPage
         room={liveKit.room}
         agentJoinTimeoutMilliseconds={5_000}
+        onEnded={vi.fn()}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    await screen.findByText('Waiting for the Agent…');
+    await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+    await screen.findByText('Đang chờ Sam…');
 
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Agent không sẵn sàng');
   });
 
-  describe('pressing Start again', () => {
+  describe('pressing Bắt đầu again', () => {
     it('starts a fresh attempt with a new Room Token once the User allows the microphone', async () => {
       const liveKit = createUnconnectedRoom();
       liveKit.denyMicrophoneAccess();
@@ -127,17 +131,16 @@ describe('Conversation page failures', () => {
         <ConversationPage
           room={liveKit.room}
           agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
         />,
       );
-      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await screen.findByRole('alert');
 
       liveKit.allowMicrophoneAccess();
-      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
-      expect(await findStatusMessage()).toHaveTextContent(
-        'Waiting for the Agent',
-      );
+      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Sam');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));
@@ -151,17 +154,16 @@ describe('Conversation page failures', () => {
         <ConversationPage
           room={liveKit.room}
           agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
         />,
       );
-      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await screen.findByRole('alert');
 
       backend.resetHandlers();
-      await userEvent.click(screen.getByRole('button', { name: 'Start' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
-      expect(await findStatusMessage()).toHaveTextContent(
-        'Waiting for the Agent',
-      );
+      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Sam');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(roomTokensUsed(liveKit)).toEqual([roomTokensIssued().at(-1)]);
     });
@@ -173,19 +175,22 @@ describe('Conversation page failures', () => {
         <ConversationPage
           room={liveKit.room}
           agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
         />,
       );
-      await user.click(screen.getByRole('button', { name: 'Start' }));
+      await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await act(() => vi.advanceTimersByTimeAsync(15_000));
-      expect(screen.getByRole('alert')).toHaveTextContent('Agent unavailable');
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Agent không sẵn sàng',
+      );
 
-      await user.click(screen.getByRole('button', { name: 'Start' }));
-      await screen.findByText('Waiting for the Agent…');
+      await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+      await screen.findByText('Đang chờ Sam…');
       act(() => {
         liveKit.agentJoins();
       });
 
-      expect(getStatusMessage()).toHaveTextContent('The Agent is listening.');
+      expect(getStatusMessage()).toHaveTextContent('Sam đang nghe bạn nói.');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));

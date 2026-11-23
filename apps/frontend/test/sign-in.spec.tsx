@@ -20,7 +20,7 @@ describe('Signing in', () => {
       await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
     expect(
-      screen.queryByRole('button', { name: 'Start' }),
+      screen.queryByRole('button', { name: 'Bắt đầu' }),
     ).not.toBeInTheDocument();
   });
 
@@ -31,7 +31,7 @@ describe('Signing in', () => {
     await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
 
     expect(
-      await screen.findByRole('heading', { name: 'Talk to the Agent' }),
+      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
     ).toBeVisible();
   });
 
@@ -41,7 +41,9 @@ describe('Signing in', () => {
     renderApp('/sign-in', liveKit.room);
     await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Start' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Bắt đầu' }),
+    );
     await findStatusMessage();
 
     expect(roomTokenRequestAuthorizations()).not.toHaveLength(0);

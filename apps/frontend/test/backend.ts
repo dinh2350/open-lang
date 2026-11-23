@@ -1,3 +1,4 @@
+import { conversationChoiceSchema } from '@open-lang/shared';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { vi } from 'vitest';
@@ -38,8 +39,21 @@ function roomToken(roomName: string): string {
   return `${base64UrlJson({ alg: 'HS256', typ: 'JWT' })}.${base64UrlJson(claims)}.unsigned`;
 }
 
+function hasConversationChoice(participantMetadata: string | undefined) {
+  if (participantMetadata === undefined) {
+    return false;
+  }
+  try {
+    return conversationChoiceSchema.safeParse(JSON.parse(participantMetadata))
+      .success;
+  } catch {
+    return false;
+  }
+}
+
 const issuedRoomTokens: string[] = [];
 const roomTokenAuthorizations: (string | null)[] = [];
+const roomTokenParticipantMetadata: (string | undefined)[] = [];
 
 /** The Room Tokens the backend issued in the current test, oldest first. */
 export function roomTokensIssued(): readonly string[] {
@@ -51,11 +65,24 @@ export function roomTokenRequestAuthorizations(): readonly (string | null)[] {
   return roomTokenAuthorizations;
 }
 
+/**
+ * The `participant_metadata` of every Room Token request, oldest first: the
+ * JSON of the Scenario and speed the Member chose.
+ */
+export function roomTokenRequestParticipantMetadata(): readonly (
+  string | undefined
+)[] {
+  return roomTokenParticipantMetadata;
+}
+
 /** The backend's `/api` endpoints, as the browser sees them. */
 export const backend = setupServer(
   ...authHandlers,
   ...adminHandlers,
-  http.post('/api/token', ({ request }) => {
+  http.post('/api/token', async ({ request }) => {
+    const { participant_metadata: participantMetadata } =
+      (await request.json()) as { participant_metadata?: string };
+    roomTokenParticipantMetadata.push(participantMetadata);
     const authorization = request.headers.get('Authorization');
     roomTokenAuthorizations.push(authorization);
     // The Conversation page's own specs render it without an AuthProvider,
@@ -66,6 +93,13 @@ export const backend = setupServer(
         : refusalOfAuthorization(authorization);
     if (refusal !== undefined) {
       return refusal;
+    }
+    // Like the real backend, refuse a request that carries no valid choice.
+    if (!hasConversationChoice(participantMetadata)) {
+      return HttpResponse.json(
+        { message: 'participant_metadata must be a JSON choice.' },
+        { status: 400 },
+      );
     }
     const participantToken = roomToken(
       `conversation-${String(issuedRoomTokens.length + 1)}`,
@@ -82,6 +116,7 @@ export function resetBackend(): void {
   backend.resetHandlers();
   issuedRoomTokens.length = 0;
   roomTokenAuthorizations.length = 0;
+  roomTokenParticipantMetadata.length = 0;
   resetAuthBackend();
   resetAdminBackend();
 }
