@@ -1,26 +1,12 @@
-import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
-import { Button } from '@astryxdesign/core/Button';
 import { Stack } from '@astryxdesign/core/Stack';
+import type { ConversationChoice } from '@open-lang/shared';
+import type { Room } from 'livekit-client';
+import { useRef, useState } from 'react';
 import {
-  RoomAudioRenderer,
-  SessionProvider,
-  useAgent,
-  useSession,
-} from '@livekit/components-react';
-import {
-  type ConversationChoice,
-  DEFAULT_SPEED,
-  SCENARIO_IDS,
-  SCENARIOS,
-  SPEED_LABELS,
-} from '@open-lang/shared';
-import { ConnectionState, MediaDeviceFailure, type Room } from 'livekit-client';
-import { useEffect, useEffectEvent, useMemo, useState } from 'react';
-import { useAuth } from '@/auth/auth-context';
-import { AgentStatus } from './agent-status';
-import { ListeningHelpButton } from './listening-help-button';
-import { createRoomTokenSource } from './room-token-source';
+  type ConversationFailure,
+  ConversationSession,
+} from './conversation-session';
 import { ScenarioPicker } from './scenario-picker';
 
 interface ConversationPageProps {
@@ -38,9 +24,6 @@ interface ConversationPageProps {
   readonly onEnded: (roomName: string) => void;
 }
 
-type ConversationFailure =
-  'microphone-denied' | 'start-failed' | 'agent-unavailable';
-
 const failureMessages: Record<ConversationFailure, string> = {
   'microphone-denied':
     'Agent không nghe được bạn vì quyền dùng micro đang bị chặn. Hãy cho phép micro cho trang này trong cài đặt trình duyệt, rồi bấm Bắt đầu.',
@@ -49,89 +32,50 @@ const failureMessages: Record<ConversationFailure, string> = {
     'Agent không sẵn sàng nên buổi luyện đã kết thúc. Bấm Bắt đầu để thử lại.',
 };
 
-/**
- * What the Room Token prepared on page load carries, before the Member has
- * chosen: the first Scenario at the default speed. The Conversation itself
- * always uses a Room Token for the Member's own choice.
- */
-const PREPARED_CHOICE: ConversationChoice = {
-  scenarioId: SCENARIO_IDS[0],
-  speed: DEFAULT_SPEED,
-};
-
-/**
- * Why Start failed: the Member denied the microphone, or something else went
- * wrong, which is logged for developers.
- */
-function startFailure(error: unknown): ConversationFailure {
-  if (
-    MediaDeviceFailure.getFailure(error) === MediaDeviceFailure.PermissionDenied
-  ) {
-    return 'microphone-denied';
-  }
-  console.error('The Conversation failed to start:', error);
-  return 'start-failed';
+/** The Conversation that is running, or has just failed. */
+interface Attempt {
+  /** Tells a new Conversation from the last, even with the same choice. */
+  readonly id: number;
+  readonly choice: ConversationChoice;
 }
 
 /**
  * The Member chooses a Scenario and a speed and presses Bắt đầu to begin a
- * Conversation in a new private room; Kết thúc leaves it.
+ * Conversation in a new private room; Kết thúc leaves it. The Conversation's
+ * session exists only from Bắt đầu on, so nothing asks for a Room Token before.
  */
 export function ConversationPage({
   room,
   agentJoinTimeoutMilliseconds,
   onEnded,
 }: ConversationPageProps) {
-  const { authorizedFetch } = useAuth();
-  // The Member's choice, set when they press Bắt đầu. Each choice has its own
-  // source, because a Room Token carries the choice it was requested for.
-  const [choice, setChoice] = useState<ConversationChoice | null>(null);
-  const roomTokenSource = useMemo(
-    () => createRoomTokenSource(authorizedFetch, choice ?? PREPARED_CHOICE),
-    [authorizedFetch, choice],
-  );
-  const session = useSession(roomTokenSource, {
-    room,
-    agentConnectTimeoutMilliseconds: agentJoinTimeoutMilliseconds,
-  });
-  const agent = useAgent(session);
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [lastChoice, setLastChoice] = useState<ConversationChoice>();
   const [failure, setFailure] = useState<ConversationFailure | null>(null);
-  // The Agent's failed state clears once the room disconnects, so keep it.
-  if (agent.state === 'failed' && failure === null) {
-    setFailure('agent-unavailable');
+  // Set from the press until the Conversation fails or ends, so a second
+  // press cannot start a second Conversation, even before the next render.
+  const running = useRef(false);
+
+  function start(choice: ConversationChoice): void {
+    if (running.current) {
+      return;
+    }
+    running.current = true;
+    setFailure(null);
+    setLastChoice(choice);
+    setAttempt((previous) => ({ id: (previous?.id ?? 0) + 1, choice }));
   }
-  const inConversation =
-    failure === null &&
-    session.connectionState !== ConnectionState.Disconnected;
 
-  // A Conversation that failed leaves its room, even when the room finished
-  // connecting after the failure.
-  const { connectionState, end } = session;
-  useEffect(() => {
-    if (failure !== null && connectionState !== ConnectionState.Disconnected) {
-      void end();
-    }
-  }, [failure, connectionState, end]);
+  function fail(reason: ConversationFailure): void {
+    running.current = false;
+    setFailure(reason);
+  }
 
-  // The session only requests Room Tokens from the source of the render it
-  // belongs to, so a Conversation starts once that render has the new choice.
-  const startSession = useEffectEvent(() => session.start());
-  useEffect(() => {
-    if (choice !== null) {
-      startSession().catch((error: unknown) => {
-        setFailure(startFailure(error));
-      });
-    }
-  }, [choice]);
-
-  async function endConversation(): Promise<void> {
-    // Read the name while the Room is still joined.
-    const roomName = room.name;
-    await session.end();
+  function end(roomName: string): void {
+    running.current = false;
+    setAttempt(null);
     onEnded(roomName);
   }
-
-  const scenario = SCENARIOS.find(({ id }) => id === choice?.scenarioId);
 
   return (
     <Stack
@@ -145,34 +89,19 @@ export function ConversationPage({
       {failure !== null && (
         <Banner status="error" role="alert" title={failureMessages[failure]} />
       )}
-      <SessionProvider session={session}>
-        {inConversation && choice !== null && scenario !== undefined ? (
-          <>
-            <Badge
-              label={`${scenario.title} · tốc độ ${SPEED_LABELS[choice.speed].toLowerCase()}`}
-              variant="blue"
-            />
-            <AgentStatus
-              personaName={scenario.personaName}
-              agentState={agent.state}
-              agentVoice={agent.microphoneTrack}
-            />
-            <Stack direction="horizontal" gap={3}>
-              <ListeningHelpButton />
-              <Button label="Kết thúc" onClick={() => void endConversation()} />
-            </Stack>
-          </>
-        ) : (
-          <ScenarioPicker
-            onStart={(chosen) => {
-              setFailure(null);
-              // A new object each time, so choosing the same again starts again.
-              setChoice({ ...chosen });
-            }}
-          />
-        )}
-        <RoomAudioRenderer />
-      </SessionProvider>
+      {attempt !== null && (
+        <ConversationSession
+          key={attempt.id}
+          room={room}
+          choice={attempt.choice}
+          agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
+          onFailed={fail}
+          onEnded={end}
+        />
+      )}
+      {(attempt === null || failure !== null) && (
+        <ScenarioPicker onStart={start} initialChoice={lastChoice} />
+      )}
     </Stack>
   );
 }

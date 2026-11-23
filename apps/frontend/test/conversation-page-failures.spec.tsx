@@ -4,7 +4,11 @@ import { ConnectionState } from 'livekit-client';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
-import { backend, roomTokensIssued } from './backend';
+import {
+  backend,
+  roomTokenRequestParticipantMetadata,
+  roomTokensIssued,
+} from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
 import {
   findStatusMessage,
@@ -145,6 +149,36 @@ describe('Conversation page failures', () => {
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));
       expect(freshAttempt).not.toBe(failedAttempt);
+    });
+
+    it('starts again with the Scenario and speed the Member chose, which the picker still shows', async () => {
+      const liveKit = createUnconnectedRoom();
+      liveKit.denyMicrophoneAccess();
+      render(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
+        />,
+      );
+      await userEvent.click(
+        screen.getByRole('radio', { name: 'Gọi khách trễ hạn' }),
+      );
+      await userEvent.click(screen.getByRole('radio', { name: 'Chậm' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+      await screen.findByRole('alert');
+      expect(
+        screen.getByRole('radio', { name: 'Gọi khách trễ hạn' }),
+      ).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Chậm' })).toBeChecked();
+
+      liveKit.allowMicrophoneAccess();
+      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+
+      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Jordan…');
+      expect(
+        JSON.parse(roomTokenRequestParticipantMetadata().at(-1) ?? 'null'),
+      ).toEqual({ scenarioId: 'client-delay-call', speed: 0.7 });
     });
 
     it('starts a fresh attempt with a new Room Token once the backend issues Room Tokens again', async () => {

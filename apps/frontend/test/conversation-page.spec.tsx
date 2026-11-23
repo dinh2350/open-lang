@@ -1,9 +1,11 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionState } from 'livekit-client';
+import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
 import {
+  allRequestsAnswered,
   roomTokenRequestParticipantMetadata,
   roomTokensIssued,
   TEST_LIVEKIT_URL,
@@ -63,7 +65,7 @@ describe('Conversation page', () => {
     renderConversationPage(liveKit);
 
     await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Họp 1:1 với quản lý' }),
+      screen.getByRole('radio', { name: 'Họp 1:1 với quản lý' }),
     );
     await userEvent.click(screen.getByRole('radio', { name: 'Chậm' }));
     await pressStart();
@@ -86,7 +88,7 @@ describe('Conversation page', () => {
     const liveKit = createUnconnectedRoom();
     renderConversationPage(liveKit);
     await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Gọi khách trễ hạn' }),
+      screen.getByRole('radio', { name: 'Gọi khách trễ hạn' }),
     );
     await pressStart();
 
@@ -196,7 +198,7 @@ describe('Conversation page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
 
     await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Họp 1:1 với quản lý' }),
+      screen.getByRole('radio', { name: 'Họp 1:1 với quản lý' }),
     );
     await userEvent.click(screen.getByRole('radio', { name: 'Bình thường' }));
     await pressStart();
@@ -208,5 +210,57 @@ describe('Conversation page', () => {
     expect(liveKit.connections().at(-1)?.participantToken).toBe(
       roomTokensIssued().at(-1),
     );
+  });
+  it('requests no Room Token while the Member chooses, one after Bắt đầu, and one more when Kết thúc ends the Conversation', async () => {
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await allRequestsAnswered();
+    expect(roomTokenRequestParticipantMetadata()).toHaveLength(0);
+
+    await pressStart();
+    await findStatusMessage();
+    await allRequestsAnswered();
+    expect(roomTokenRequestParticipantMetadata()).toHaveLength(1);
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    // Ending a session makes the session fetch the Room Token of the next one.
+    await waitFor(() => {
+      expect(roomTokenRequestParticipantMetadata()).toHaveLength(2);
+    });
+  });
+
+  it('makes one Room Token request and one connection when Bắt đầu is pressed twice', async () => {
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Bắt đầu' }));
+
+    await findStatusMessage();
+    await allRequestsAnswered();
+    expect(roomTokenRequestParticipantMetadata()).toHaveLength(1);
+    expect(liveKit.connections()).toHaveLength(1);
+  });
+
+  it('makes one Room Token request and one connection in React strict mode', async () => {
+    const liveKit = createUnconnectedRoom();
+    render(
+      <StrictMode>
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
+        />
+      </StrictMode>,
+    );
+
+    await pressStart();
+
+    await findStatusMessage();
+    await allRequestsAnswered();
+    expect(roomTokenRequestParticipantMetadata()).toHaveLength(1);
+    expect(liveKit.connections()).toHaveLength(1);
   });
 });

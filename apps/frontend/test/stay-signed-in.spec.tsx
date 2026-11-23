@@ -64,27 +64,22 @@ describe('Staying signed in', () => {
   it('gets a new Auth Token once and retries, when a request finds the Auth Token expired', async () => {
     await signInAs('ada@example.test');
 
-    // Every Room Token request from here on finds the Auth Token expired.
+    // No Room Token was requested before Bắt đầu, so its request is the first
+    // to find the Auth Token expired.
     travelForward(16 * ONE_MINUTE);
     await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
     expect(await findStatusMessage()).toBeVisible();
     const [expired, renewed] = authTokensIssued();
-    expect(authTokensIssued()).toHaveLength(2);
-    const authorizations = roomTokenRequestAuthorizations();
-    expect(authorizations.indexOf(`Bearer ${expired}`)).toBeGreaterThanOrEqual(
-      0,
-    );
-    expect(authorizations.indexOf(`Bearer ${renewed}`)).toBeGreaterThan(
-      authorizations.indexOf(`Bearer ${expired}`),
-    );
-    expect(authorizations.at(-1)).toBe(`Bearer ${renewed}`);
+    expect(roomTokenRequestAuthorizations()).toEqual([
+      `Bearer ${expired}`,
+      `Bearer ${renewed}`,
+    ]);
   });
 
   it('sends the User to sign-in when the Auth Token has expired and the refresh cookie no longer works', async () => {
     await signInAs('ada@example.test');
     const refreshesBefore = refreshesRequested();
-    const roomTokenRequestsBefore = roomTokenRequestAuthorizations().length;
 
     travelForward(8 * ONE_DAY);
     await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
@@ -93,8 +88,13 @@ describe('Staying signed in', () => {
       await screen.findByRole('heading', { name: 'Sign in' }),
     ).toBeVisible();
     expect(refreshesRequested() - refreshesBefore).toBe(1);
+    // The session's own request and the one that starts it share one refresh,
+    // and neither is sent again with a renewed Auth Token, as none exists. The
+    // request the ended session makes afterwards has no Auth Token to send.
     expect(
-      roomTokenRequestAuthorizations().length - roomTokenRequestsBefore,
-    ).toBe(1);
+      new Set(
+        roomTokenRequestAuthorizations().filter((value) => value !== null),
+      ),
+    ).toEqual(new Set([`Bearer ${authTokensIssued()[0]}`]));
   });
 });
