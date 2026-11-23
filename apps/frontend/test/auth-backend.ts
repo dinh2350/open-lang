@@ -197,6 +197,14 @@ export function refusalOfAuthorization(
   return owner?.locked === true ? accountLockedResponse() : undefined;
 }
 
+/** The email of the User an `Authorization` header's Auth Token was issued to. */
+export function emailOfAuthorization(
+  authorization: string | null,
+): string | undefined {
+  const authToken = /^Bearer (\S+)$/.exec(authorization ?? '')?.[1] ?? '';
+  return authTokenOwners.get(authToken);
+}
+
 export function resetAuthBackend(): void {
   accounts.clear();
   issuedAuthTokens.length = 0;

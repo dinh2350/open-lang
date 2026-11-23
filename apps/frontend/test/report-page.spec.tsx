@@ -224,6 +224,40 @@ describe('Report page', () => {
     ).toBeVisible();
   });
 
+  it('tells which sentence is wrong and which is the correction, in words', async () => {
+    openReport(
+      { reportStatus: 'ready' },
+      {
+        report: reportOf({
+          grammarIssues: [
+            {
+              said: 'Yesterday I goed to the office.',
+              corrected: 'Yesterday I went to the office.',
+              reason: 'Go là động từ bất quy tắc.',
+            },
+          ],
+        }),
+      },
+    );
+
+    const section = await screen.findByRole('region', {
+      name: '2. Lỗi ngữ pháp',
+    });
+
+    const text = section.textContent;
+    const said = text.indexOf('Bạn nói:');
+    const wrong = text.indexOf('Yesterday I goed to the office.');
+    const fix = text.indexOf('Sửa thành:');
+    const corrected = text.indexOf('Yesterday I went to the office.');
+    expect(said).toBeGreaterThanOrEqual(0);
+    expect(wrong).toBeGreaterThan(said);
+    expect(fix).toBeGreaterThan(wrong);
+    expect(corrected).toBeGreaterThan(fix);
+    expect(text.indexOf('Go là động từ bất quy tắc.')).toBeGreaterThan(
+      corrected,
+    );
+  });
+
   it('shows the fluency line with an em dash for missing numbers', async () => {
     openReport(
       { reportStatus: 'ready' },

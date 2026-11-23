@@ -23,8 +23,6 @@ import {
 } from './conversation-format';
 import { fetchConversations } from './conversations-api';
 
-export const CONVERSATIONS_QUERY_KEY = ['conversations'] as const;
-
 const reportLabels: Record<ReportStatus | 'none', string> = {
   none: 'Chưa có',
   generating: 'Đang tạo',
@@ -37,9 +35,11 @@ const reportLabels: Record<ReportStatus | 'none', string> = {
  * Every Conversation is listed; there is no paging.
  */
 export function HistoryPage() {
-  const { authorizedFetch } = useAuth();
+  const { user, authorizedFetch } = useAuth();
   const conversations = useQuery({
-    queryKey: CONVERSATIONS_QUERY_KEY,
+    // The key names the User, so a User who signs in on this tab never meets
+    // what another User loaded here.
+    queryKey: ['conversations', user?.id],
     queryFn: () => fetchConversations(authorizedFetch),
     // A refusal won't change on a retry.
     retry: false,

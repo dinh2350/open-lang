@@ -56,9 +56,11 @@ function pollWhileGenerating(query: Query<ConversationDetail>): number | false {
  */
 export function ReportPage() {
   const { roomName = '' } = useParams();
-  const { authorizedFetch } = useAuth();
+  const { user, authorizedFetch } = useAuth();
   const queryClient = useQueryClient();
-  const queryKey = ['conversations', roomName] as const;
+  // The key names the User, so a User who signs in on this tab never meets
+  // what another User loaded here.
+  const queryKey = ['conversations', user?.id, roomName] as const;
   const conversation = useQuery({
     queryKey,
     queryFn: () => fetchConversation(authorizedFetch, roomName),
@@ -123,16 +125,19 @@ function ReportContent({
   askFailed,
   onAskAgain,
 }: ReportContentProps) {
-  if (conversation === undefined) {
-    if (error === null) {
-      return <ReportLoading />;
-    }
-    return error instanceof ConversationNotFoundError ? (
+  // A Conversation that is gone is never shown from an earlier answer.
+  if (error instanceof ConversationNotFoundError) {
+    return (
       <Banner
         status="error"
         role="alert"
         title="Không tìm thấy buổi luyện này."
       />
+    );
+  }
+  if (conversation === undefined) {
+    return error === null ? (
+      <ReportLoading />
     ) : (
       <Banner
         status="error"
@@ -306,12 +311,22 @@ function GrammarIssueCard({ issue }: { readonly issue: GrammarIssue }) {
   return (
     <Card>
       <Stack gap={2}>
-        <Text as="p" color="secondary">
-          <del lang="en">{issue.said}</del>
-        </Text>
-        <Text as="p" weight="semibold" style={successTextStyle}>
-          <ins lang="en">{issue.corrected}</ins>
-        </Text>
+        <Stack gap={0.5}>
+          <Text type="supporting" color="secondary">
+            Bạn nói:
+          </Text>
+          <Text as="p" color="secondary">
+            <del lang="en">{issue.said}</del>
+          </Text>
+        </Stack>
+        <Stack gap={0.5}>
+          <Text type="supporting" color="secondary">
+            Sửa thành:
+          </Text>
+          <Text as="p" weight="semibold" style={successTextStyle}>
+            <ins lang="en">{issue.corrected}</ins>
+          </Text>
+        </Stack>
         <Text as="p" color="secondary">
           {issue.reason}
         </Text>

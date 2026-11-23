@@ -6,13 +6,15 @@ import {
   type ReportStatus,
 } from '@open-lang/shared';
 import { http, HttpResponse } from 'msw';
-import { refusalOfAuthorization } from './auth-backend';
+import { emailOfAuthorization, refusalOfAuthorization } from './auth-backend';
 
 /**
  * A Conversation the fake backend holds, and what the Report looks like once
  * the Member asks for it.
  */
 interface BackendConversation {
+  /** The email of the User it belongs to; without one, every User's. */
+  owner: string | undefined;
   detail: ConversationDetail;
   /** The Report that `ready` shows. */
   report: ConversationReport;
@@ -64,6 +66,8 @@ export function reportOf(
 }
 
 export interface BackendConversationOptions {
+  /** The email of the User it belongs to. Without it, it belongs to every User. */
+  readonly owner?: string;
   /** The Report once it is ready. */
   readonly report?: ConversationReport;
   /**
@@ -78,12 +82,14 @@ export interface BackendConversationOptions {
 export function backendHasConversation(
   summary: ConversationSummary,
   {
+    owner,
     report = reportOf(),
     afterRequest = [['ready']],
   }: BackendConversationOptions = {},
 ): void {
   const ready = summary.reportStatus === 'ready';
   conversations.set(summary.roomName, {
+    owner,
     detail: { ...summary, report: ready ? report : null },
     report,
     afterRequest: afterRequest.map((statuses) => [...statuses]),
@@ -130,6 +136,18 @@ function guard(request: Request): Response | undefined {
   return refusalOfAuthorization(authorization ?? '');
 }
 
+/** The Conversation with this room name, when it is the requesting User's. */
+function conversationOf(
+  request: Request,
+  roomName: string,
+): BackendConversation | undefined {
+  const conversation = conversations.get(roomName);
+  const email = emailOfAuthorization(request.headers.get('Authorization'));
+  return conversation?.owner === undefined || conversation.owner === email
+    ? conversation
+    : undefined;
+}
+
 /** Moves the Report on to the next status the Member's request scripted. */
 function advance(conversation: BackendConversation): ConversationDetail {
   const next = conversation.pending.shift();
@@ -153,7 +171,9 @@ export const conversationHandlers = [
     return (
       guard(request) ??
       HttpResponse.json({
-        conversations: [...conversations.values()]
+        conversations: [...conversations.keys()]
+          .map((roomName) => conversationOf(request, roomName))
+          .filter((conversation) => conversation !== undefined)
           .map(({ detail }) => conversationSummarySchema.parse(detail))
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       })
@@ -167,7 +187,7 @@ export const conversationHandlers = [
         return refusal;
       }
       detailRequests.push(params.roomName);
-      const conversation = conversations.get(params.roomName);
+      const conversation = conversationOf(request, params.roomName);
       return conversation === undefined
         ? HttpResponse.json(NO_SUCH_CONVERSATION, { status: 404 })
         : HttpResponse.json(advance(conversation));
@@ -180,7 +200,7 @@ export const conversationHandlers = [
       if (refusal !== undefined) {
         return refusal;
       }
-      const conversation = conversations.get(params.roomName);
+      const conversation = conversationOf(request, params.roomName);
       if (conversation === undefined) {
         return HttpResponse.json(NO_SUCH_CONVERSATION, { status: 404 });
       }
