@@ -72,7 +72,7 @@ export async function roomNameOfNextConversation(page: Page): Promise<string> {
 
 async function postToAgentIngest(
   roomName: string,
-  path: 'turns' | 'misses',
+  path: 'turns',
   body: object,
 ): Promise<void> {
   const response = await fetch(
@@ -107,17 +107,7 @@ export async function postTurn(
   });
 }
 
-/** Records a press of "Chưa nghe kịp" at `pressedAt`, as the Agent would. */
-export async function postMiss(
-  roomName: string,
-  pressedAt: Date,
-): Promise<void> {
-  await postToAgentIngest(roomName, 'misses', {
-    pressedAt: pressedAt.toISOString(),
-  });
-}
-
-/** A moment `seconds` before now. */
+/** A moment `seconds` before now; after now when `seconds` is negative. */
 export function secondsAgo(seconds: number): Date {
   return new Date(Date.now() - seconds * 1000);
 }

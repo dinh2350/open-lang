@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
-  postMiss,
   postTurn,
   roomNameOfNextConversation,
   secondsAgo,
@@ -113,19 +112,20 @@ test('pressing Chưa nghe kịp lists the sentence being said, in the Report', a
   const roomName = await startConversation(page);
   await expectPersonaListening(page, 'Sam');
   const sentence = 'We pushed the release to Friday because of the outage.';
+  // A sentence the Agent is saying now, and for the next 20 s: the press
+  // falls inside it, whatever the Agent itself said before.
   await postTurn(roomName, {
     role: 'agent',
     text: sentence,
-    startedAt: secondsAgo(4),
-    endedAt: secondsAgo(1),
+    startedAt: secondsAgo(0),
+    endedAt: secondsAgo(-20),
   });
 
+  // The real press is the only Miss: the Agent records it, and the Report
+  // waits for the Agent's end marker, which follows the Miss.
   const helpButton = page.getByRole('button', { name: 'Chưa nghe kịp' });
   await helpButton.click();
   await expect(helpButton).toBeEnabled();
-  // The Agent records the real press on its own time; recording one here,
-  // after the sentence started, keeps the Report from racing it.
-  await postMiss(roomName, new Date());
   await endConversation(page, roomName);
 
   const misses = page.getByRole('region', { name: '1. Câu bạn nghe sót' });
