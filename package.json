@@ -12,7 +12,7 @@
     "dev": "pnpm --recursive --parallel --stream run dev",
     "test": "vitest run --coverage && node scripts/split-lcov-by-package.ts",
     "test:e2e": "docker compose up --detach --wait && pnpm --filter @open-lang/e2e test:e2e",
-    "test:live": "pnpm --filter @open-lang/agent test:live",
+    "test:live": "pnpm --filter @open-lang/agent --filter @open-lang/backend test:live",
     "db:migrate": "pnpm --filter @open-lang/backend db:migrate",
     "db:seed": "pnpm --filter @open-lang/backend db:seed",
     "format": "prettier --write .",

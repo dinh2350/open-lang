@@ -24,6 +24,8 @@ The Agent sends the transcript of each Conversation to the backend at `BACKEND_U
 
 The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER` in `apps/agent/.env` to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY` or Vertex AI (see `apps/agent/.env.example`). To try Pipeline mode instead, set `AGENT_MODE=pipeline` and choose `openai` or `google` for each of `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER`; the Providers may be mixed. The Agent refuses to start, naming the variable, when its configuration is invalid.
 
+The backend writes each Conversation's Report with the model `REPORT_PROVIDER` names in `apps/backend/.env`: `fake` (the default) gives canned Reports with no API key. Set it to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY`; `REPORT_MODEL` picks the Provider's model, and blank uses its default (see `apps/backend/.env.example`). The backend refuses to start without the key of the chosen Provider.
+
 ## Commands
 
 | Command                                 | What it does                                                                                                                                              |
@@ -31,7 +33,7 @@ The example Agent config uses the `fake` Provider, which needs no API key and st
 | `pnpm dev`                              | Runs the frontend, backend and Agent with hot reload.                                                                                                     |
 | `pnpm test`                             | Runs every fast test with coverage. Needs Docker for the backend's Postgres (Testcontainers), but no keys and no LiveKit.                                 |
 | `pnpm test:e2e`                         | Runs the end-to-end smoke test against Docker Compose.                                                                                                    |
-| `pnpm test:live`                        | Runs live Agent tests against real Providers; skipped without keys.                                                                                       |
+| `pnpm test:live`                        | Runs the live Agent and backend Report model tests against real Providers; each is skipped without its key.                                               |
 | `pnpm db:migrate`                       | Regenerates the Prisma client and runs `prisma migrate dev`: applies migrations, and creates one after a schema change (`pnpm db:migrate --name <name>`). |
 | `pnpm db:seed`                          | Creates the first Admin from `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `apps/backend/.env`. Does nothing once an Admin exists.                      |
 | `pnpm check`                            | Format check, lint, typecheck and tests.                                                                                                                  |
