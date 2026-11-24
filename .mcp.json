@@ -23,19 +23,9 @@
       "type": "http",
       "url": "https://docs.livekit.io/mcp"
     },
-    "dbhub": {
+    "postgres": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@bytebase/dbhub@2.0.1",
-        "--transport",
-        "stdio",
-        "--config",
-        ".mcp/dbhub.toml"
-      ],
-      "env": {
-        "DBHUB_DSN": "${DBHUB_DSN}"
-      }
+      "args": ["-y", "@microsoft/postgres-mcp@0.3.1", "run", "--no-telemetry"]
     }
   }
 }

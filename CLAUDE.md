@@ -25,4 +25,11 @@ Fix the code, never the scanner: no `NOSONAR`, `@ts-ignore`, ESLint or Sonar exc
 
 ## MCP servers
 
-`.mcp.json` configures context7 (library docs), livekit-docs (LiveKit's docs, code search and changelog), playwright and chrome-devtools (browser), github (read-only) and dbhub (read-only Postgres). It only holds `${VAR}` references. Keep real values, such as `GITHUB_PERSONAL_ACCESS_TOKEN` and `DBHUB_DSN`, in the git-ignored `.claude/settings.local.json`, and never write a secret into a committed file.
+`.mcp.json` configures context7 (library docs), livekit-docs (LiveKit's docs, code search and changelog), playwright and chrome-devtools (browser), github (read-only), dbhub (read-only Postgres) and postgres (Microsoft's `@microsoft/postgres-mcp`). It only holds `${VAR}` references. Keep real values, such as `GITHUB_PERSONAL_ACCESS_TOKEN` and `DBHUB_DSN`, in the git-ignored `.claude/settings.local.json`, and never write a secret into a committed file.
+
+`postgres` reads its connection from a saved profile, which is per machine (`~/.postgres-mcp/connections.yaml`, password in the OS keyring), so each developer creates it once. Keep it `ro` (read-only tools only):
+
+```sh
+npx -y @microsoft/postgres-mcp@0.3.1 connection add open-lang "postgresql://open_lang@127.0.0.1:5432/open_lang?sslmode=disable" --access-mode ro
+npx -y @microsoft/postgres-mcp@0.3.1 connection set-password open-lang   # hidden prompt
+```
