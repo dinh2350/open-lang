@@ -1,5 +1,4 @@
-import { llm, voice } from '@livekit/agents';
-import { LISTENING_HELP_MESSAGE } from '@open-lang/shared';
+import { initializeLogger, llm, voice } from '@livekit/agents';
 import {
   afterAll,
   afterEach,
@@ -10,19 +9,16 @@ import {
   it,
   vi,
 } from 'vitest';
-import conversationAgent from '../src/conversation-agent.ts';
+import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
+import conversationAgent, {
+  startConversation,
+} from '../src/conversation-agent.ts';
 import {
   type FakeBackend,
   startFakeBackend,
   TEST_AGENT_API_KEY,
 } from './fake-backend.ts';
 import { dispatchToRoom } from './fake-job.ts';
-
-/** What the backend sets as the job's metadata. */
-const standupAtNormalSpeed = JSON.stringify({
-  scenarioId: 'daily-standup',
-  speed: 1,
-});
 
 describe('Agent dispatched into a Conversation room', () => {
   let backend: FakeBackend;
@@ -47,11 +43,7 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('joins the room and logs that the Conversation started, with the room name', async () => {
-    const job = await dispatchToRoom(
-      conversationAgent,
-      'conversation-123',
-      standupAtNormalSpeed,
-    );
+    const job = await dispatchToRoom(conversationAgent, 'conversation-123');
     await job.end();
 
     expect(job.joinedRoom()).toBe(true);
@@ -64,11 +56,7 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('logs its Agent Mode, Provider and model when the Conversation starts', async () => {
-    const job = await dispatchToRoom(
-      conversationAgent,
-      'conversation-789',
-      standupAtNormalSpeed,
-    );
+    const job = await dispatchToRoom(conversationAgent, 'conversation-789');
     await job.end();
 
     expect(job.logs()).toContainEqual(
@@ -87,11 +75,7 @@ describe('Agent dispatched into a Conversation room', () => {
     vi.stubEnv('LLM_PROVIDER', 'fake');
     vi.stubEnv('TTS_PROVIDER', 'fake');
 
-    const job = await dispatchToRoom(
-      conversationAgent,
-      'conversation-321',
-      standupAtNormalSpeed,
-    );
+    const job = await dispatchToRoom(conversationAgent, 'conversation-321');
     await job.end();
 
     expect(job.logs()).toContainEqual(
@@ -107,11 +91,7 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('logs that the Conversation ended, with the room name and the reason, when its job ends', async () => {
-    const job = await dispatchToRoom(
-      conversationAgent,
-      'conversation-456',
-      standupAtNormalSpeed,
-    );
+    const job = await dispatchToRoom(conversationAgent, 'conversation-456');
 
     await job.end();
 
@@ -128,7 +108,6 @@ describe('Agent dispatched into a Conversation room', () => {
     const job = await dispatchToRoom(
       conversationAgent,
       'conversation-transcript',
-      standupAtNormalSpeed,
     );
     job.session()?.emit(
       voice.AgentSessionEventTypes.ConversationItemAdded,
@@ -167,7 +146,6 @@ describe('Agent dispatched into a Conversation room', () => {
       const job = await dispatchToRoom(
         conversationAgent,
         'conversation-ending',
-        standupAtNormalSpeed,
       );
       for (const id of ['item_first', 'item_last']) {
         job
@@ -200,11 +178,7 @@ describe('Agent dispatched into a Conversation room', () => {
       vi.stubEnv(name, undefined);
 
       await expect(
-        dispatchToRoom(
-          conversationAgent,
-          'conversation-unconfigured',
-          standupAtNormalSpeed,
-        ),
+        dispatchToRoom(conversationAgent, 'conversation-unconfigured'),
       ).rejects.toThrow(new RegExp(name));
     },
   );
@@ -214,11 +188,16 @@ describe('Agent dispatched into a Conversation room', () => {
     return vi.spyOn(voice.AgentSession.prototype, 'start');
   }
 
-  /** The text input handler the job started its session with, if any. */
-  function textInputCallbackOf(
-    start: ReturnType<typeof spyOnSessionStart>,
-  ): voice.TextInputCallback | undefined {
-    return start.mock.calls[0]?.[0].inputOptions?.textInputCallback;
+  /**
+   * Scripts the fake Provider's model, which the job's session uses: each
+   * input gets its response, any other input nothing, as FakeLLM does.
+   */
+  function scriptFakeModel(responses: voice.testing.FakeLLMResponse[]) {
+    return vi
+      .spyOn(voice.testing.FakeLLM.prototype, 'lookup')
+      .mockImplementation((input) =>
+        responses.find((response) => response.input === input),
+      );
   }
 
   /** Emits a User message the session added to its history. */
@@ -235,11 +214,7 @@ describe('Agent dispatched into a Conversation room', () => {
     const slowBackend = await startFakeBackend([], { responseDelayMs: 300 });
     vi.stubEnv('BACKEND_URL', slowBackend.url);
     try {
-      const job = await dispatchToRoom(
-        conversationAgent,
-        'conversation-end',
-        standupAtNormalSpeed,
-      );
+      const job = await dispatchToRoom(conversationAgent, 'conversation-end');
       addUserMessage(job.session(), 'item_first');
       addUserMessage(job.session(), 'item_last');
 
@@ -259,65 +234,102 @@ describe('Agent dispatched into a Conversation room', () => {
     }
   });
 
-  it('the job starts its session with the listening help handler, which records a Miss for its room', async () => {
+  it('the Agent publishes its transcription', async () => {
     const start = spyOnSessionStart();
     try {
       const job = await dispatchToRoom(
         conversationAgent,
-        'conversation-help-press',
-        standupAtNormalSpeed,
+        'conversation-transcription',
       );
-      const session = job.session();
-      const textInputCallback = textInputCallbackOf(start);
-
-      expect(textInputCallback).toBeTypeOf('function');
-      if (session === undefined || textInputCallback === undefined) return;
-      await textInputCallback(session, { text: LISTENING_HELP_MESSAGE });
-
-      await vi.waitFor(() => {
-        expect(backend.requests).toContainEqual(
-          expect.objectContaining({
-            url: '/api/agent/conversations/conversation-help-press/misses',
-            body: { pressedAt: expect.any(String) as unknown },
-          }),
-        );
-      });
       await job.end();
+
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(
+        start.mock.calls[0]?.[0].outputOptions?.transcriptionEnabled,
+      ).not.toBe(false);
     } finally {
       start.mockRestore();
     }
   });
 
-  it('the job posts the end marker only after a Miss that is still being sent', async () => {
+  it('the job runs with empty metadata', async () => {
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-no-metadata',
+      '',
+    );
+    await job.end();
+
+    expect(job.logs()).toContainEqual(
+      expect.objectContaining({
+        msg: 'Conversation started',
+        roomName: 'conversation-no-metadata',
+      }),
+    );
+  });
+
+  it('waits for a note still being sent before the end marker', async () => {
     const slowBackend = await startFakeBackend([], { responseDelayMs: 300 });
     vi.stubEnv('BACKEND_URL', slowBackend.url);
-    const start = spyOnSessionStart();
+    const lookup = scriptFakeModel([
+      {
+        input: 'ghi lại câu này',
+        toolCalls: [
+          {
+            name: 'saveNote',
+            args: {
+              kind: 'phrase',
+              english: 'Yesterday I finished the login page.',
+              meaning: 'Hôm qua tôi đã làm xong trang đăng nhập.',
+              said: null,
+            },
+          },
+        ],
+      },
+    ]);
     try {
       const job = await dispatchToRoom(
         conversationAgent,
-        'conversation-late-press',
-        standupAtNormalSpeed,
+        'conversation-late-note',
       );
-      const session = job.session();
-      const textInputCallback = textInputCallbackOf(start);
-      if (session === undefined || textInputCallback === undefined) {
-        throw new Error('The job started no session with a text handler.');
-      }
-      await textInputCallback(session, { text: LISTENING_HELP_MESSAGE });
+      job.session()?.generateReply({ userInput: 'ghi lại câu này' });
+      const notes = '/api/agent/conversations/conversation-late-note/notes';
+      await vi.waitFor(() => {
+        expect(slowBackend.events).toContain(`received ${notes}`);
+      });
 
       await job.end();
 
-      const misses = '/api/agent/conversations/conversation-late-press/misses';
-      const end = '/api/agent/conversations/conversation-late-press/end';
-      expect(slowBackend.events).toEqual([
-        `received ${misses}`,
-        `answered ${misses}`,
+      const end = '/api/agent/conversations/conversation-late-note/end';
+      expect(
+        slowBackend.events.filter((event) => !event.endsWith('/turns')),
+      ).toEqual([
+        `received ${notes}`,
+        `answered ${notes}`,
         `received ${end}`,
         `answered ${end}`,
       ]);
     } finally {
-      start.mockRestore();
+      lookup.mockRestore();
       await slowBackend.close();
+    }
+  });
+
+  it('the job keeps the SDK default text input and records no Miss', async () => {
+    const start = spyOnSessionStart();
+    try {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-help-text',
+      );
+      await job.end();
+
+      expect(start.mock.calls[0]?.[0].inputOptions).toBeUndefined();
+      expect(
+        backend.requests.filter(({ url }) => url?.endsWith('/misses')),
+      ).toEqual([]);
+    } finally {
+      start.mockRestore();
     }
   });
 
@@ -325,11 +337,7 @@ describe('Agent dispatched into a Conversation room', () => {
     const start = spyOnSessionStart();
     const requestsBefore = backend.requests.length;
     try {
-      const job = await dispatchToRoom(
-        conversationAgent,
-        '',
-        standupAtNormalSpeed,
-      );
+      const job = await dispatchToRoom(conversationAgent, '');
       await job.end();
 
       expect(start).toHaveBeenCalledTimes(1);
@@ -341,11 +349,7 @@ describe('Agent dispatched into a Conversation room', () => {
   });
 
   it('the job shuts down as soon as its session closes, so the end marker is not held up', async () => {
-    const job = await dispatchToRoom(
-      conversationAgent,
-      'conversation-left',
-      standupAtNormalSpeed,
-    );
+    const job = await dispatchToRoom(conversationAgent, 'conversation-left');
     const session = job.session();
     const closed = new Promise((resolve) => {
       session?.once(voice.AgentSessionEventTypes.Close, resolve);
@@ -357,5 +361,43 @@ describe('Agent dispatched into a Conversation room', () => {
 
     // The session is closed already, so job.end() would wait for a second Close.
     expect(job.shutdownReasons()).toEqual(['participant_disconnected']);
+  });
+});
+
+describe('The tutor, run with voice.testing', () => {
+  it('the Agent no longer handles listening-help text', async () => {
+    initializeLogger({ pretty: false, level: 'error' });
+    const session = new voice.AgentSession({
+      ...createSessionOptions(
+        loadAgentConfig({
+          AGENT_MODE: 'pipeline',
+          STT_PROVIDER: 'fake',
+          LLM_PROVIDER: 'fake',
+          TTS_PROVIDER: 'fake',
+        }),
+      ),
+      llm: new voice.testing.FakeLLM([
+        { input: 'listening-help', content: 'Bạn cần mình giúp gì?' },
+      ]),
+    });
+    try {
+      await startConversation(session);
+
+      // Typed text reaches the session as the User's own message.
+      const result = await session.run({ userInput: 'listening-help' }).wait();
+
+      expect(
+        result.expect.nextEvent().isMessage({ role: 'assistant' }).event().item
+          .textContent,
+      ).toBe('Bạn cần mình giúp gì?');
+      expect(
+        session.history.items
+          .filter((item) => item instanceof llm.ChatMessage)
+          .filter(({ role }) => role === 'user')
+          .map(({ textContent }) => textContent),
+      ).toEqual(['listening-help']);
+    } finally {
+      await session.close();
+    }
   });
 });

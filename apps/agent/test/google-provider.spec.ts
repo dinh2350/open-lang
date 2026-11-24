@@ -90,7 +90,6 @@ describe('Agent configuration in Realtime mode with Google', () => {
   it("builds the Google plugin's realtime model on the Gemini API, without connecting to Google", () => {
     const options = createSessionOptions(
       loadAgentConfig({ ...realtimeWithGoogle, REALTIME_VOICE: 'Puck' }),
-      1,
     );
 
     expect(options.llm).toBeInstanceOf(google.realtime.RealtimeModel);
@@ -108,7 +107,6 @@ describe('Agent configuration in Realtime mode with Google', () => {
     });
     const options = createSessionOptions(
       loadAgentConfig({ ...realtimeWithGoogle, REALTIME_VOICE: 'Puck' }),
-      1,
     );
 
     const connection = await liveApi.connect(options.llm);
@@ -127,10 +125,7 @@ describe('Agent configuration in Realtime mode with Google', () => {
   });
 
   it("leaves turn detection to Google's server, with no local VAD and no LiveKit Inference", () => {
-    const options = createSessionOptions(
-      loadAgentConfig(realtimeWithGoogle),
-      1,
-    );
+    const options = createSessionOptions(loadAgentConfig(realtimeWithGoogle));
 
     expect(options.turnHandling?.turnDetection).toBe('realtime_llm');
     expect(options.vad).toBeNull();
@@ -158,10 +153,7 @@ describe('Agent configuration in Realtime mode with Google on Vertex AI', () => 
   });
 
   it("builds the Google plugin's realtime model on Vertex AI, in the configured project and location", () => {
-    const options = createSessionOptions(
-      loadAgentConfig(realtimeOnVertexAi),
-      1,
-    );
+    const options = createSessionOptions(loadAgentConfig(realtimeOnVertexAi));
 
     expect(options.llm).toBeInstanceOf(google.realtime.RealtimeModel);
     expect(options.llm).toHaveProperty('model', 'gemini-3.8-live');
@@ -201,7 +193,6 @@ describe('Agent configuration in Pipeline mode with Google for every step', () =
   it("builds the Google plugin's STT, LLM and TTS on the Gemini API, without connecting to Google", () => {
     const options = createSessionOptions(
       loadAgentConfig({ ...pipelineWithGoogle, TTS_VOICE: 'Puck' }),
-      1,
     );
 
     expect(options.stt).toBeInstanceOf(google.beta.GeminiSTT);
@@ -222,7 +213,6 @@ describe('Agent configuration in Pipeline mode with Google for every step', () =
     const requests = fakeGeminiApi();
     const languageModel = createSessionOptions(
       loadAgentConfig(pipelineWithGoogle),
-      1,
     ).llm;
     assert(languageModel instanceof llm.LLM);
     const chatCtx = llm.ChatContext.empty();
@@ -252,7 +242,6 @@ describe('Agent configuration in Pipeline mode with Google for every step', () =
         GOOGLE_API_KEY: undefined,
         ...vertexAi,
       }),
-      1,
     );
 
     expect(options.llm).toHaveProperty('provider', 'Vertex AI');
@@ -298,7 +287,6 @@ describe('Agent configuration in Pipeline mode with OpenAI transcribing and thin
   it("builds OpenAI's STT and LLM with Google's TTS", () => {
     const options = createSessionOptions(
       loadAgentConfig(openAiWithGoogleSpeech),
-      1,
     );
 
     expect(options.stt).toBeInstanceOf(openai.STT);

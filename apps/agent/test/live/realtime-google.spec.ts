@@ -33,18 +33,14 @@ describe.skipIf(!hasGoogleCredentials(process.env))(
           LLM_MODEL: undefined,
           TTS_PROVIDER: 'fake',
         }),
-        1,
       ).llm;
       assert(judge instanceof llm.LLM, 'Pipeline mode has a language model');
-      const session = new voice.AgentSession(createSessionOptions(config, 1));
+      const session = new voice.AgentSession(createSessionOptions(config));
       const greeting = firstAgentMessage(session);
 
       try {
         // Without a room, as LiveKit's testing docs do: the User types.
-        await startConversation(session, {
-          scenarioId: 'daily-standup',
-          speed: 1,
-        });
+        await startConversation(session);
 
         await assertAgentMessage(await greeting).judge(judge, {
           intent:

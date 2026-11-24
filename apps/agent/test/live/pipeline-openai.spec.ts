@@ -24,7 +24,6 @@ describe.skipIf(!process.env.OPENAI_API_KEY)(
           LLM_PROVIDER: 'openai',
           TTS_PROVIDER: 'openai',
         }),
-        1,
       );
       // The judge is the Agent's own language model.
       const judge = options.llm;
@@ -34,10 +33,7 @@ describe.skipIf(!process.env.OPENAI_API_KEY)(
 
       try {
         // Without a room, as LiveKit's testing docs do: the User types.
-        await startConversation(session, {
-          scenarioId: 'daily-standup',
-          speed: 1,
-        });
+        await startConversation(session);
         await assertAgentMessage(await greeting).judge(judge, {
           intent:
             'Opens a daily standup, such as "Morning! Let\'s start the standup. What did you work on yesterday?"',

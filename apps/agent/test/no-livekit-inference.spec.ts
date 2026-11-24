@@ -51,10 +51,7 @@ describe.each([...realtimeConfigurations, ...pipelineConfigurations])(
   'The Agent in %s',
   (_, agentMode) => {
     const options = () =>
-      createSessionOptions(
-        loadAgentConfig({ ...agentMode, ...credentials }),
-        1,
-      );
+      createSessionOptions(loadAgentConfig({ ...agentMode, ...credentials }));
 
     it('detects interruptions from voice activity, not with the adaptive detector, which calls LiveKit Inference', () => {
       expect(options().turnHandling?.interruption?.mode).toBe('vad');

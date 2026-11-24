@@ -25,7 +25,6 @@ describe.skipIf(!hasGoogleCredentials(process.env))(
           LLM_PROVIDER: 'google',
           TTS_PROVIDER: 'google',
         }),
-        1,
       );
       // The judge is the Agent's own language model.
       const judge = options.llm;
@@ -35,10 +34,7 @@ describe.skipIf(!hasGoogleCredentials(process.env))(
 
       try {
         // Without a room, as LiveKit's testing docs do: the User types.
-        await startConversation(session, {
-          scenarioId: 'daily-standup',
-          speed: 1,
-        });
+        await startConversation(session);
         await assertAgentMessage(await greeting).judge(judge, {
           intent:
             'Opens a daily standup, such as "Morning! Let\'s start the standup. What did you work on yesterday?"',

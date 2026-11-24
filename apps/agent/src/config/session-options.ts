@@ -8,7 +8,6 @@ import {
 } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
-import type { Speed } from '@open-lang/shared';
 import type {
   AgentConfig,
   ModelConfig,
@@ -23,16 +22,15 @@ import { DEFAULT_STT_MODEL } from './models.ts';
 /**
  * Turns the Agent's configuration into the models of its AgentSession. No
  * Agent Mode or Provider uses LiveKit Inference. The OpenAI realtime model
- * speaks at the chosen speed; no other model has a setting for it, so they
- * keep the pace from the Agent's instructions alone.
+ * speaks at the normal speed; the User asks the tutor to slow down by voice
+ * when they need it.
  */
 export function createSessionOptions(
   config: AgentConfig,
-  speed: Speed,
 ): voice.AgentSessionOptions {
   const options =
     config.agentMode === 'realtime'
-      ? realtimeSessionOptions(config, speed)
+      ? realtimeSessionOptions(config)
       : pipelineSessionOptions(config);
   return {
     ...options,
@@ -46,11 +44,10 @@ export function createSessionOptions(
   };
 }
 
-function realtimeSessionOptions(
-  { realtime }: RealtimeConfig,
-  speed: Speed,
-): voice.AgentSessionOptions {
-  return pluginOf(realtime.provider).realtime(realtime, speed);
+function realtimeSessionOptions({
+  realtime,
+}: RealtimeConfig): voice.AgentSessionOptions {
+  return pluginOf(realtime.provider).realtime(realtime);
 }
 
 /**
@@ -79,10 +76,7 @@ function pipelineSessionOptions(
 /** What a Provider's plugin builds for each of the Agent's models. */
 interface Plugin<P extends Provider> {
   /** Realtime mode's AgentSession options, around one model that listens and speaks. */
-  realtime(
-    config: SpeakingModelConfig<P>,
-    speed: Speed,
-  ): voice.AgentSessionOptions;
+  realtime(config: SpeakingModelConfig<P>): voice.AgentSessionOptions;
   stt(config: ModelConfig<P>, vad: inference.VAD): stt.STT | undefined;
   llm(config: ModelConfig<P>): llm.LLM;
   tts(config: SpeakingModelConfig<P>): tts.TTS | undefined;
@@ -91,13 +85,15 @@ interface Plugin<P extends Provider> {
 /** Each Provider's plugin. */
 const PLUGINS: { readonly [P in Provider]: Plugin<P> } = {
   openai: {
-    realtime: ({ model, voice, apiKey }, speed) =>
+    realtime: ({ model, voice, apiKey }) =>
       serverDetectsTurns(
         new openai.realtime.RealtimeModel({
           model,
           voice,
           apiKey,
-          speed,
+          // Fixed: the pace never changes with the Conversation. The User
+          // asks by voice to repeat or slow down.
+          speed: 1,
           // The plugin's default, gpt-4o-mini-transcribe, is deprecated.
           inputAudioTranscription: { model: DEFAULT_STT_MODEL.openai },
         }),

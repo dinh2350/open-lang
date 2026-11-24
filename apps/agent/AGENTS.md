@@ -17,13 +17,12 @@ Always read the latest LiveKit documentation before using a LiveKit API. Trainin
 ## File layout
 
 - `src/main.ts`: the process entrypoint. It validates the environment and hands over to the `@livekit/agents` CLI (`cli.runApp`).
-- `src/conversation-agent.ts`: the job module. The CLI loads it in each job process; its default export is the `defineAgent` entry that reads the Scenario and speed from the job's metadata and runs one Conversation in one `AgentSession`. The job ends as soon as its session closes (when the User leaves, for example); its shutdown callback then waits for the transcript and the Misses still being sent, then posts the end marker, which tells the backend the Report may be written.
-- `src/conversation-choice.ts`: `readConversationChoice`, which parses the job's metadata into the Member's Scenario and speed, and throws when it is missing or invalid.
-- `src/scenario-instructions.ts`: the persona instructions, the opening line and the greeting instruction of each Scenario, for the chosen speed.
-- `src/agent.ts`: the `ConversationAgent` class, which plays the chosen Scenario, with no tools.
-- `src/listening-help.ts`: `createListeningHelpHandler`, the session's text input handler. The "Chưa nghe kịp" message makes the Agent interrupt itself and say its last words again, simpler and slower, and records the press as a Miss; any other text is handled as the SDK does by default.
+- `src/conversation-agent.ts`: the job module. The CLI loads it in each job process; its default export is the `defineAgent` entry that runs one Conversation in one `AgentSession`. It ignores the job's metadata. The job ends as soon as its session closes (when the User leaves, for example); its shutdown callback then waits for the transcript and the Notes still being sent, then posts the end marker, which tells the backend the Report may be written. Text the User types is handled as the SDK does by default.
+- `src/tutor-instructions.ts`: the tutor's instructions, its opening line and the instruction to say it.
+- `src/agent.ts`: the `TutorAgent` class, an English tutor that explains in Vietnamese, with the tools it is given.
+- `src/note-tool.ts`: `createSaveNoteTool`, the `saveNote` tool, which validates a Note and sends it to the backend.
 - `src/transcript-recorder.ts`: `recordTranscript`, which sends each user and assistant message to the backend, in order, timed by the speaking intervals of LiveKit's state events.
-- `src/backend-client.ts`: `createBackendClient`, which posts turns, Misses and the end marker to the backend with `AGENT_API_KEY`, retries, and never rejects; `trackPendingSends`, which lets the job wait for the sends it started.
+- `src/backend-client.ts`: `createBackendClient`, which posts turns, Notes and the end marker to the backend with `AGENT_API_KEY`, retries, and never rejects; `trackPendingSends`, which lets the job wait for the sends it started.
 - `src/config/`: the validated environment, the models and the `AgentSession` options.
 - `test/`: unit and integration tests. `test/live/` needs real Provider keys and runs with `pnpm test:live`.
 
