@@ -11,7 +11,7 @@ import {
   TEST_LIVEKIT_URL,
 } from './backend';
 import { backendHasNotes, noteOf } from './conversations-backend';
-import { deviceIsAPhone } from './device-mode';
+import { deviceHasWidth, deviceIsAPhone } from './device-mode';
 import { withQueryClient } from './query-client';
 import { createUnconnectedRoom } from './unconnected-room';
 import { findStatusMessage, getStatusMessage } from './status-message';
@@ -190,6 +190,47 @@ describe('Conversation page', () => {
     expect(
       screen.queryByText('Chữ của cuộc nói sẽ hiện ở đây.'),
     ).not.toBeVisible();
+  });
+
+  it('keeps the transcript when the layout changes', async () => {
+    const device = deviceHasWidth(1024);
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    act(() => {
+      liveKit.agentSays('segment-1', 'Hi! How was your weekend?');
+    });
+    act(() => {
+      liveKit.memberSays('segment-2', 'It was great.');
+    });
+    expect(await screen.findByText('It was great.')).toBeVisible();
+    const transcriptIsThere = () => {
+      expect(screen.getByText('Hi! How was your weekend?')).toBeVisible();
+      expect(screen.getByText('It was great.')).toBeVisible();
+    };
+
+    // A phone turned upright: the panels become tabs.
+    act(() => {
+      device.resize(375);
+    });
+    const tabs = screen.getByRole('tablist');
+    transcriptIsThere();
+
+    // Switching to Ghi chú and back.
+    await userEvent.click(within(tabs).getByRole('tab', { name: /^Ghi chú/ }));
+    expect(screen.getByText('It was great.')).not.toBeVisible();
+    await userEvent.click(within(tabs).getByRole('tab', { name: 'Cuộc nói' }));
+    transcriptIsThere();
+
+    // Turned sideways again: side by side.
+    act(() => {
+      device.resize(1024);
+    });
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    transcriptIsThere();
   });
 
   it('the in-session screen shows the voice bars, the status, the controls and the two panels, and no Scenario or speed', async () => {

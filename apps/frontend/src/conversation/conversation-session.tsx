@@ -200,9 +200,14 @@ function Notes({ roomName }: { readonly roomName: string | null }) {
   );
 }
 
+type PanelTab = 'transcript' | 'notes';
+
 /**
  * What is said and the Notes: side by side on a wide screen, and on a phone
- * in two tabs, the Ghi chú tab saying how many Notes there are.
+ * in two tabs, the Ghi chú tab saying how many Notes there are. Both layouts
+ * render the same tree, with the tabs in a slot of their own, so turning a
+ * phone or switching tabs never remounts the transcript, which would lose
+ * the lines said so far. On a phone the tab not chosen is only hidden.
  */
 function ConversationPanels({
   roomName,
@@ -210,96 +215,110 @@ function ConversationPanels({
   readonly roomName: string | null;
 }) {
   const sideBySide = useMediaQuery(SIDE_BY_SIDE_QUERY, true);
-  return sideBySide ? (
-    <Grid columns={2} gap={6} width="100%" maxWidth="64rem" align="start">
-      <Panel title="Cuộc nói">
-        <TranscriptPanel />
-      </Panel>
-      <Panel title="Ghi chú" icon={<Icon icon={NotebookIcon} />}>
-        <Notes roomName={roomName} />
-      </Panel>
-    </Grid>
-  ) : (
-    <PanelTabs roomName={roomName} />
-  );
-}
-
-function Panel({
-  title,
-  icon,
-  children,
-}: {
-  readonly title: string;
-  readonly icon?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const headingId = useId();
-  return (
-    <Card>
-      <Stack as="section" aria-labelledby={headingId} gap={4}>
-        <Heading level={2} id={headingId}>
-          <HStack as="span" gap={2} align="center">
-            {icon}
-            <span>{title}</span>
-          </HStack>
-        </Heading>
-        {children}
-      </Stack>
-    </Card>
-  );
-}
-
-type PanelTab = 'transcript' | 'notes';
-
-/**
- * The transcript and the Notes as two tabs. Both stay mounted, so the
- * Notes keep coming while the transcript shows.
- */
-function PanelTabs({ roomName }: { readonly roomName: string | null }) {
   const [tab, setTab] = useState<PanelTab>('transcript');
   const noteCount = useNoteCount(roomName);
   const transcriptId = useId();
   const notesId = useId();
   return (
-    <Stack gap={4} width="100%">
-      <TabList
-        role="tablist"
-        layout="fill"
-        hasDivider
-        value={tab}
-        onChange={(value) => {
-          setTab(value === 'notes' ? 'notes' : 'transcript');
-        }}
-      >
-        <Tab value="transcript" label="Cuộc nói" panelId={transcriptId} />
-        <Tab
-          value="notes"
-          label="Ghi chú"
-          panelId={notesId}
-          icon={<Icon icon={NotebookIcon} />}
-          endContent={
-            noteCount > 0 && (
-              <Badge variant="neutral" label={String(noteCount)} />
-            )
-          }
-        />
-      </TabList>
-      <div
-        role="tabpanel"
+    <Grid
+      columns={sideBySide ? 2 : 1}
+      gap={sideBySide ? 6 : 4}
+      width="100%"
+      maxWidth="64rem"
+      align="start"
+    >
+      {!sideBySide && (
+        <TabList
+          role="tablist"
+          layout="fill"
+          hasDivider
+          value={tab}
+          onChange={(value) => {
+            setTab(value === 'notes' ? 'notes' : 'transcript');
+          }}
+        >
+          <Tab value="transcript" label="Cuộc nói" panelId={transcriptId} />
+          <Tab
+            value="notes"
+            label="Ghi chú"
+            panelId={notesId}
+            icon={<Icon icon={NotebookIcon} />}
+            endContent={
+              noteCount > 0 && (
+                <Badge variant="neutral" label={String(noteCount)} />
+              )
+            }
+          />
+        </TabList>
+      )}
+      <Panel
         id={transcriptId}
-        aria-label="Cuộc nói"
-        hidden={tab !== 'transcript'}
+        title="Cuộc nói"
+        isTab={!sideBySide}
+        isHidden={!sideBySide && tab !== 'transcript'}
       >
         <TranscriptPanel />
-      </div>
-      <div
-        role="tabpanel"
+      </Panel>
+      <Panel
         id={notesId}
-        aria-label="Ghi chú"
-        hidden={tab !== 'notes'}
+        title="Ghi chú"
+        icon={<Icon icon={NotebookIcon} />}
+        isTab={!sideBySide}
+        isHidden={!sideBySide && tab !== 'notes'}
       >
         <Notes roomName={roomName} />
-      </div>
-    </Stack>
+      </Panel>
+    </Grid>
+  );
+}
+
+/**
+ * One panel: a card with a heading side by side, or a tab panel named by
+ * its title on a phone, where the tab shows the title.
+ */
+function Panel({
+  id,
+  title,
+  icon,
+  isTab,
+  isHidden,
+  children,
+}: {
+  readonly id: string;
+  readonly title: string;
+  readonly icon?: ReactNode;
+  readonly isTab: boolean;
+  readonly isHidden: boolean;
+  readonly children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <div
+      id={id}
+      role={isTab ? 'tabpanel' : undefined}
+      aria-label={isTab ? title : undefined}
+      hidden={isHidden}
+    >
+      <Card
+        variant={isTab ? 'transparent' : 'default'}
+        padding={isTab ? 0 : undefined}
+      >
+        <Stack
+          as="section"
+          aria-labelledby={isTab ? undefined : headingId}
+          gap={4}
+        >
+          {!isTab && (
+            <Heading level={2} id={headingId}>
+              <HStack as="span" gap={2} align="center">
+                {icon}
+                <span>{title}</span>
+              </HStack>
+            </Heading>
+          )}
+          {children}
+        </Stack>
+      </Card>
+    </div>
   );
 }
