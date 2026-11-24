@@ -75,3 +75,16 @@ export {
   type ReportStatus,
   type TurnIngest,
 } from './conversation-report.ts';
+export {
+  MAX_NOTES_PER_CONVERSATION,
+  NOTE_KINDS,
+  NOTE_LIMITS,
+  noteKindSchema,
+  noteListSchema,
+  noteSchema,
+  storedNoteSchema,
+  type Note,
+  type NoteKind,
+  type NoteList,
+  type StoredNote,
+} from './note.ts';
