@@ -3,8 +3,10 @@ import {
   type ConversationList,
   conversationDetailSchema,
   conversationListSchema,
+  noteListSchema,
   type ReportStatus,
   reportStatusSchema,
+  type StoredNote,
 } from '@open-lang/shared';
 import { z } from 'zod';
 import type { AuthorizedFetch } from '@/auth/auth-context';
@@ -57,6 +59,26 @@ export async function fetchConversation(
     throw failed(path, response);
   }
   return conversationDetailSchema.parse(await response.json());
+}
+
+/**
+ * The Notes the Agent wrote in one of the signed-in User's Conversations,
+ * oldest first. Throws ConversationNotFoundError when the backend answers
+ * `404`, as it does for another User's Conversation too.
+ */
+export async function fetchNotes(
+  authorizedFetch: AuthorizedFetch,
+  roomName: string,
+): Promise<StoredNote[]> {
+  const path = `${conversationPath(roomName)}/notes`;
+  const response = await authorizedFetch(path);
+  if (response.status === 404) {
+    throw new ConversationNotFoundError(roomName);
+  }
+  if (!response.ok) {
+    throw failed(path, response);
+  }
+  return noteListSchema.parse(await response.json()).notes;
 }
 
 /**

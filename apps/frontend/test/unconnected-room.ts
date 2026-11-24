@@ -1,6 +1,7 @@
 import {
   ConnectionState,
   DisconnectReason,
+  Encryption_Type,
   ParticipantEvent,
   ParticipantKind,
   RemoteParticipant,
@@ -8,6 +9,9 @@ import {
   RoomEvent,
   Track,
   TrackPublication,
+  type TextStreamHandler,
+  type TextStreamInfo,
+  type TextStreamReader,
 } from 'livekit-client';
 import { onTestFinished, vi } from 'vitest';
 
@@ -34,6 +38,31 @@ class LocalMicrophonePublication extends TrackPublication {
   readonly isLocal = true;
 }
 
+/** The topic LiveKit's agent framework sends the Conversation's words on. */
+const TRANSCRIPTION_TOPIC = 'lk.transcription';
+
+/**
+ * One text stream as the Room hands it to a handler: its details and its
+ * text in one chunk. livekit-client exports the reader as a type only, so
+ * the stub has just what a reader of the stream uses.
+ */
+function textStream(info: TextStreamInfo, text: string): TextStreamReader {
+  let read = false;
+  const stream = {
+    info,
+    [Symbol.asyncIterator]: () => ({
+      next: (): Promise<IteratorResult<string>> => {
+        const result: IteratorResult<string> = read
+          ? { done: true, value: undefined }
+          : { done: false, value: text };
+        read = true;
+        return Promise.resolve(result);
+      },
+    }),
+  };
+  return stream as unknown as TextStreamReader;
+}
+
 /** Gives the browser a microphone for the current test; jsdom has none. */
 function stubBrowserMicrophone(
   getUserMedia: MediaDevices['getUserMedia'],
@@ -52,7 +81,7 @@ function stubBrowserMicrophone(
  * LiveKit's own component tests. Connecting and disconnecting only change its
  * state, the microphone publishes nothing, and the test decides when the
  * Agent joins. Its name is that of the room of the last Room Token it
- * connected with, and sending text to the Agent is a spy.
+ * connected with.
  */
 export function createUnconnectedRoom() {
   const room = new Room();
@@ -64,18 +93,60 @@ export function createUnconnectedRoom() {
   // slow to answer the join.
   let connectionsHeld = false;
   vi.spyOn(room, 'prepareConnection').mockResolvedValue(undefined);
+  const join = (name: string) => {
+    roomName = name;
+    changeConnectionState(room, ConnectionState.Connected);
+    room.emit(RoomEvent.Connected);
+  };
   vi.spyOn(room, 'connect').mockImplementation(
     (serverUrl, participantToken) => {
       connections.push({ serverUrl, participantToken });
       if (connectionsHeld) {
         return new Promise<void>(() => undefined);
       }
-      roomName = roomNameOf(participantToken);
-      changeConnectionState(room, ConnectionState.Connected);
-      room.emit(RoomEvent.Connected);
+      join(roomNameOf(participantToken));
       return Promise.resolve();
     },
   );
+  // Whoever listens for text streams, by topic, as the Room keeps them.
+  const textStreamHandlers = new Map<string, TextStreamHandler>();
+  vi.spyOn(room, 'registerTextStreamHandler').mockImplementation(
+    (topic, handler) => {
+      textStreamHandlers.set(topic, handler);
+    },
+  );
+  vi.spyOn(room, 'unregisterTextStreamHandler').mockImplementation((topic) => {
+    textStreamHandlers.delete(topic);
+  });
+  let transcriptionStreams = 0;
+  /**
+   * A transcription text stream reaches the Room, as LiveKit's agent
+   * framework sends it: a stream per update, grouped by segment.
+   */
+  const transcribe = (
+    identity: string,
+    segment: string,
+    text: string,
+    final: boolean,
+  ) => {
+    const handler = textStreamHandlers.get(TRANSCRIPTION_TOPIC);
+    if (handler === undefined) {
+      throw new Error('Nothing listens for transcriptions');
+    }
+    transcriptionStreams += 1;
+    const info: TextStreamInfo = {
+      id: `stream-${String(transcriptionStreams)}`,
+      mimeType: 'text/plain',
+      topic: TRANSCRIPTION_TOPIC,
+      timestamp: transcriptionStreams,
+      encryptionType: Encryption_Type.NONE,
+      attributes: {
+        'lk.segment_id': segment,
+        'lk.transcription_final': String(final),
+      },
+    };
+    handler(textStream(info, text), { identity });
+  };
   const { localParticipant } = room;
   // A fake microphone: it publishes nothing, but the Room reports whether it
   // is on and tells listeners when it is muted or unmuted.
@@ -96,11 +167,6 @@ export function createUnconnectedRoom() {
     );
     return Promise.resolve(undefined);
   };
-  // The stream's details are not the point, so the stub sets only some.
-  const sendText = vi.spyOn(localParticipant, 'sendText').mockResolvedValue({
-    id: 'text-stream',
-    topic: 'lk.chat',
-  } as Awaited<ReturnType<typeof localParticipant.sendText>>);
   const askBrowserForMicrophone =
     localParticipant.setMicrophoneEnabled.bind(localParticipant);
   const setMicrophoneEnabled = vi
@@ -121,8 +187,14 @@ export function createUnconnectedRoom() {
 
   return {
     room,
-    /** The spy on `room.localParticipant.sendText`, which sends nothing. */
-    sendText,
+    /** The spy on `room.localParticipant.setMicrophoneEnabled`. */
+    setMicrophoneEnabled,
+    /** Whether the fake microphone is on. */
+    microphoneIsOn: (): boolean => microphoneOn,
+    /** The Room joins the room `name` at once, without a Room Token. */
+    joins(name = 'conversation-1'): void {
+      join(name);
+    },
     /** Every room this Room connected to, oldest first. */
     connections: (): readonly RoomConnection[] => connections,
     /** From now on, joining a room never completes. */
@@ -187,6 +259,20 @@ export function createUnconnectedRoom() {
       // A connected Room forwards its participants' events; this one isn't.
       agent.emit(ParticipantEvent.AttributesChanged, attributes);
       room.emit(RoomEvent.ParticipantAttributesChanged, attributes, agent);
+    },
+    /**
+     * The Agent sends what it says in `segment` so far, as its transcription.
+     * Its stream of a segment says not final, as the agent framework's does.
+     */
+    agentSays(segment: string, text: string): void {
+      transcribe(agent?.identity ?? 'agent', segment, text, false);
+    },
+    /**
+     * The Agent sends what it heard the Member say in `segment`, on the
+     * Member's behalf; `final` is false while the Member is still talking.
+     */
+    memberSays(segment: string, text: string, { final = true } = {}): void {
+      transcribe(localParticipant.identity, segment, text, final);
     },
   };
 }

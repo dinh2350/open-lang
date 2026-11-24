@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
 import { backend, roomTokensIssued } from './backend';
+import { withQueryClient } from './query-client';
 import { createUnconnectedRoom } from './unconnected-room';
 import {
   findStatusMessage,
@@ -33,11 +34,13 @@ describe('Conversation page failures', () => {
     const liveKit = createUnconnectedRoom();
     liveKit.denyMicrophoneAccess();
     render(
-      <ConversationPage
-        room={liveKit.room}
-        agentJoinTimeoutMilliseconds={15_000}
-        onEnded={vi.fn()}
-      />,
+      withQueryClient(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
+        />,
+      ),
     );
 
     await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
@@ -65,11 +68,13 @@ describe('Conversation page failures', () => {
       backend.use(http.post('/api/token', respond));
       const liveKit = createUnconnectedRoom();
       render(
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />,
+        withQueryClient(
+          <ConversationPage
+            room={liveKit.room}
+            agentJoinTimeoutMilliseconds={15_000}
+            onEnded={vi.fn()}
+          />,
+        ),
       );
 
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
@@ -86,11 +91,13 @@ describe('Conversation page failures', () => {
     const user = startFakeTimers();
     const liveKit = createUnconnectedRoom();
     render(
-      <ConversationPage
-        room={liveKit.room}
-        agentJoinTimeoutMilliseconds={15_000}
-        onEnded={vi.fn()}
-      />,
+      withQueryClient(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={15_000}
+          onEnded={vi.fn()}
+        />,
+      ),
     );
     await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
     await screen.findByText('Đang chờ Gia sư…');
@@ -109,11 +116,13 @@ describe('Conversation page failures', () => {
     const user = startFakeTimers();
     const liveKit = createUnconnectedRoom();
     render(
-      <ConversationPage
-        room={liveKit.room}
-        agentJoinTimeoutMilliseconds={5_000}
-        onEnded={vi.fn()}
-      />,
+      withQueryClient(
+        <ConversationPage
+          room={liveKit.room}
+          agentJoinTimeoutMilliseconds={5_000}
+          onEnded={vi.fn()}
+        />,
+      ),
     );
     await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
     await screen.findByText('Đang chờ Gia sư…');
@@ -128,11 +137,13 @@ describe('Conversation page failures', () => {
       const liveKit = createUnconnectedRoom();
       liveKit.denyMicrophoneAccess();
       render(
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />,
+        withQueryClient(
+          <ConversationPage
+            room={liveKit.room}
+            agentJoinTimeoutMilliseconds={15_000}
+            onEnded={vi.fn()}
+          />,
+        ),
       );
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await screen.findByRole('alert');
@@ -151,11 +162,13 @@ describe('Conversation page failures', () => {
       backend.use(http.post('/api/token', () => HttpResponse.error()));
       const liveKit = createUnconnectedRoom();
       render(
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />,
+        withQueryClient(
+          <ConversationPage
+            room={liveKit.room}
+            agentJoinTimeoutMilliseconds={15_000}
+            onEnded={vi.fn()}
+          />,
+        ),
       );
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await screen.findByRole('alert');
@@ -172,11 +185,13 @@ describe('Conversation page failures', () => {
       const user = startFakeTimers();
       const liveKit = createUnconnectedRoom();
       render(
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />,
+        withQueryClient(
+          <ConversationPage
+            room={liveKit.room}
+            agentJoinTimeoutMilliseconds={15_000}
+            onEnded={vi.fn()}
+          />,
+        ),
       );
       await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await act(() => vi.advanceTimersByTimeAsync(15_000));

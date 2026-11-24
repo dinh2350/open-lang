@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionState } from 'livekit-client';
 import { StrictMode } from 'react';
@@ -10,6 +10,9 @@ import {
   roomTokensIssued,
   TEST_LIVEKIT_URL,
 } from './backend';
+import { backendHasNotes, noteOf } from './conversations-backend';
+import { deviceIsAPhone } from './device-mode';
+import { withQueryClient } from './query-client';
 import { createUnconnectedRoom } from './unconnected-room';
 import { findStatusMessage, getStatusMessage } from './status-message';
 
@@ -19,11 +22,13 @@ function renderConversationPage(
   onEnded: (roomName: string) => void = vi.fn(),
 ) {
   render(
-    <ConversationPage
-      room={liveKit.room}
-      agentJoinTimeoutMilliseconds={15_000}
-      onEnded={onEnded}
-    />,
+    withQueryClient(
+      <ConversationPage
+        room={liveKit.room}
+        agentJoinTimeoutMilliseconds={15_000}
+        onEnded={onEnded}
+      />,
+    ),
   );
 }
 
@@ -99,7 +104,7 @@ describe('Conversation page', () => {
     expect(getStatusMessage()).toHaveTextContent('Gia sư đang nói…');
   });
 
-  it('there is no Chưa nghe kịp button', async () => {
+  it('has Tắt mic and Kết thúc and no Chưa nghe kịp', async () => {
     const liveKit = createUnconnectedRoom();
     renderConversationPage(liveKit);
     await pressStart();
@@ -108,10 +113,86 @@ describe('Conversation page', () => {
     });
     await findStatusMessage();
 
+    expect(
+      await screen.findByRole('button', { name: 'Tắt mic' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Kết thúc' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Chưa nghe kịp' })).toBeNull();
   });
 
-  it('the in-session screen shows the voice bars, the status and Kết thúc, and no conversation text', async () => {
+  it('ends the session while muted', async () => {
+    const liveKit = createUnconnectedRoom();
+    const onEnded = vi.fn();
+    renderConversationPage(liveKit, onEnded);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Tắt mic' }),
+    );
+    expect(
+      await screen.findByText('Mic đang tắt. Gia sư không nghe thấy bạn.'),
+    ).toBeVisible();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
+    expect(onEnded).toHaveBeenCalledExactlyOnceWith(liveKit.room.name);
+    expect(
+      await screen.findByRole('button', { name: 'Bắt đầu' }),
+    ).toBeVisible();
+  });
+
+  it('shows the transcript and the notes side by side on a wide screen', async () => {
+    backendHasNotes('conversation-1', [noteOf('phrase', 'That makes sense.')]);
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Cuộc nói' })).toBeVisible();
+    const notes = screen.getByRole('region', { name: 'Ghi chú' });
+    expect(await within(notes).findByText('That makes sense.')).toBeVisible();
+  });
+
+  it('shows tabs Cuộc nói and Ghi chú with the count at phone width', async () => {
+    deviceIsAPhone();
+    backendHasNotes('conversation-1', [
+      noteOf('phrase', 'That makes sense.'),
+      noteOf('word', 'run by'),
+    ]);
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+
+    const tabs = screen.getByRole('tablist');
+    expect(within(tabs).getAllByRole('tab')).toHaveLength(2);
+    const notesTab = within(tabs).getByRole('tab', { name: /^Ghi chú/ });
+    expect(await within(notesTab).findByText('2')).toBeVisible();
+    expect(within(tabs).getByRole('tab', { name: 'Cuộc nói' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
+    expect(screen.queryByText('That makes sense.')).not.toBeVisible();
+
+    await userEvent.click(notesTab);
+
+    expect(notesTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('That makes sense.')).toBeVisible();
+    expect(
+      screen.queryByText('Chữ của cuộc nói sẽ hiện ở đây.'),
+    ).not.toBeVisible();
+  });
+
+  it('the in-session screen shows the voice bars, the status, the controls and the two panels, and no Scenario or speed', async () => {
     const liveKit = createUnconnectedRoom();
     renderConversationPage(liveKit);
     expect(
@@ -126,13 +207,19 @@ describe('Conversation page', () => {
       screen.getByRole('img', { name: 'Giọng nói của Gia sư' }),
     ).toBeVisible();
     expect(
-      screen.getAllByRole('button').map((button) => button.textContent),
-    ).toEqual(['Kết thúc']);
-    expect(screen.queryByRole('log')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-    expect(screen.getByRole('main')).toHaveTextContent(
-      /^Gia sư đang nghe bạn nói\.Kết thúc$/,
-    );
+      (await screen.findAllByRole('button')).map(
+        (button) => button.textContent,
+      ),
+    ).toEqual(['Tắt mic', 'Kết thúc']);
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading').map((heading) => heading.textContent),
+    ).toEqual(['Cuộc nói', 'Ghi chú']);
+    await waitFor(() => {
+      expect(screen.getByRole('main')).toHaveTextContent(
+        /^Gia sư đang nghe bạn nói\.Tắt micKết thúcCuộc nóiChữ của cuộc nói sẽ hiện ở đây\.Ghi chúGia sư sẽ ghi những điều đáng nhớ ở đây\.$/,
+      );
+    });
   });
 
   it('Kết thúc leaves the room and calls onEnded with the room name', async () => {
@@ -204,11 +291,13 @@ describe('Conversation page', () => {
     const liveKit = createUnconnectedRoom();
     render(
       <StrictMode>
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />
+        {withQueryClient(
+          <ConversationPage
+            room={liveKit.room}
+            agentJoinTimeoutMilliseconds={15_000}
+            onEnded={vi.fn()}
+          />,
+        )}
       </StrictMode>,
     );
 

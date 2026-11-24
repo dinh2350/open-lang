@@ -13,3 +13,16 @@ export function deviceUses(mode: ThemeMode): void {
     removeEventListener: () => undefined,
   }));
 }
+
+/**
+ * Makes the window as narrow as a phone's, in light mode: no `min-width`
+ * query matches.
+ */
+export function deviceIsAPhone(): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+}
