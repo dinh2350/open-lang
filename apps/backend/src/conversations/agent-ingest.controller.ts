@@ -1,7 +1,9 @@
 import {
   missIngestSchema,
+  noteSchema,
   turnIngestSchema,
   type MissIngest,
+  type Note,
   type TurnIngest,
 } from '@open-lang/shared';
 import {
@@ -39,6 +41,20 @@ export class AgentIngestController {
     @Body({ schema: missIngestSchema }) miss: MissIngest,
   ): Promise<void> {
     return this.conversations.recordMiss(roomName, miss);
+  }
+
+  /**
+   * A Note the tutor wrote down. The Agent may send one again, and a
+   * Conversation keeps only its first `MAX_NOTES_PER_CONVERSATION` Notes:
+   * either way, nothing changes.
+   */
+  @Post(':roomName/notes')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  recordNote(
+    @Param('roomName') roomName: string,
+    @Body({ schema: noteSchema }) note: Note,
+  ): Promise<void> {
+    return this.conversations.recordNote(roomName, note);
   }
 
   /**

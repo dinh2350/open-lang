@@ -1,11 +1,14 @@
 import {
   conversationDetailSchema,
   conversationSummarySchema,
+  MAX_NOTES_PER_CONVERSATION,
   type ConversationChoice,
   type ConversationDetail,
   type ConversationSummary,
   type MissIngest,
+  type Note,
   type ReportStatus,
+  type StoredNote,
   type TurnIngest,
   type User,
 } from '@open-lang/shared';
@@ -54,13 +57,17 @@ export class ConversationsService {
 
   /**
    * The User's Conversations, newest first. A Conversation the Agent recorded
-   * no turn and no Miss for is not a practice session, so it is left out.
+   * no turn, no Miss and no Note for is not a practice session, so it is left out.
    */
   async list(user: User): Promise<ConversationSummary[]> {
     const conversations = await this.prisma.conversation.findMany({
       where: {
         userId: user.id,
-        OR: [{ turns: { some: {} } }, { misses: { some: {} } }],
+        OR: [
+          { turns: { some: {} } },
+          { misses: { some: {} } },
+          { notes: { some: {} } },
+        ],
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: summarySelect,
@@ -86,6 +93,33 @@ export class ConversationsService {
       ...summarize(conversation, report),
       report: report?.content ?? null,
     });
+  }
+
+  /** The Notes of the User's Conversation in the room, oldest first. `404` when it is not the User's. */
+  async listNotes(user: User, roomName: string): Promise<StoredNote[]> {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { roomName, userId: user.id },
+      select: {
+        notes: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true,
+            kind: true,
+            english: true,
+            said: true,
+            meaning: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (conversation === null) {
+      throw new NotFoundException('There is no Conversation in that room.');
+    }
+    return conversation.notes.map(({ createdAt, ...note }) => ({
+      ...note,
+      createdAt: createdAt.toISOString(),
+    }));
   }
 
   /**
@@ -138,6 +172,28 @@ export class ConversationsService {
         conversationId: await this.conversationIdOf(roomName),
         pressedAt: new Date(miss.pressedAt),
       },
+    });
+  }
+
+  /**
+   * Stores a Note of the Conversation in the room. The Agent may write a Note
+   * again, so one with the same kind and English changes nothing. Once the
+   * Conversation holds `MAX_NOTES_PER_CONVERSATION` Notes, the rest are ignored.
+   */
+  async recordNote(roomName: string, note: Note): Promise<void> {
+    const conversationId = await this.conversationIdOf(roomName);
+    const stored = await this.prisma.note.count({ where: { conversationId } });
+    if (stored >= MAX_NOTES_PER_CONVERSATION) return;
+    await this.prisma.note.upsert({
+      where: {
+        conversationId_kind_english: {
+          conversationId,
+          kind: note.kind,
+          english: note.english,
+        },
+      },
+      create: { conversationId, ...note },
+      update: {},
     });
   }
 

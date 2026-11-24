@@ -84,6 +84,7 @@ model Conversation {
   endedAt    DateTime?
   turns      Turn[]
   misses     Miss[]
+  notes      Note[]
   report     Report?
 
   @@index([userId, createdAt])
@@ -112,6 +113,34 @@ model Miss {
   pressedAt      DateTime
 
   @@index([conversationId])
+}
+
+/// What a Note is for: a good sentence, a word or expression, the User's wrong
+/// sentence with the fix, or a sentence the User did not hear.
+enum NoteKind {
+  phrase
+  word
+  correction
+  missed
+}
+
+/// One thing the tutor wrote down for the User during a Conversation.
+model Note {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  kind           NoteKind
+  /// The English to learn. For a correction, the fixed sentence.
+  english        String
+  /// What the User said. Only a correction has it.
+  said           String?
+  /// What it means or why, in Vietnamese.
+  meaning        String
+  createdAt      DateTime     @default(now())
+
+  // The tutor may write a Note again; the same kind and English is one Note.
+  @@unique([conversationId, kind, english])
+  @@index([conversationId, createdAt])
 }
 
 /// The feedback on a finished Conversation.

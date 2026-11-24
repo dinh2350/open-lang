@@ -1,4 +1,8 @@
-import { conversationListSchema, type AuthResponse } from '@open-lang/shared';
+import {
+  conversationListSchema,
+  type AuthResponse,
+  type Note,
+} from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -8,8 +12,11 @@ import {
   at,
   endConversation,
   getConversation,
+  getNotes,
   ingestMiss,
+  ingestNote,
   ingestTurn,
+  listNotes,
   readConversation,
   requestReport,
   startConversation,
@@ -122,6 +129,73 @@ describe('The Conversation API', () => {
     expect(await listedRooms()).toEqual(['room-miss']);
   });
 
+  it('a Conversation with only notes appears in the list', async () => {
+    await startConversation(app, ada.user, 'room-notes');
+    await ingestNote(app, 'room-notes', {
+      kind: 'word',
+      english: 'on track',
+      meaning: 'đúng tiến độ',
+      said: null,
+    });
+
+    expect(await listedRooms()).toEqual(['room-notes']);
+  });
+
+  it('lists notes oldest first', async () => {
+    await startConversation(app, ada.user, 'room-notes');
+    const notes: Note[] = [
+      {
+        kind: 'phrase',
+        english: 'Let me circle back to that.',
+        meaning: 'Để tôi quay lại việc đó sau.',
+        said: null,
+      },
+      {
+        kind: 'correction',
+        english: 'I finished the report yesterday.',
+        meaning: 'Chuyện đã xong dùng thì quá khứ.',
+        said: 'I finish the report yesterday.',
+      },
+      {
+        kind: 'missed',
+        english: 'Could you walk me through it?',
+        meaning: 'Bạn có thể hướng dẫn tôi từng bước không?',
+        said: null,
+      },
+    ];
+    for (const note of notes) {
+      await ingestNote(app, 'room-notes', note);
+    }
+
+    const stored = await listNotes(app, ada.authToken, 'room-notes');
+
+    expect(stored).toMatchObject(notes);
+    const times = stored.map(({ createdAt }) => createdAt);
+    expect(times).toEqual([...times].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it('lists no notes for a Conversation that has none', async () => {
+    await startConversation(app, ada.user, 'room-empty');
+
+    expect(await listNotes(app, ada.authToken, 'room-empty')).toEqual([]);
+  });
+
+  it("answers 404 for a room that is another Member's", async () => {
+    await startConversation(app, grace.user, 'room-grace');
+    await ingestNote(app, 'room-grace', {
+      kind: 'word',
+      english: 'on track',
+      meaning: 'đúng tiến độ',
+      said: null,
+    });
+
+    const response = await getNotes(app, ada.authToken, 'room-grace');
+    const unknown = await getNotes(app, ada.authToken, 'no-such-room');
+
+    expect(response.status).toBe(404);
+    expect(unknown.status).toBe(404);
+  });
+
   it('lists a ready Report whose stored content breaks the contract as failed', async () => {
     await startConversation(app, ada.user, 'room-broken');
     await ingestMiss(app, 'room-broken', at(1));
@@ -187,9 +261,10 @@ describe('The Conversation API', () => {
         request(app.getHttpServer()).get('/api/conversations'),
         request(app.getHttpServer()).get('/api/conversations/room-ada'),
         request(app.getHttpServer()).post('/api/conversations/room-ada/report'),
+        request(app.getHttpServer()).get('/api/conversations/room-ada/notes'),
       ])
     ).map(({ status }) => status);
 
-    expect(statuses).toEqual([401, 401, 401]);
+    expect(statuses).toEqual([401, 401, 401, 401]);
   });
 });

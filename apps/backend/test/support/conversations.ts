@@ -1,7 +1,10 @@
 import {
   conversationDetailSchema,
+  noteListSchema,
   type ConversationDetail,
+  type Note,
   type ScenarioId,
+  type StoredNote,
   type User,
 } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
@@ -67,6 +70,23 @@ export async function ingestMiss(
   }
 }
 
+/** The Agent writes a Note into the room's Conversation. */
+export async function ingestNote(
+  app: INestApplication<App>,
+  roomName: string,
+  note: Note,
+): Promise<void> {
+  const response = await request(app.getHttpServer())
+    .post(`/api/agent/conversations/${roomName}/notes`)
+    .auth(testEnv.AGENT_API_KEY, { type: 'bearer' })
+    .send(note);
+  if (response.status !== 204) {
+    throw new Error(
+      `Posting a note failed with status ${String(response.status)}`,
+    );
+  }
+}
+
 /** The Agent reports that the room's Conversation has ended: it sent all it had. */
 export async function endConversation(
   app: INestApplication<App>,
@@ -102,6 +122,32 @@ export function getConversation(
   return request(app.getHttpServer())
     .get(`/api/conversations/${roomName}`)
     .auth(authToken, { type: 'bearer' });
+}
+
+/** The User reads the Notes of the room's Conversation. */
+export function getNotes(
+  app: INestApplication<App>,
+  authToken: string,
+  roomName: string,
+) {
+  return request(app.getHttpServer())
+    .get(`/api/conversations/${roomName}/notes`)
+    .auth(authToken, { type: 'bearer' });
+}
+
+/** Reads the Notes of the room's Conversation, oldest first, and checks them against the contract. */
+export async function listNotes(
+  app: INestApplication<App>,
+  authToken: string,
+  roomName: string,
+): Promise<StoredNote[]> {
+  const response = await getNotes(app, authToken, roomName);
+  if (response.status !== 200) {
+    throw new Error(
+      `Reading the notes failed with status ${String(response.status)}`,
+    );
+  }
+  return noteListSchema.parse(response.body).notes;
 }
 
 /** Reads the room's Conversation and checks it against the contract. */
