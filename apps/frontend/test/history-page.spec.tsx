@@ -42,7 +42,7 @@ describe('History page', () => {
     renderApp('/conversations');
 
     expect(
-      await screen.findByRole('heading', { name: 'Lịch sử luyện nói' }),
+      await screen.findByRole('heading', { name: 'Lịch sử học' }),
     ).toBeVisible();
     const rows = within(await screen.findByRole('table')).getAllByRole('row');
     expect(rows.map((row) => row.textContent)).toEqual([
@@ -64,12 +64,12 @@ describe('History page', () => {
 
     expect(
       await screen.findByRole('table', {
-        name: 'Các buổi luyện của bạn, mới nhất trước.',
+        name: 'Các buổi học của bạn, mới nhất trước.',
       }),
     ).toBeVisible();
     expect(
       screen.getByRole('group', {
-        name: 'Các buổi luyện của bạn, mới nhất trước.',
+        name: 'Các buổi học của bạn, mới nhất trước.',
       }),
     ).toBeVisible();
   });
@@ -79,9 +79,7 @@ describe('History page', () => {
 
     renderApp('/conversations');
 
-    expect(
-      await screen.findByText('Bạn chưa có buổi luyện nào.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Bạn chưa có buổi học nào.')).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 

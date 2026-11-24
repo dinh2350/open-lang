@@ -26,9 +26,9 @@ interface ConversationPageProps {
 const failureMessages: Record<ConversationFailure, string> = {
   'microphone-denied':
     'Agent không nghe được bạn vì quyền dùng micro đang bị chặn. Hãy cho phép micro cho trang này trong cài đặt trình duyệt, rồi bấm Bắt đầu.',
-  'start-failed': 'Không bắt đầu được buổi luyện. Bấm Bắt đầu để thử lại.',
+  'start-failed': 'Không bắt đầu được buổi học. Bấm Bắt đầu để thử lại.',
   'agent-unavailable':
-    'Agent không sẵn sàng nên buổi luyện đã kết thúc. Bấm Bắt đầu để thử lại.',
+    'Agent không sẵn sàng nên buổi học đã kết thúc. Bấm Bắt đầu để thử lại.',
 };
 
 /**

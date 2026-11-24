@@ -51,7 +51,7 @@ export function HistoryPage() {
       maxWidth="56rem"
       style={{ marginInline: 'auto' }}
     >
-      <Heading level={1}>Lịch sử luyện nói</Heading>
+      <Heading level={1}>Lịch sử học</Heading>
       {conversations.isPending && (
         <div role="status">
           <Text as="p" color="secondary">
@@ -67,7 +67,7 @@ export function HistoryPage() {
         />
       )}
       {conversations.data?.conversations.length === 0 && (
-        <EmptyState title="Bạn chưa có buổi luyện nào." headingLevel={2} />
+        <EmptyState title="Bạn chưa có buổi học nào." headingLevel={2} />
       )}
       {conversations.data !== undefined &&
         conversations.data.conversations.length > 0 && (
@@ -84,7 +84,7 @@ export function HistoryPage() {
               }}
             >
               <Text type="supporting" color="secondary">
-                Các buổi luyện của bạn, mới nhất trước.
+                Các buổi học của bạn, mới nhất trước.
               </Text>
             </caption>
             <TableHeader>

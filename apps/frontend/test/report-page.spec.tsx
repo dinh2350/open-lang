@@ -306,7 +306,7 @@ describe('Report page', () => {
     renderApp('/conversations/someone-elses-room');
 
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
     expect(reportRequestsReceived()).toEqual([]);
   });
@@ -338,9 +338,10 @@ describe('Report page', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Chính' });
 
-    expect(
-      within(nav).getByRole('link', { name: 'Luyện nói' }),
-    ).toHaveAttribute('href', '/');
+    expect(within(nav).getByRole('link', { name: 'Học' })).toHaveAttribute(
+      'href',
+      '/',
+    );
     expect(within(nav).getByRole('link', { name: 'Lịch sử' })).toHaveAttribute(
       'href',
       '/conversations',
@@ -348,7 +349,7 @@ describe('Report page', () => {
     await userEvent.click(within(nav).getByRole('link', { name: 'Lịch sử' }));
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: 'Lịch sử luyện nói' }),
+        screen.getByRole('heading', { name: 'Lịch sử học' }),
       ).toBeVisible();
     });
     expect(within(nav).getByRole('link', { name: 'Lịch sử' })).toHaveAttribute(

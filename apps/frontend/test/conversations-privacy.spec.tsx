@@ -64,9 +64,7 @@ describe('Conversations of another User', () => {
     } finally {
       release();
     }
-    expect(
-      await screen.findByText('Bạn chưa có buổi luyện nào.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Bạn chưa có buổi học nào.')).toBeVisible();
   });
 
   it("does not show the previous User's Report to the next User on the same tab", async () => {
@@ -102,7 +100,7 @@ describe('Conversations of another User', () => {
       release();
     }
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
   });
 
@@ -129,7 +127,7 @@ describe('Conversations of another User', () => {
     await userEvent.click(link);
 
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
     expect(screen.queryByText(ADAS_SENTENCE)).not.toBeInTheDocument();
   });

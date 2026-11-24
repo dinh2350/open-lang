@@ -18,7 +18,7 @@ export function AppNav(): ReactElement | null {
       gap={4}
     >
       <NavLink href="/" end>
-        Luyện nói
+        Học
       </NavLink>
       <NavLink href="/conversations" end={false}>
         Lịch sử

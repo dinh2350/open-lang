@@ -75,7 +75,7 @@ describe('Conversation page failures', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Không bắt đầu được buổi luyện',
+        'Không bắt đầu được buổi học',
       );
       expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeVisible();
       expect(liveKit.connections()).toEqual([]);

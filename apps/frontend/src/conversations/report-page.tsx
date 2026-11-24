@@ -125,7 +125,7 @@ function ReportContent({
       <Banner
         status="error"
         role="alert"
-        title="Không tìm thấy buổi luyện này."
+        title="Không tìm thấy buổi học này."
       />
     );
   }
