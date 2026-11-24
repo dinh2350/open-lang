@@ -315,16 +315,32 @@ describe('Agent dispatched into a Conversation room', () => {
     }
   });
 
-  it('the job keeps the SDK default text input and records no Miss', async () => {
+  it('typed listening-help text reaches the job as a User message and records no Miss', async () => {
     const start = spyOnSessionStart();
     try {
       const job = await dispatchToRoom(
         conversationAgent,
         'conversation-help-text',
       );
+      const session = job.session();
+      if (session === undefined) throw new Error('The job started no session.');
+      // What RoomIO calls for a typed message: the job's own handler, if it
+      // registered one, else the SDK's default.
+      const textInputCallback =
+        start.mock.calls[0]?.[0].inputOptions?.textInputCallback ??
+        voice.DEFAULT_TEXT_INPUT_CALLBACK;
+
+      await textInputCallback(session, { text: 'listening-help' });
+      await vi.waitFor(() => {
+        expect(
+          session.history.items
+            .filter((item) => item instanceof llm.ChatMessage)
+            .filter(({ role }) => role === 'user')
+            .map(({ textContent }) => textContent),
+        ).toEqual(['listening-help']);
+      });
       await job.end();
 
-      expect(start.mock.calls[0]?.[0].inputOptions).toBeUndefined();
       expect(
         backend.requests.filter(({ url }) => url?.endsWith('/misses')),
       ).toEqual([]);
@@ -383,19 +399,23 @@ describe('The tutor, run with voice.testing', () => {
     try {
       await startConversation(session);
 
-      // Typed text reaches the session as the User's own message.
-      const result = await session.run({ userInput: 'listening-help' }).wait();
+      // The SDK's default text input handler, which the job keeps: the text
+      // is answered as the User's own message.
+      await voice.DEFAULT_TEXT_INPUT_CALLBACK(session, {
+        text: 'listening-help',
+      });
 
-      expect(
-        result.expect.nextEvent().isMessage({ role: 'assistant' }).event().item
-          .textContent,
-      ).toBe('Bạn cần mình giúp gì?');
-      expect(
-        session.history.items
-          .filter((item) => item instanceof llm.ChatMessage)
-          .filter(({ role }) => role === 'user')
-          .map(({ textContent }) => textContent),
-      ).toEqual(['listening-help']);
+      await vi.waitFor(() => {
+        expect(
+          session.history.items
+            .filter((item) => item instanceof llm.ChatMessage)
+            .filter(({ role }) => role !== 'system')
+            .map(({ role, textContent }) => [role, textContent]),
+        ).toEqual([
+          ['user', 'listening-help'],
+          ['assistant', 'Bạn cần mình giúp gì?'],
+        ]);
+      });
     } finally {
       await session.close();
     }
