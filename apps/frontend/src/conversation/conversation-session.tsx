@@ -1,17 +1,10 @@
-import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
-import { Stack } from '@astryxdesign/core/Stack';
 import {
   RoomAudioRenderer,
   SessionProvider,
   useAgent,
   useSession,
 } from '@livekit/components-react';
-import {
-  type ConversationChoice,
-  SCENARIOS,
-  SPEED_LABELS,
-} from '@open-lang/shared';
 import {
   ConnectionState,
   MediaDeviceFailure,
@@ -21,7 +14,6 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useAuth } from '@/auth/auth-context';
 import { AgentStatus } from './agent-status';
-import { ListeningHelpButton } from './listening-help-button';
 import { createRoomTokenSource } from './room-token-source';
 
 /** Why a Conversation could not go on. */
@@ -31,8 +23,6 @@ export type ConversationFailure =
 interface ConversationSessionProps {
   /** The LiveKit Room the Conversation connects through. */
   readonly room: Room;
-  /** What the Member chose: the Scenario the Agent plays, and its speed. */
-  readonly choice: ConversationChoice;
   /**
    * How long the Conversation waits for the Agent to join and start
    * listening before it fails with `agent-unavailable`.
@@ -66,20 +56,18 @@ function startFailure(error: unknown): ConversationFailure {
  * One Conversation, from the moment the Member pressed Bắt đầu: it mounts
  * then, so the session's own Room Token request, which `useSession` makes on
  * mount, is the Conversation's Room Token, and it starts at once. Mount one
- * per Conversation, keyed by it. The quiet screen shows only the Scenario and
- * speed, how the persona is doing, the voice bars, "Chưa nghe kịp" and
- * "Kết thúc".
+ * per Conversation, keyed by it. The quiet screen shows only the voice bars,
+ * how the tutor is doing and "Kết thúc".
  */
 export function ConversationSession({
   room,
-  choice,
   agentJoinTimeoutMilliseconds,
   onFailed,
   onEnded,
 }: ConversationSessionProps) {
   const { authorizedFetch } = useAuth();
   const [roomTokenSource] = useState(() =>
-    createRoomTokenSource(authorizedFetch, choice),
+    createRoomTokenSource(authorizedFetch),
   );
   const session = useSession(roomTokenSource, {
     room,
@@ -158,25 +146,16 @@ export function ConversationSession({
     };
   }, [room]);
 
-  const scenario = SCENARIOS.find(({ id }) => id === choice.scenarioId);
-  if (failure !== null || scenario === undefined) {
+  if (failure !== null) {
     return null;
   }
   return (
     <SessionProvider session={session}>
-      <Badge
-        label={`${scenario.title} · tốc độ ${SPEED_LABELS[choice.speed].toLowerCase()}`}
-        variant="blue"
-      />
       <AgentStatus
-        personaName={scenario.personaName}
         agentState={agent.state}
         agentVoice={agent.microphoneTrack}
       />
-      <Stack direction="horizontal" gap={3}>
-        <ListeningHelpButton />
-        <Button label="Kết thúc" onClick={() => void finish()} />
-      </Stack>
+      <Button label="Kết thúc" onClick={() => void finish()} />
       <RoomAudioRenderer />
     </SessionProvider>
   );

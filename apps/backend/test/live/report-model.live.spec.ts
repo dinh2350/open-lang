@@ -6,7 +6,6 @@ import { createReportModel } from '../../src/reports/create-report-model.js';
 import type { ReportInput } from '../../src/reports/report-model.js';
 
 const input: ReportInput = {
-  scenarioId: 'daily-standup',
   transcript: [
     { role: 'agent', text: 'Morning! Any blockers I should loop in on?' },
     { role: 'user', text: 'No blocker. I finish the report yesterday.' },

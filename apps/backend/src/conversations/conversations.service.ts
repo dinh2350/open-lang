@@ -2,7 +2,6 @@ import {
   conversationDetailSchema,
   conversationSummarySchema,
   MAX_NOTES_PER_CONVERSATION,
-  type ConversationChoice,
   type ConversationDetail,
   type ConversationSummary,
   type MissIngest,
@@ -24,8 +23,6 @@ import {
 /** What a Conversation's summary is made of. */
 const summarySelect = {
   roomName: true,
-  scenarioId: true,
-  speed: true,
   createdAt: true,
   turns: { select: { role: true, startedAt: true, endedAt: true } },
   // The content too: a ready Report whose content breaks the contract is shown as failed.
@@ -40,18 +37,9 @@ export class ConversationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Records a new Conversation of the User, in the room the Room Token names. */
-  async create(
-    user: User,
-    roomName: string,
-    choice: ConversationChoice,
-  ): Promise<void> {
+  async create(user: User, roomName: string): Promise<void> {
     await this.prisma.conversation.create({
-      data: {
-        userId: user.id,
-        roomName,
-        scenarioId: choice.scenarioId,
-        speed: choice.speed,
-      },
+      data: { userId: user.id, roomName },
     });
   }
 
@@ -229,8 +217,6 @@ export class ConversationsService {
 function summarize(
   conversation: {
     readonly roomName: string;
-    readonly scenarioId: string;
-    readonly speed: number;
     readonly createdAt: Date;
     readonly turns: readonly {
       role: 'agent' | 'user';
@@ -242,8 +228,6 @@ function summarize(
 ): Record<string, unknown> {
   return {
     roomName: conversation.roomName,
-    scenarioId: conversation.scenarioId,
-    speed: conversation.speed,
     createdAt: conversation.createdAt.toISOString(),
     durationSeconds: conversationDurationSeconds(conversation.turns),
     reportStatus: report?.status ?? null,

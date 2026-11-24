@@ -94,9 +94,9 @@ describe('Report page', () => {
     expect(reportRequestsReceived()).toEqual([]);
   });
 
-  it('titles the Report with the Scenario, duration, date and speed, above three number cards', async () => {
+  it('titles the Report with the duration and the date only, above three number cards', async () => {
     openReport(
-      { reportStatus: 'ready', scenarioId: 'one-on-one', speed: 0.7 },
+      { reportStatus: 'ready' },
       {
         report: reportOf({
           listeningMisses: [
@@ -120,9 +120,7 @@ describe('Report page', () => {
 
     const title = await screen.findByRole('heading', { level: 1 });
 
-    expect(title).toHaveTextContent(
-      'Họp 1:1 với quản lý · 13 phút · 23 thg 11, 2026 · Chậm',
-    );
+    expect(title).toHaveTextContent(/^13 phút · 23 thg 11, 2026$/);
     const cards = screen.getByRole('group', { name: 'Tóm tắt' });
     expect(cards).toHaveTextContent('2câu nghe sót1lỗi ngữ pháp96từ/phút');
   });

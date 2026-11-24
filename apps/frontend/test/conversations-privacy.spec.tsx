@@ -44,7 +44,7 @@ async function signOutAndSignInAs(email: string): Promise<void> {
   await screen.findByRole('heading', { name: 'Sign in' });
   backendHasUser(email, PASSWORD);
   await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+  await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
 }
 
 describe('Conversations of another User', () => {

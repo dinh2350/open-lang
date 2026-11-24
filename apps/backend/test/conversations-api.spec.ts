@@ -39,10 +39,10 @@ describe('The Conversation API', () => {
     await stopTestApp(app);
   });
 
-  it("lists only the signed-in User's Conversations, newest first, with Scenario, speed, duration and report status", async () => {
-    await startConversation(app, ada.user, 'room-old', 'daily-standup');
-    await startConversation(app, ada.user, 'room-new', 'one-on-one');
-    await startConversation(app, grace.user, 'room-grace', 'client-delay-call');
+  it('lists Conversations without scenarioId or speed keys', async () => {
+    await startConversation(app, ada.user, 'room-old');
+    await startConversation(app, ada.user, 'room-new');
+    await startConversation(app, grace.user, 'room-grace');
     const prisma = app.get(PrismaService);
     await prisma.conversation.update({
       where: { roomName: 'room-old' },
@@ -73,24 +73,23 @@ describe('The Conversation API', () => {
       .auth(ada.authToken, { type: 'bearer' });
 
     expect(response.status).toBe(200);
-    expect(conversationListSchema.parse(response.body).conversations).toEqual([
-      {
-        roomName: 'room-new',
-        scenarioId: 'one-on-one',
-        speed: 0.85,
-        createdAt: '2026-11-23T09:00:00.000Z',
-        durationSeconds: null,
-        reportStatus: null,
-      },
-      {
-        roomName: 'room-old',
-        scenarioId: 'daily-standup',
-        speed: 0.85,
-        createdAt: '2026-11-22T09:00:00.000Z',
-        durationSeconds: 4.5,
-        reportStatus: 'ready',
-      },
-    ]);
+    // The raw body, not the parsed one: parsing would strip extra keys.
+    expect(response.body).toEqual({
+      conversations: [
+        {
+          roomName: 'room-new',
+          createdAt: '2026-11-23T09:00:00.000Z',
+          durationSeconds: null,
+          reportStatus: null,
+        },
+        {
+          roomName: 'room-old',
+          createdAt: '2026-11-22T09:00:00.000Z',
+          durationSeconds: 4.5,
+          reportStatus: 'ready',
+        },
+      ],
+    });
   });
 
   /** The room names the User's list shows. */

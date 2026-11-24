@@ -3,7 +3,6 @@ import {
   noteListSchema,
   type ConversationDetail,
   type Note,
-  type ScenarioId,
   type StoredNote,
   type User,
 } from '@open-lang/shared';
@@ -22,12 +21,8 @@ export function startConversation(
   app: INestApplication<App>,
   user: User,
   roomName: string,
-  scenarioId: ScenarioId = 'daily-standup',
 ): Promise<void> {
-  return app.get(ConversationsService).create(user, roomName, {
-    scenarioId,
-    speed: 0.85,
-  });
+  return app.get(ConversationsService).create(user, roomName);
 }
 
 /** The Agent reports a turn of the room's Conversation. */

@@ -20,7 +20,6 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-1', {
         createdAt: '2026-11-21T12:00:00.000Z',
-        scenarioId: 'one-on-one',
         durationSeconds: 300,
         reportStatus: 'ready',
       }),
@@ -28,7 +27,6 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-2', {
         createdAt: '2026-11-23T12:00:00.000Z',
-        scenarioId: 'daily-standup',
         durationSeconds: 754,
         reportStatus: 'generating',
       }),
@@ -36,7 +34,6 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-3', {
         createdAt: '2026-11-22T12:00:00.000Z',
-        scenarioId: 'client-delay-call',
         durationSeconds: null,
         reportStatus: null,
       }),
@@ -49,10 +46,10 @@ describe('History page', () => {
     ).toBeVisible();
     const rows = within(await screen.findByRole('table')).getAllByRole('row');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'NgàyTình huốngThời lượngBáo cáo',
-      '23 thg 11, 2026Họp standup13 phútĐang tạo',
-      '22 thg 11, 2026Gọi khách trễ hạn—Chưa có',
-      '21 thg 11, 2026Họp 1:1 với quản lý5 phútSẵn sàng',
+      'NgàyThời lượngBáo cáo',
+      '23 thg 11, 202613 phútĐang tạo',
+      '22 thg 11, 2026—Chưa có',
+      '21 thg 11, 20265 phútSẵn sàng',
     ]);
     expect(conversationRequestAuthorizations()).toEqual([
       expect.stringMatching(/^Bearer /),
@@ -121,7 +118,7 @@ describe('History page', () => {
       },
     );
     renderApp('/conversations');
-    const row = (await screen.findByText('Họp standup')).closest('tr');
+    const row = (await screen.findByText('Sẵn sàng')).closest('tr');
     expect(row).not.toBeNull();
 
     await userEvent.click(
@@ -129,7 +126,7 @@ describe('History page', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /Họp standup/ }),
+      await screen.findByRole('heading', { name: /13 phút/ }),
     ).toBeVisible();
     expect(await screen.findByText('I went')).toBeVisible();
   });

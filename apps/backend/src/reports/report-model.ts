@@ -1,13 +1,8 @@
-import {
-  grammarIssueSchema,
-  type GrammarIssue,
-  type ScenarioId,
-} from '@open-lang/shared';
+import { grammarIssueSchema, type GrammarIssue } from '@open-lang/shared';
 import { z } from 'zod';
 import type { Role } from './resolve-misses.js';
 
 export interface ReportInput {
-  readonly scenarioId: ScenarioId;
   readonly transcript: readonly { role: Role; text: string }[];
   readonly missedTurnIndexes: readonly number[];
 }

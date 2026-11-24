@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { scenarioIdSchema, speedSchema } from './scenario.ts';
 
 /** Where a Conversation's Report is: being written, ready to read, or failed. */
 export const reportStatusSchema = z.enum(['generating', 'ready', 'failed']);
@@ -50,8 +49,6 @@ export type ConversationReport = z.infer<typeof conversationReportSchema>;
 /** One Conversation in the Member's history list. */
 export const conversationSummarySchema = z.object({
   roomName: z.string().min(1),
-  scenarioId: scenarioIdSchema,
-  speed: speedSchema,
   createdAt: z.iso.datetime(),
   durationSeconds: z.number().nullable(),
   reportStatus: reportStatusSchema.nullable(),

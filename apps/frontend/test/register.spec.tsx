@@ -22,7 +22,7 @@ describe('Registering', () => {
     await submitCredentials('ada@example.test', PASSWORD, 'Register');
 
     expect(
-      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
+      await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
     expect(registeredEmails()).toEqual(['ada@example.test']);
 

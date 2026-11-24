@@ -3,7 +3,6 @@ import { buildReportPrompt } from '../src/reports/report-prompt.js';
 import type { ReportInput } from '../src/reports/report-model.js';
 
 const input: ReportInput = {
-  scenarioId: 'daily-standup',
   transcript: [
     { role: 'agent', text: 'Any blockers on your end?' },
     { role: 'user', text: 'No blocker, I finish the report yesterday.' },
@@ -24,6 +23,12 @@ describe('buildReportPrompt', () => {
     expect(user).toContain("[2] Agent: Let's circle back after lunch.");
     expect(user).toContain('[3] User: Okay, see you.');
     expect(user).toContain('Missed turn indexes: 0, 2');
+  });
+
+  it('names no Scenario', () => {
+    const { user } = buildReportPrompt(input);
+
+    expect(user).not.toContain('Scenario:');
   });
 
   it('says there are no missed turns when the list is empty', () => {

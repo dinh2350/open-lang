@@ -59,7 +59,7 @@ describe('The mode toggle', () => {
     );
     backendHasUser('ada@example.test', PASSWORD);
     await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
-    await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+    await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
     expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeChecked();
   });
 

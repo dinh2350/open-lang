@@ -4,11 +4,7 @@ import { ConnectionState } from 'livekit-client';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
-import {
-  backend,
-  roomTokenRequestParticipantMetadata,
-  roomTokensIssued,
-} from './backend';
+import { backend, roomTokensIssued } from './backend';
 import { createUnconnectedRoom } from './unconnected-room';
 import {
   findStatusMessage,
@@ -97,10 +93,10 @@ describe('Conversation page failures', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
-    await screen.findByText('Đang chờ Sam…');
+    await screen.findByText('Đang chờ Gia sư…');
 
     await act(() => vi.advanceTimersByTimeAsync(14_000));
-    expect(getStatusMessage()).toHaveTextContent('Đang chờ Sam');
+    expect(getStatusMessage()).toHaveTextContent('Đang chờ Gia sư');
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(screen.getByRole('alert')).toHaveTextContent('Agent không sẵn sàng');
@@ -120,7 +116,7 @@ describe('Conversation page failures', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
-    await screen.findByText('Đang chờ Sam…');
+    await screen.findByText('Đang chờ Gia sư…');
 
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
@@ -144,41 +140,11 @@ describe('Conversation page failures', () => {
       liveKit.allowMicrophoneAccess();
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
-      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Sam');
+      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Gia sư');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));
       expect(freshAttempt).not.toBe(failedAttempt);
-    });
-
-    it('starts again with the Scenario and speed the Member chose, which the picker still shows', async () => {
-      const liveKit = createUnconnectedRoom();
-      liveKit.denyMicrophoneAccess();
-      render(
-        <ConversationPage
-          room={liveKit.room}
-          agentJoinTimeoutMilliseconds={15_000}
-          onEnded={vi.fn()}
-        />,
-      );
-      await userEvent.click(
-        screen.getByRole('radio', { name: 'Gọi khách trễ hạn' }),
-      );
-      await userEvent.click(screen.getByRole('radio', { name: 'Chậm' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
-      await screen.findByRole('alert');
-      expect(
-        screen.getByRole('radio', { name: 'Gọi khách trễ hạn' }),
-      ).toBeChecked();
-      expect(screen.getByRole('radio', { name: 'Chậm' })).toBeChecked();
-
-      liveKit.allowMicrophoneAccess();
-      await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
-
-      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Jordan…');
-      expect(
-        JSON.parse(roomTokenRequestParticipantMetadata().at(-1) ?? 'null'),
-      ).toEqual({ scenarioId: 'client-delay-call', speed: 0.7 });
     });
 
     it('starts a fresh attempt with a new Room Token once the backend issues Room Tokens again', async () => {
@@ -197,7 +163,7 @@ describe('Conversation page failures', () => {
       backend.resetHandlers();
       await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
-      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Sam');
+      expect(await findStatusMessage()).toHaveTextContent('Đang chờ Gia sư');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(roomTokensUsed(liveKit)).toEqual([roomTokensIssued().at(-1)]);
     });
@@ -219,12 +185,12 @@ describe('Conversation page failures', () => {
       );
 
       await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
-      await screen.findByText('Đang chờ Sam…');
+      await screen.findByText('Đang chờ Gia sư…');
       act(() => {
         liveKit.agentJoins();
       });
 
-      expect(getStatusMessage()).toHaveTextContent('Sam đang nghe bạn nói.');
+      expect(getStatusMessage()).toHaveTextContent('Gia sư đang nghe bạn nói.');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       const [failedAttempt, freshAttempt] = roomTokensUsed(liveKit);
       expect(freshAttempt).toBe(roomTokensIssued().at(-1));

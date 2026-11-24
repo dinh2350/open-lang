@@ -39,8 +39,6 @@ export function summaryOf(
 ): ConversationSummary {
   return {
     roomName,
-    scenarioId: 'daily-standup',
-    speed: 0.85,
     createdAt: '2026-11-23T12:00:00.000Z',
     durationSeconds: 754,
     reportStatus: null,

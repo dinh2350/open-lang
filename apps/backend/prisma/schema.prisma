@@ -20,11 +20,11 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(uuid(7)) @db.Uuid
+  id            String         @id @default(uuid(7)) @db.Uuid
   /// Stored lowercase, so it is unique whatever case the User types.
-  email        String   @unique
+  email         String         @unique
   /// argon2id hash; the password itself is never stored.
-  passwordHash String
+  passwordHash  String
   role          Role           @default(member)
   /// A Locked User can't sign in or call the backend (GLOSSARY.md).
   locked        Boolean        @default(false)
@@ -67,25 +67,22 @@ enum ReportStatus {
   failed
 }
 
-/// One listening role-play of a User: created with the Room Token, in the room
-/// it names.
+/// One tutoring session of a User: created with the Room Token, in the room it
+/// names.
 model Conversation {
-  id         String   @id @default(uuid(7)) @db.Uuid
-  userId     String   @db.Uuid
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// The LiveKit room of the Conversation, `conversation-<uuid>`.
-  roomName   String   @unique
-  scenarioId String
-  /// How fast the Agent speaks: 0.7, 0.85 or 1.
-  speed      Float
-  createdAt  DateTime @default(now())
+  roomName  String    @unique
+  createdAt DateTime  @default(now())
   /// When the Agent said it had sent every turn and Miss (the end marker);
   /// null while the Conversation runs, or when the Agent never said so.
-  endedAt    DateTime?
-  turns      Turn[]
-  misses     Miss[]
-  notes      Note[]
-  report     Report?
+  endedAt   DateTime?
+  turns     Turn[]
+  misses    Miss[]
+  notes     Note[]
+  report    Report?
 
   @@index([userId, createdAt])
 }

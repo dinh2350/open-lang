@@ -1,7 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import {
   conversationReportSchema,
-  scenarioIdSchema,
   type ConversationReport,
   type ReportStatus,
   type User,
@@ -66,7 +65,6 @@ export class ReportService {
       where: { roomName, userId: user.id },
       select: {
         id: true,
-        scenarioId: true,
         report: { select: { status: true, startedAt: true, content: true } },
       },
     });
@@ -82,14 +80,12 @@ export class ReportService {
       // Another request claimed it first.
       return 'generating';
     }
-    this.generate(conversation.id, conversation.scenarioId, claimedAt).catch(
-      (error: unknown) => {
-        this.logger.error(
-          `Could not record the failure of the Report of ${conversation.id}.`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      },
-    );
+    this.generate(conversation.id, claimedAt).catch((error: unknown) => {
+      this.logger.error(
+        `Could not record the failure of the Report of ${conversation.id}.`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    });
     return 'generating';
   }
 
@@ -134,12 +130,11 @@ export class ReportService {
   /** Writes the Report and stores it; any failure stores `failed` instead. */
   private async generate(
     conversationId: string,
-    scenarioId: string,
     claimedAt: Date,
   ): Promise<void> {
     try {
       await this.waitForEnd(conversationId, claimedAt);
-      const content = checked(await this.write(conversationId, scenarioId));
+      const content = checked(await this.write(conversationId));
       await this.finish(conversationId, claimedAt, 'ready', content);
     } catch (error) {
       this.logger.warn(
@@ -179,10 +174,7 @@ export class ReportService {
    * model sees and the indexes of the missed turns all come from one array,
    * sorted by start time, never by arrival.
    */
-  private async write(
-    conversationId: string,
-    scenarioId: string,
-  ): Promise<ConversationReport> {
+  private async write(conversationId: string): Promise<ConversationReport> {
     const [turns, misses] = await Promise.all([
       this.prisma.turn.findMany({
         where: { conversationId },
@@ -203,7 +195,6 @@ export class ReportService {
       misses.map((miss) => miss.pressedAt),
     );
     const draft = await this.model.draft({
-      scenarioId: scenarioIdSchema.parse(scenarioId),
       transcript: turns.map(({ role, text }) => ({ role, text })),
       missedTurnIndexes,
     });

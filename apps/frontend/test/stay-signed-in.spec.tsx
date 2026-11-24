@@ -30,7 +30,7 @@ describe('Staying signed in', () => {
     reloadApp('/');
 
     expect(
-      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
+      await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
     expect(authRequestsReceived()).toEqual(['/api/auth/sign-in']);
     await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));

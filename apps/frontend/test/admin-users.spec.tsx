@@ -60,7 +60,7 @@ describe('Admin Users page', () => {
     await userEvent.click(
       within(nav).getByRole('link', { name: 'Conversation' }),
     );
-    await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+    await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
 
     expect(
       within(nav).getByRole('link', { name: 'Conversation' }),
@@ -76,7 +76,7 @@ describe('Admin Users page', () => {
     renderApp('/admin/users');
 
     expect(
-      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
+      await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
     expect(adminRequestAuthorizations()).toEqual([]);
   });

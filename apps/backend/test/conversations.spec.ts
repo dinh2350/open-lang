@@ -25,18 +25,18 @@ describe('The Conversation created with each Room Token', () => {
     await stopTestApp(app);
   });
 
-  async function requestRoomToken(scenarioId: string, speed: number) {
+  async function requestRoomToken() {
     const response = await request(app.getHttpServer())
       .post('/api/token')
       .auth(signedIn.authToken, { type: 'bearer' })
-      .send({ participant_metadata: JSON.stringify({ scenarioId, speed }) });
+      .send({});
     expect(response.status).toBe(201);
     const roomToken = roomTokenResponseSchema.parse(response.body);
     return verifier.verify(roomToken.participant_token);
   }
 
-  it('creates a Conversation of the signed-in User, named after the room in the token, with the chosen Scenario and speed', async () => {
-    const claims = await requestRoomToken('one-on-one', 0.7);
+  it('records a Conversation without a Scenario', async () => {
+    const claims = await requestRoomToken();
 
     const conversations = await app
       .get(PrismaService)
@@ -45,14 +45,14 @@ describe('The Conversation created with each Room Token', () => {
     expect(conversations[0]).toMatchObject({
       userId: signedIn.user.id,
       roomName: claims.video?.room,
-      scenarioId: 'one-on-one',
-      speed: 0.7,
     });
+    expect(conversations[0]).not.toHaveProperty('scenarioId');
+    expect(conversations[0]).not.toHaveProperty('speed');
   });
 
   it('creates one Conversation per token request', async () => {
-    await requestRoomToken('daily-standup', 0.85);
-    await requestRoomToken('daily-standup', 0.85);
+    await requestRoomToken();
+    await requestRoomToken();
 
     const conversations = await app
       .get(PrismaService)

@@ -25,10 +25,7 @@ describe('The Agent ingest API', () => {
   beforeEach(async () => {
     app = await startTestApp();
     signedIn = await registerUser(app);
-    await app.get(ConversationsService).create(signedIn.user, ROOM_NAME, {
-      scenarioId: 'daily-standup',
-      speed: 0.85,
-    });
+    await app.get(ConversationsService).create(signedIn.user, ROOM_NAME);
   });
 
   afterEach(async () => {

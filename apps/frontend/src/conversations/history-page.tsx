@@ -16,11 +16,7 @@ import type { ConversationSummary, ReportStatus } from '@open-lang/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { useAuth } from '@/auth/auth-context';
-import {
-  formatDate,
-  formatDuration,
-  scenarioTitle,
-} from './conversation-format';
+import { formatDate, formatDuration } from './conversation-format';
 import { fetchConversations } from './conversations-api';
 
 const reportLabels: Record<ReportStatus | 'none', string> = {
@@ -94,7 +90,6 @@ export function HistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHeaderCell scope="col">Ngày</TableHeaderCell>
-                <TableHeaderCell scope="col">Tình huống</TableHeaderCell>
                 <TableHeaderCell scope="col">Thời lượng</TableHeaderCell>
                 <TableHeaderCell scope="col">Báo cáo</TableHeaderCell>
               </TableRow>
@@ -129,7 +124,6 @@ function ConversationRow({
           </time>
         </Link>
       </TableHeaderCell>
-      <TableCell>{scenarioTitle(conversation.scenarioId)}</TableCell>
       <TableCell>{formatDuration(conversation.durationSeconds)}</TableCell>
       <TableCell>{reportLabels[conversation.reportStatus ?? 'none']}</TableCell>
     </TableRow>

@@ -31,7 +31,7 @@ describe('Signing in', () => {
     await submitCredentials('ada@example.test', PASSWORD, 'Sign in');
 
     expect(
-      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
+      await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
   });
 

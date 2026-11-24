@@ -15,7 +15,7 @@ export function backendHasAdminAndMember(): void {
 /** Signs in on the sign-in page, and waits for the Conversation page. */
 export async function signInAs(email: string): Promise<void> {
   await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+  await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
 }
 
 /** Grace, an Admin, signs in and opens the Users page, which lists Ada too. */

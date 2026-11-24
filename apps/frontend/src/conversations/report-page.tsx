@@ -13,7 +13,6 @@ import {
   type Fluency,
   type GrammarIssue,
   type ListeningMiss,
-  SPEED_LABELS,
 } from '@open-lang/shared';
 import {
   useMutation,
@@ -24,12 +23,7 @@ import {
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { useParams } from 'react-router';
 import { useAuth } from '@/auth/auth-context';
-import {
-  formatDate,
-  formatDuration,
-  NO_VALUE,
-  scenarioTitle,
-} from './conversation-format';
+import { formatDate, formatDuration, NO_VALUE } from './conversation-format';
 import {
   ConversationNotFoundError,
   fetchConversation,
@@ -195,7 +189,7 @@ function ReadyReport({
   return (
     <>
       <Heading level={1}>
-        {`${scenarioTitle(conversation.scenarioId)} · ${formatDuration(conversation.durationSeconds)} · ${formatDate(conversation.createdAt)} · ${SPEED_LABELS[conversation.speed]}`}
+        {`${formatDuration(conversation.durationSeconds)} · ${formatDate(conversation.createdAt)}`}
       </Heading>
       <Grid
         role="group"

@@ -4,7 +4,6 @@ import { FakeReportModel } from '../src/reports/fake-report-model.js';
 describe('FakeReportModel', () => {
   it('explains every missed turn and turns every User turn into a grammar issue', async () => {
     const draft = await new FakeReportModel().draft({
-      scenarioId: 'daily-standup',
       transcript: [
         { role: 'agent', text: 'Any blockers?' },
         { role: 'user', text: 'No blocker.' },

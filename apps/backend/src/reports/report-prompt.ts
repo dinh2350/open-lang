@@ -44,6 +44,6 @@ export function buildReportPrompt(input: ReportInput): {
 
   return {
     system: SYSTEM_PROMPT,
-    user: `Scenario: ${input.scenarioId}\n\nTranscript:\n${turns}\n\nMissed turn indexes: ${missed}\n\nAnswer with the JSON object.`,
+    user: `Transcript:\n${turns}\n\nMissed turn indexes: ${missed}\n\nAnswer with the JSON object.`,
   };
 }

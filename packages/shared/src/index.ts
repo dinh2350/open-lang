@@ -39,21 +39,6 @@ export {
   type RoomTokenResponse,
 } from './room-token.ts';
 export {
-  SCENARIO_IDS,
-  SCENARIOS,
-  SPEEDS,
-  SPEED_LABELS,
-  DEFAULT_SPEED,
-  LISTENING_HELP_MESSAGE,
-  conversationChoiceSchema,
-  scenarioIdSchema,
-  speedSchema,
-  type ConversationChoice,
-  type ScenarioId,
-  type ScenarioInfo,
-  type Speed,
-} from './scenario.ts';
-export {
   conversationDetailSchema,
   conversationListSchema,
   conversationReportSchema,

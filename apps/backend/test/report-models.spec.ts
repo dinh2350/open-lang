@@ -17,7 +17,6 @@ import {
 } from '../src/reports/report-model.js';
 
 const input: ReportInput = {
-  scenarioId: 'daily-standup',
   transcript: [
     { role: 'agent', text: 'Any blockers?' },
     { role: 'user', text: 'No blocker.' },

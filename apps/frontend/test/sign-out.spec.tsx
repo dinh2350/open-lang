@@ -55,7 +55,7 @@ describe('Signing out', () => {
       "Couldn't sign out. Try again.",
     );
     expect(
-      screen.getByRole('heading', { name: 'Luyện nói hôm nay' }),
+      screen.getByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
   });
 });

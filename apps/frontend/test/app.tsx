@@ -60,5 +60,5 @@ export async function signInAs(
   backendHasUser(email, PASSWORD);
   renderApp('/sign-in', room);
   await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+  await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
 }
