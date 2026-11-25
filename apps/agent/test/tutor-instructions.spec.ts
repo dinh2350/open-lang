@@ -32,6 +32,36 @@ describe('The tutor instructions', () => {
     expect(TUTOR_INSTRUCTIONS).toContain('ghi lại câu này');
   });
 
+  it('tells the tutor to save a correction when it corrects', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(
+      /When you correct the User, call saveNote with kind 'correction'/,
+    );
+    expect(TUTOR_INSTRUCTIONS).toMatch(/said set to what the User said/);
+  });
+
+  it('tells the tutor to save a phrase after the User practised a model sentence', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(
+      /practised an English model sentence that you taught, call saveNote with kind 'phrase'/,
+    );
+  });
+
+  it('tells the tutor to save a word when it teaches one', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(
+      /teach a new useful word or expression, call saveNote with kind 'word'/,
+    );
+  });
+
+  it('tells the tutor never to save the same thing twice', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(/Never save the same thing twice/);
+  });
+
+  it('says a plain request to repeat is not a missed sentence', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(
+      /request to repeat or to speak slower is not a missed sentence/,
+    );
+    expect(TUTOR_INSTRUCTIONS).toMatch(/do not save a note for it/);
+  });
+
   it('says nothing about Scenario or role-play', () => {
     expect(TUTOR_INSTRUCTIONS).not.toMatch(/Scenario|role-play/);
   });
