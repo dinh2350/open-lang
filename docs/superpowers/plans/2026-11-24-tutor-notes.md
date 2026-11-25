@@ -70,13 +70,13 @@ The spec's last scenario, "old role-play data is backed up, then removed", is no
 
 ## Quality Gates
 
-**Format run:** `files=$(git diff --name-only --diff-filter=ACMR 16c9414...HEAD); [ -z "$files" ] || npx prettier --check $files`
+**Format run:** `pnpm format:check`
 **Lint run:** `pnpm lint`
 **Typecheck run:** `pnpm typecheck`
 **Build run:** `pnpm --filter @open-lang/frontend build`
 **Sonar run:** `pnpm sonar`
 
-Format is scoped to the files this plan changes: at base commit 16c9414, `pnpm format:check` reports 67 files, all in the untracked `apps/backend/.agents`, `.claude` and `.windsurf` folders, none in this plan. Lint, typecheck and the 713 unit tests (`pnpm test`, coverage 96%) are green on the whole project at 16c9414. Only the frontend has a build script. `pnpm sonar` runs `pnpm test` first, which writes the `lcov.info` files `sonar-project.properties` reads; if SonarQube is down run `pnpm sonar:up`, and if the token is rejected `pnpm sonar:setup`.
+Format is whole-project on this branch: at base commit 16c9414 in the main checkout, `pnpm format:check` reported 67 files, all in untracked folders (`apps/backend/.agents`, `.claude`, `.windsurf`) that the branch does not contain, so the whole project is green here. A file-list form of the command was tried first and cannot run, because Prettier errors on files it has no parser for (`.sql` migrations, `.prisma`). Lint, typecheck and the 713 unit tests (`pnpm test`, coverage 96%) are green on the whole project at 16c9414. Only the frontend has a build script. `pnpm sonar` runs `pnpm test` first, which writes the `lcov.info` files `sonar-project.properties` reads; if SonarQube is down run `pnpm sonar:up`, and if the token is rejected `pnpm sonar:setup`.
 
 ## Review Focus
 
