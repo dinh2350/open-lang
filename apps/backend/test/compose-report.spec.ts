@@ -6,7 +6,7 @@ import {
   ReportModelError,
   type ReportDraft,
 } from '../src/reports/report-model.js';
-import type { TimedTurn } from '../src/reports/resolve-misses.js';
+import type { TimedTurn } from '../src/reports/turn-times.js';
 
 const at = (seconds: number): Date =>
   new Date(Date.UTC(2026, 10, 23, 10, 0, seconds));

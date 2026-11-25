@@ -46,7 +46,6 @@ export {
   conversationReportSchema,
   conversationSummarySchema,
   fluencySchema,
-  missIngestSchema,
   reportStatusSchema,
   turnIngestSchema,
   type Assessment,
@@ -55,7 +54,6 @@ export {
   type ConversationReport,
   type ConversationSummary,
   type Fluency,
-  type MissIngest,
   type ReportStatus,
   type TurnIngest,
 } from './conversation-report.ts';

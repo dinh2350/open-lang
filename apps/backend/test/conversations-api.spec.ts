@@ -13,7 +13,6 @@ import {
   endConversation,
   getConversation,
   getNotes,
-  ingestMiss,
   ingestNote,
   ingestTurn,
   listNotes,
@@ -23,6 +22,14 @@ import {
 } from './support/conversations.js';
 import { startTestApp, stopTestApp } from './support/test-app.js';
 import { registerUser } from './support/users.js';
+
+/** A Note that makes a Conversation worth listing, whatever else it holds. */
+const ANY_NOTE: Note = {
+  kind: 'word',
+  english: 'on track',
+  meaning: 'đúng tiến độ',
+  said: null,
+};
 
 describe('The Conversation API', () => {
   let app: INestApplication<App>;
@@ -52,8 +59,8 @@ describe('The Conversation API', () => {
       where: { roomName: 'room-new' },
       data: { createdAt: new Date('2026-11-23T09:00:00.000Z') },
     });
-    await ingestMiss(app, 'room-new', at(1));
-    await ingestMiss(app, 'room-grace', at(1));
+    await ingestNote(app, 'room-new', ANY_NOTE);
+    await ingestNote(app, 'room-grace', ANY_NOTE);
     await ingestTurn(app, 'room-old', {
       itemId: 'a',
       role: 'agent',
@@ -103,7 +110,7 @@ describe('The Conversation API', () => {
       .conversations.map((conversation) => conversation.roomName);
   }
 
-  it('does not list a Conversation that has no turns and no Misses', async () => {
+  it('does not list a Conversation that has no turns and no Notes', async () => {
     await startConversation(app, ada.user, 'room-empty');
 
     expect(await listedRooms()).toEqual([]);
@@ -119,13 +126,6 @@ describe('The Conversation API', () => {
     });
 
     expect(await listedRooms()).toEqual(['room-turn']);
-  });
-
-  it('lists a Conversation that has only a Miss', async () => {
-    await startConversation(app, ada.user, 'room-miss');
-    await ingestMiss(app, 'room-miss', at(1));
-
-    expect(await listedRooms()).toEqual(['room-miss']);
   });
 
   it('a Conversation with only notes appears in the list', async () => {
@@ -197,7 +197,7 @@ describe('The Conversation API', () => {
 
   it('lists a ready Report whose stored content breaks the contract as failed', async () => {
     await startConversation(app, ada.user, 'room-broken');
-    await ingestMiss(app, 'room-broken', at(1));
+    await ingestNote(app, 'room-broken', ANY_NOTE);
     const prisma = app.get(PrismaService);
     const { id } = await prisma.conversation.findUniqueOrThrow({
       where: { roomName: 'room-broken' },

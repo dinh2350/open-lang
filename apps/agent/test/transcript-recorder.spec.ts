@@ -19,7 +19,6 @@ function stubBackend(
       turns.push(turn);
       return sendTurn(turn);
     }),
-    sendMiss: vi.fn(() => Promise.resolve()),
     sendNote: vi.fn(() => Promise.resolve()),
     sendEnd: vi.fn(() => Promise.resolve()),
   };

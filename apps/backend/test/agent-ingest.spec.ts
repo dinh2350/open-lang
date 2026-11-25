@@ -34,7 +34,7 @@ describe('The Agent ingest API', () => {
 
   /** Posts to a room's ingest route with `key` as the bearer token, or with no key at all. */
   function ingest(
-    route: 'turns' | 'misses' | 'notes' | 'end',
+    route: 'turns' | 'notes' | 'end',
     body: object,
     key: string | null = testEnv.AGENT_API_KEY,
     roomName = ROOM_NAME,
@@ -52,8 +52,6 @@ describe('The Agent ingest API', () => {
     startedAt: STARTED_AT,
     ...overrides,
   });
-
-  const miss = { pressedAt: STARTED_AT };
 
   const note = (overrides: Readonly<Partial<Note>> = {}): Note => ({
     kind: 'phrase',
@@ -73,7 +71,6 @@ describe('The Agent ingest API', () => {
     });
 
   const storedTurns = () => app.get(PrismaService).turn.findMany();
-  const storedMisses = () => app.get(PrismaService).miss.findMany();
   const storedNotes = () => app.get(PrismaService).note.findMany();
   const storedEnd = async () =>
     (
@@ -86,9 +83,7 @@ describe('The Agent ingest API', () => {
   it('returns 401 without a key and with a wrong key', async () => {
     const calls = [
       ingest('turns', turn(), null),
-      ingest('misses', miss, null),
       ingest('turns', turn(), 'wrong-key'),
-      ingest('misses', miss, 'wrong-key'),
       // One character short of the real key: a different length.
       ingest('turns', turn(), testEnv.AGENT_API_KEY.slice(1)),
       // The same length as the real key, but not the key.
@@ -97,19 +92,15 @@ describe('The Agent ingest API', () => {
 
     const statuses = (await Promise.all(calls)).map(({ status }) => status);
 
-    expect(statuses).toEqual([401, 401, 401, 401, 401, 401]);
+    expect(statuses).toEqual([401, 401, 401, 401]);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it("a User's own Auth Token is not an Agent key", async () => {
-    const turnResponse = await ingest('turns', turn(), signedIn.authToken);
-    const missResponse = await ingest('misses', miss, signedIn.authToken);
+    const response = await ingest('turns', turn(), signedIn.authToken);
 
-    expect(turnResponse.status).toBe(401);
-    expect(missResponse.status).toBe(401);
+    expect(response.status).toBe(401);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it('the Agent key is not a User token', async () => {
@@ -121,23 +112,15 @@ describe('The Agent ingest API', () => {
   });
 
   it('returns 404 for a room that has no Conversation', async () => {
-    const turnResponse = await ingest(
+    const response = await ingest(
       'turns',
       turn(),
       testEnv.AGENT_API_KEY,
       'no-such-room',
     );
-    const missResponse = await ingest(
-      'misses',
-      miss,
-      testEnv.AGENT_API_KEY,
-      'no-such-room',
-    );
 
-    expect(turnResponse.status).toBe(404);
-    expect(missResponse.status).toBe(404);
+    expect(response.status).toBe(404);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it('stores a turn', async () => {
@@ -180,20 +163,14 @@ describe('The Agent ingest API', () => {
     expect(await storedTurns()).toEqual([]);
   });
 
-  it('rejects a Miss without a time', async () => {
-    const response = await ingest('misses', {});
+  it('POST …/misses answers 404', async () => {
+    // The route is gone: even the Agent's own key finds nothing there.
+    const response = await request(app.getHttpServer())
+      .post(`/api/agent/conversations/${ROOM_NAME}/misses`)
+      .auth(testEnv.AGENT_API_KEY, { type: 'bearer' })
+      .send({ pressedAt: STARTED_AT });
 
-    expect(response.status).toBe(400);
-    expect(await storedMisses()).toEqual([]);
-  });
-
-  it('stores a Miss', async () => {
-    const response = await ingest('misses', miss);
-
-    expect(response.status).toBe(204);
-    const misses = await storedMisses();
-    expect(misses).toHaveLength(1);
-    expect(misses[0]?.pressedAt).toEqual(new Date(STARTED_AT));
+    expect(response.status).toBe(404);
   });
 
   it('rejects a turn that ends before it starts, and stores nothing', async () => {

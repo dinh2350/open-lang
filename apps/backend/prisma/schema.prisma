@@ -76,11 +76,10 @@ model Conversation {
   /// The LiveKit room of the Conversation, `conversation-<uuid>`.
   roomName  String    @unique
   createdAt DateTime  @default(now())
-  /// When the Agent said it had sent every turn and Miss (the end marker);
+  /// When the Agent said it had sent every turn and Note (the end marker);
   /// null while the Conversation runs, or when the Agent never said so.
   endedAt   DateTime?
   turns     Turn[]
-  misses    Miss[]
   notes     Note[]
   report    Report?
 
@@ -100,16 +99,6 @@ model Turn {
   endedAt        DateTime?
 
   @@unique([conversationId, itemId])
-}
-
-/// A press of "I did not catch that".
-model Miss {
-  id             String       @id @default(uuid(7)) @db.Uuid
-  conversationId String       @db.Uuid
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  pressedAt      DateTime
-
-  @@index([conversationId])
 }
 
 /// What a Note is for: a good sentence, a word or expression, the User's wrong

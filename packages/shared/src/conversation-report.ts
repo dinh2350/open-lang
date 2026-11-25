@@ -98,10 +98,3 @@ export const turnIngestSchema = z
   );
 
 export type TurnIngest = z.infer<typeof turnIngestSchema>;
-
-/** Body the Agent sends to the backend when the Member presses the help button. */
-export const missIngestSchema = z.object({
-  pressedAt: z.iso.datetime(),
-});
-
-export type MissIngest = z.infer<typeof missIngestSchema>;

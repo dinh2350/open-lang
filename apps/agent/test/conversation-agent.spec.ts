@@ -315,12 +315,12 @@ describe('Agent dispatched into a Conversation room', () => {
     }
   });
 
-  it('typed listening-help text reaches the job as a User message and records no Miss', async () => {
+  it('typed text reaches the job as a User message, through the SDK default text input', async () => {
     const start = spyOnSessionStart();
     try {
       const job = await dispatchToRoom(
         conversationAgent,
-        'conversation-help-text',
+        'conversation-typed-text',
       );
       const session = job.session();
       if (session === undefined) throw new Error('The job started no session.');
@@ -330,20 +330,16 @@ describe('Agent dispatched into a Conversation room', () => {
         start.mock.calls[0]?.[0].inputOptions?.textInputCallback ??
         voice.DEFAULT_TEXT_INPUT_CALLBACK;
 
-      await textInputCallback(session, { text: 'listening-help' });
+      await textInputCallback(session, { text: 'Can you say that again?' });
       await vi.waitFor(() => {
         expect(
           session.history.items
             .filter((item) => item instanceof llm.ChatMessage)
             .filter(({ role }) => role === 'user')
             .map(({ textContent }) => textContent),
-        ).toEqual(['listening-help']);
+        ).toEqual(['Can you say that again?']);
       });
       await job.end();
-
-      expect(
-        backend.requests.filter(({ url }) => url?.endsWith('/misses')),
-      ).toEqual([]);
     } finally {
       start.mockRestore();
     }

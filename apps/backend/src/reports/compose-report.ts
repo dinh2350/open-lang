@@ -1,7 +1,7 @@
 import { ASSESSMENT_LIMITS, type ConversationReport } from '@open-lang/shared';
 import { computeFluency } from './fluency.js';
 import type { ReportDraft } from './report-model.js';
-import type { TimedTurn } from './resolve-misses.js';
+import type { TimedTurn } from './turn-times.js';
 
 const ELLIPSIS = '…';
 

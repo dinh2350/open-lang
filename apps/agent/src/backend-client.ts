@@ -1,11 +1,10 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { log } from '@livekit/agents';
-import type { MissIngest, Note, TurnIngest } from '@open-lang/shared';
+import type { Note, TurnIngest } from '@open-lang/shared';
 
 /** Sends what happens in a Conversation to the backend, which stores it. */
 export interface BackendClient {
   sendTurn(roomName: string, turn: TurnIngest): Promise<void>;
-  sendMiss(roomName: string, miss: MissIngest): Promise<void>;
   sendNote(roomName: string, note: Note): Promise<void>;
   /**
    * The end marker: every turn and Note of the Conversation has been sent,
@@ -55,8 +54,8 @@ export function createBackendClient(options: {
 
   async function post(
     roomName: string,
-    route: 'turns' | 'misses' | 'notes' | 'end',
-    body?: TurnIngest | MissIngest | Note,
+    route: 'turns' | 'notes' | 'end',
+    body?: TurnIngest | Note,
   ): Promise<void> {
     const url = new URL(
       `/api/agent/conversations/${encodeURIComponent(roomName)}/${route}`,
@@ -78,7 +77,6 @@ export function createBackendClient(options: {
 
   return {
     sendTurn: (roomName, turn) => post(roomName, 'turns', turn),
-    sendMiss: (roomName, miss) => post(roomName, 'misses', miss),
     sendNote: (roomName, note) => post(roomName, 'notes', note),
     sendEnd: (roomName) => post(roomName, 'end'),
   };
@@ -105,7 +103,6 @@ export function trackPendingSends(backend: BackendClient): {
   return {
     client: {
       sendTurn: (roomName, turn) => track(backend.sendTurn(roomName, turn)),
-      sendMiss: (roomName, miss) => track(backend.sendMiss(roomName, miss)),
       sendNote: (roomName, note) => track(backend.sendNote(roomName, note)),
       sendEnd: (roomName) => track(backend.sendEnd(roomName)),
     },

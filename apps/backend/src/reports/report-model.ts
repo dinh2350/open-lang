@@ -1,6 +1,6 @@
 import type { Note } from '@open-lang/shared';
 import { z } from 'zod';
-import type { Role } from './resolve-misses.js';
+import type { Role } from './turn-times.js';
 
 /** What the model reads: the Conversation's turns, in order, and its Notes. */
 export interface ReportInput {

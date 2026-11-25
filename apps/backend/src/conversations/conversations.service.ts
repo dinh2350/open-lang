@@ -4,7 +4,6 @@ import {
   MAX_NOTES_PER_CONVERSATION,
   type ConversationDetail,
   type ConversationSummary,
-  type MissIngest,
   type Note,
   type ReportStatus,
   type StoredNote,
@@ -45,17 +44,13 @@ export class ConversationsService {
 
   /**
    * The User's Conversations, newest first. A Conversation the Agent recorded
-   * no turn, no Miss and no Note for is not a practice session, so it is left out.
+   * no turn and no Note for is not a practice session, so it is left out.
    */
   async list(user: User): Promise<ConversationSummary[]> {
     const conversations = await this.prisma.conversation.findMany({
       where: {
         userId: user.id,
-        OR: [
-          { turns: { some: {} } },
-          { misses: { some: {} } },
-          { notes: { some: {} } },
-        ],
+        OR: [{ turns: { some: {} } }, { notes: { some: {} } }],
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: summarySelect,
@@ -150,16 +145,6 @@ export class ConversationsService {
         ...times,
       },
       update: { text: turn.text, ...times },
-    });
-  }
-
-  /** Stores a press of "I did not catch that" in the Conversation in the room. */
-  async recordMiss(roomName: string, miss: MissIngest): Promise<void> {
-    await this.prisma.miss.create({
-      data: {
-        conversationId: await this.conversationIdOf(roomName),
-        pressedAt: new Date(miss.pressedAt),
-      },
     });
   }
 

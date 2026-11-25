@@ -48,23 +48,6 @@ export async function ingestTurn(
   }
 }
 
-/** The Agent reports a press of "I did not catch that" in the room. */
-export async function ingestMiss(
-  app: INestApplication<App>,
-  roomName: string,
-  pressedAt: string,
-): Promise<void> {
-  const response = await request(app.getHttpServer())
-    .post(`/api/agent/conversations/${roomName}/misses`)
-    .auth(testEnv.AGENT_API_KEY, { type: 'bearer' })
-    .send({ pressedAt });
-  if (response.status !== 204) {
-    throw new Error(
-      `Posting a Miss failed with status ${String(response.status)}`,
-    );
-  }
-}
-
 /** The Agent writes a Note into the room's Conversation. */
 export async function ingestNote(
   app: INestApplication<App>,

@@ -67,25 +67,13 @@ describe('Backend client', () => {
     ]);
   });
 
-  it('posts a Miss to the misses route', async () => {
-    backend = await startFakeBackend([204]);
+  it('the Agent client has no sendMiss', () => {
     const client = createBackendClient({
-      backendUrl: backend.url,
+      backendUrl: 'http://127.0.0.1:1',
       agentApiKey: AGENT_API_KEY,
     });
 
-    await client.sendMiss('conversation-123', {
-      pressedAt: '2026-11-23T09:00:02.000Z',
-    });
-
-    expect(backend.requests).toEqual([
-      expect.objectContaining({
-        method: 'POST',
-        url: '/api/agent/conversations/conversation-123/misses',
-        authorization: `Bearer ${AGENT_API_KEY}`,
-        body: { pressedAt: '2026-11-23T09:00:02.000Z' },
-      }),
-    ]);
+    expect('sendMiss' in client).toBe(false);
   });
 
   it('posts a note to the notes route', async () => {
@@ -171,11 +159,7 @@ describe('Backend client', () => {
       retryDelayMs: 1,
     });
 
-    await expect(
-      client.sendMiss('conversation-123', {
-        pressedAt: '2026-11-23T09:00:02.000Z',
-      }),
-    ).resolves.toBeUndefined();
+    await expect(client.sendEnd('conversation-123')).resolves.toBeUndefined();
     expect(logLines.join('')).toContain('conversation-123');
   });
 
