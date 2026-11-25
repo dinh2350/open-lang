@@ -1,6 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Route,
+  test,
+} from '@playwright/test';
 import {
   type PostedNote,
   postNote,
@@ -109,6 +115,29 @@ function noteGroup(scope: Page | Locator, title: string): Locator {
   });
 }
 
+/** Waits for `promise`, failing with `what` after `milliseconds`. */
+async function withTimeout(
+  promise: Promise<void>,
+  milliseconds: number,
+  what: string,
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(
+        new Error(
+          `Timed out after ${String(milliseconds)} ms waiting for ${what}.`,
+        ),
+      );
+    }, milliseconds);
+  });
+  try {
+    await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** A turn of each side, as the Agent reports them. */
 async function postTwoTurns(roomName: string): Promise<void> {
   await postTurn(roomName, {
@@ -196,21 +225,45 @@ test('the notes panel survives a failing poll', async ({ page }) => {
   const phrase = page.getByText(PHRASE.english);
   await expect(phrase).toBeVisible({ timeout: NOTES_TIMEOUT });
 
+  // Two polls in a row fail. Waiting for the second failure means the page
+  // has shown the outcome of the first for a whole poll interval, so what it
+  // shows now is what it shows after a failed poll, not a race with it.
   const notesPath = `/api/conversations/${roomName}/notes`;
-  await page.route(
-    (url) => url.pathname === notesPath,
-    (route) => route.fulfill({ status: 500, body: 'Internal Server Error' }),
-    { times: 1 },
-  );
-  await page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === notesPath &&
-      response.status() === 500,
-    { timeout: NOTES_TIMEOUT },
-  );
+  const twoFailedPolls = new Promise<void>((resolve) => {
+    let failures = 0;
+    page.on('response', (response) => {
+      if (
+        new URL(response.url()).pathname === notesPath &&
+        response.status() === 500
+      ) {
+        failures += 1;
+        if (failures === 2) {
+          resolve();
+        }
+      }
+    });
+  });
+  const failNotes = (route: Route) =>
+    route.fulfill({ status: 500, body: 'Internal Server Error' });
+  const isNotesPath = (url: URL) => url.pathname === notesPath;
+  await page.route(isNotesPath, failNotes);
+  await withTimeout(twoFailedPolls, NOTES_TIMEOUT, 'two failed notes polls');
 
   await expect(phrase).toBeVisible();
   await expect(noteGroup(page, 'Câu hay')).toBeVisible();
+  await expect(
+    page.getByText('Gia sư sẽ ghi những điều đáng nhớ ở đây.'),
+  ).toHaveCount(0);
+
+  // The backend answers again: polling resumes, and the panel shows the
+  // first Note and the one written since.
+  await page.unroute(isNotesPath, failNotes);
+  await postNote(roomName, WORD);
+  await expect(noteGroup(page, 'Từ / cụm')).toBeVisible({
+    timeout: NOTES_TIMEOUT,
+  });
+  await expect(page.getByText(WORD.english, { exact: true })).toBeVisible();
+  await expect(phrase).toBeVisible();
   await expect(
     page.getByText('Gia sư sẽ ghi những điều đáng nhớ ở đây.'),
   ).toHaveCount(0);
