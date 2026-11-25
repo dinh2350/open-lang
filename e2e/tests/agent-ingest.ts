@@ -12,6 +12,24 @@ export interface PostedTurn {
   readonly endedAt: Date;
 }
 
+/**
+ * A Note the tutor writes down, as the Agent reports it. `said`, what the
+ * Member said, is there for a correction only; the other kinds have null.
+ */
+export type PostedNote =
+  | {
+      readonly kind: 'phrase' | 'word' | 'missed';
+      readonly english: string;
+      readonly meaning: string;
+      readonly said: null;
+    }
+  | {
+      readonly kind: 'correction';
+      readonly english: string;
+      readonly meaning: string;
+      readonly said: string;
+    };
+
 /** The run's Agent key, which playwright.config.ts shares with the backend. */
 function agentApiKey(): string {
   const key = process.env.E2E_AGENT_API_KEY;
@@ -72,7 +90,7 @@ export async function roomNameOfNextConversation(page: Page): Promise<string> {
 
 async function postToAgentIngest(
   roomName: string,
-  path: 'turns',
+  path: 'turns' | 'notes',
   body: object,
 ): Promise<void> {
   const response = await fetch(
@@ -105,6 +123,14 @@ export async function postTurn(
     startedAt: turn.startedAt.toISOString(),
     endedAt: turn.endedAt.toISOString(),
   });
+}
+
+/** Records a Note of the Conversation in `roomName`, as the Agent would. */
+export async function postNote(
+  roomName: string,
+  note: PostedNote,
+): Promise<void> {
+  await postToAgentIngest(roomName, 'notes', note);
 }
 
 /** A moment `seconds` before now; after now when `seconds` is negative. */
