@@ -2,105 +2,119 @@
 # The CLI offers to add the `id` each scenario needs on its first run.
 # Format: https://docs.livekit.io/testing/simulations/write-a-scenario/
 #
-# The Agent reads the Scenario and speed of a Conversation from the job's
-# metadata, which the simulator does not set
-# (https://docs.livekit.io/testing/simulations/#limitations). A simulation
-# therefore needs a job that carries that metadata, for example
-# {"scenarioId":"daily-standup","speed":1}, matching the scenario below.
-name: Conversation Agent
+# The Agent needs no job metadata: every Conversation is the same lesson, so
+# the simulator can dispatch it as it is. It posts the transcript and its
+# notes to BACKEND_URL as usual; with no backend there, the posts fail with a
+# warning and the tutor goes on.
+name: English Tutor
 scenarios:
-  - label: The standup lead opens the daily standup in role
+  - label: The tutor opens in Vietnamese and asks what to learn
     instructions: |
-      PERSONA: Dana, a software developer in a daily standup. You speak
-      English and answer one question at a time.
-      FACTS (reveal each only when asked, one per turn):
-      - yesterday you fixed a bug in the login page
-      - today you will write tests for it
-      - you are blocked waiting for a code review
+      PERSONA: Dana, a Vietnamese office worker who wants to learn English.
+      You answer in Vietnamese, one short sentence at a time.
       DO, IN ORDER:
       1. Say nothing at first and wait for the agent to speak.
-      2. Answer each question the agent asks, briefly.
-      3. After the agent has asked about all three points, end the call.
-    agent_expectations: >
-      The agent speaks first, before the user says anything, and its opening
-      line is "Morning! Let's start the standup. What did you work on
-      yesterday?". It stays in the role of Sam, the standup lead, speaks only
-      English, and keeps each turn to one to three short sentences with one
-      question at a time. Starting with any other greeting is a fail.
-    tags:
-      feature: scenario
-      scenario: daily_standup
-
-  - label: The manager opens the one-on-one in role
-    instructions: |
-      PERSONA: Dana, a software developer in a one-on-one with your manager.
-      You speak English and answer one question at a time.
-      FACTS (reveal each only when asked, one per turn):
-      - your week was busy but good
-      - you would like to lead a small project next quarter
-      DO, IN ORDER:
-      1. Say nothing at first and wait for the agent to speak.
-      2. Answer each question the agent asks, briefly.
-      3. After the agent has asked about your goals, end the call.
-    agent_expectations: >
-      The agent speaks first, and its opening line is "Hi, thanks for making
-      time. How has your week been going?". It stays in the role of Alex, the
-      user's manager, speaks only English, and asks about the user's week and
-      goals in short turns. Starting with any other greeting is a fail.
-    tags:
-      feature: scenario
-      scenario: one_on_one
-
-  - label: The client asks about the delayed delivery in role
-    instructions: |
-      PERSONA: Dana, a project lead whose delivery to a client is late. You
-      speak English and answer one question at a time.
-      FACTS (reveal each only when asked, one per turn):
-      - a vendor shipped the parts a week late
-      - the new delivery date is the 20th
-      DO, IN ORDER:
-      1. Say nothing at first and wait for the agent to speak.
-      2. Explain the delay when asked and give the new date when asked.
-      3. After the agent has asked for the plan, end the call.
-    agent_expectations: >
-      The agent speaks first, and its opening line is "Hello, this is Jordan
-      from the client team. I heard the delivery is delayed. What happened?".
-      It stays in the role of Jordan, the client, speaks only English, and
-      asks about the reason, the length of the delay and the plan in short
-      turns. Starting with any other greeting is a fail.
-    tags:
-      feature: scenario
-      scenario: client_delay_call
-
-  - label: The Agent does not correct the User's English
-    instructions: |
-      PERSONA: Dana, a developer in a daily standup who makes grammar
-      mistakes. You speak English.
-      OPENING LINE (after the agent speaks first): "Yesterday I fix a bug,
-      and today I am go to write the tests."
-      DO, IN ORDER:
-      1. Say nothing at first and wait for the agent to speak.
-      2. Say the opening line, then answer the agent's next question
-         briefly, with another small mistake.
-      3. End the call after two answers.
-    agent_expectations: >
-      The agent never corrects, rephrases or comments on the user's grammar,
-      word choice or pronunciation, and never explains a word. It continues
-      the standup naturally in English. Any correction or teaching is a fail.
-    tags:
-      feature: scenario
-      behavior: no_correction
-
-  - label: The Agent answers in English when the User speaks Vietnamese
-    instructions: |
-      PERSONA: Dana, who speaks Vietnamese. The agent answers in English.
-      DO, IN ORDER:
-      1. Say nothing at first and wait for the agent to speak.
-      2. Answer the agent's first question in Vietnamese: "Hôm qua tôi sửa
-         một lỗi ở trang đăng nhập."
+      2. Answer the agent's first question in Vietnamese: "Mình muốn học
+         cách xin nghỉ phép."
       3. End the call after the agent's next reply.
     agent_expectations: >
-      The agent understands the answer and continues the standup in English
-      only. Replying in Vietnamese is a fail.
+      The agent speaks first, before the user says anything, and its opening
+      line is in Vietnamese and asks what the user wants to learn today ("Chào
+      bạn! Hôm nay bạn muốn học gì?"). After the user names the topic, its
+      reply is short, mostly in Vietnamese, and starts on that topic, for
+      example with an English sentence for asking for leave. An opening in
+      English, or an opening that does not ask what to learn, is a fail.
     tags:
-      feature: language
+      feature: tutor
+      behavior: opening
+
+  - label: The tutor models an English sentence and has the User repeat it
+    instructions: |
+      PERSONA: Dana, a Vietnamese office worker who wants to learn English.
+      You answer in Vietnamese, but you say English sentences in English when
+      asked to.
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Say the topic in Vietnamese: "Mình muốn học cách nhờ đồng nghiệp
+         giúp đỡ."
+      3. When the agent gives an English sentence and asks you to say it, say
+         that sentence back exactly, in English.
+      4. End the call after the agent reacts to your sentence.
+    agent_expectations: >
+      The agent gives one English sentence about asking a colleague for help,
+      says it in English, explains it briefly in Vietnamese, and asks the user
+      to say it. After the user says it back correctly, the agent confirms it
+      briefly and does not correct it. Giving only Vietnamese, or never asking
+      the user to say the sentence, is a fail.
+    tags:
+      feature: tutor
+      behavior: model_sentence
+
+  - label: The tutor corrects a wrong sentence
+    instructions: |
+      PERSONA: Dana, a Vietnamese office worker who wants to learn English and
+      makes grammar mistakes. You answer in Vietnamese, but you say English
+      sentences in English.
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Say the topic in Vietnamese: "Mình muốn tập nói về công việc hôm
+         qua."
+      3. When the agent asks you to say something about yesterday, say
+         exactly: "Yesterday I go to the office and finish the report."
+      4. End the call after the agent's next reply.
+    agent_expectations: >
+      The agent corrects the sentence: it says the better sentence in English
+      ("Yesterday I went to the office and finished the report", or an
+      equivalent in the past tense) and explains the fix briefly in
+      Vietnamese. Letting the wrong sentence pass, or correcting it only in
+      Vietnamese without saying the better English sentence, is a fail.
+    tags:
+      feature: tutor
+      behavior: correction
+
+  - label: After an off-topic reply the tutor says the sentence again slower and saves a missed note
+    instructions: |
+      PERSONA: Dana, a Vietnamese office worker who wants to learn English and
+      is distracted. You answer in Vietnamese, but you say English sentences
+      in English.
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Say the topic in Vietnamese: "Mình muốn học cách hỏi giờ họp."
+      3. When the agent says an English sentence or asks a question in
+         English, reply with something unrelated, in English, exactly: "I like
+         pizza and my cat is sleeping."
+      4. When the agent says its sentence again, say that sentence back.
+      5. End the call after the agent's next reply.
+    agent_expectations: >
+      After the off-topic reply, the agent does not take it as an answer. It
+      says the same English sentence again, simpler and slower, for example in
+      short pieces, and calls the saveNote tool with kind "missed", holding
+      that sentence and its Vietnamese meaning. Moving on to a new sentence,
+      or not saving a missed note, is a fail.
+    tags:
+      feature: tutor
+      behavior: missed_note
+
+  - label: The tutor keeps its notes few
+    instructions: |
+      PERSONA: Dana, a Vietnamese office worker who wants to learn English.
+      You answer in Vietnamese, but you say English sentences in English. You
+      are friendly and chat a little between sentences.
+      DO, IN ORDER:
+      1. Say nothing at first and wait for the agent to speak.
+      2. Say the topic in Vietnamese: "Mình muốn học cách nói chuyện với
+         khách hàng."
+      3. Say each English sentence the agent teaches back to it, then ask for
+         another one in Vietnamese: "Dạy mình thêm một câu nữa nhé."
+      4. Between two sentences, make small talk in Vietnamese once: "Hôm nay
+         trời nóng quá nhỉ."
+      5. End the call after the agent has taught three sentences.
+    agent_expectations: >
+      The agent saves at most three notes in the whole call with the saveNote
+      tool, each one for a different sentence or word worth keeping. It saves
+      no note for the small talk and none for a sentence it already saved, and
+      it never reads a note aloud. Saving a note for every turn, or saving the
+      same sentence twice, is a fail.
+    tags:
+      feature: tutor
+      behavior: few_notes

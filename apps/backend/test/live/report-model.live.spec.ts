@@ -1,14 +1,25 @@
 // Live tier (`pnpm test:live`): talks to the real OpenAI and Google APIs and
 // costs money. Each block is skipped when its key is absent from the
 // environment and from apps/backend/.env.
+import { ASSESSMENT_LIMITS } from '@open-lang/shared';
 import { describe, expect, it } from 'vitest';
 import { createReportModel } from '../../src/reports/create-report-model.js';
 import type { ReportInput } from '../../src/reports/report-model.js';
 
 const input: ReportInput = {
   transcript: [
-    { role: 'agent', text: 'Morning! Any blockers I should loop in on?' },
+    { role: 'agent', text: 'Chào bạn! Hôm nay bạn muốn học gì?' },
+    { role: 'user', text: 'Mình muốn học cách báo cáo công việc.' },
+    {
+      role: 'agent',
+      text: 'Hay đó. Bạn thử nói câu này nhé: Yesterday I finished the report.',
+    },
     { role: 'user', text: 'No blocker. I finish the report yesterday.' },
+    {
+      role: 'agent',
+      text: 'Gần đúng rồi. Nói là: I finished the report yesterday.',
+    },
+    { role: 'user', text: 'I finished the report yesterday.' },
   ],
   notes: [
     {
@@ -27,7 +38,7 @@ const providers = [
 
 describe.each(providers)('The $provider report model (live)', (target) => {
   it.skipIf(!process.env[target.keyName])(
-    'drafts a two-turn transcript',
+    'the Report model answers within the assessment limits',
     async () => {
       const model = createReportModel({
         // The Provider's default model: one REPORT_MODEL cannot suit both.
@@ -37,11 +48,26 @@ describe.each(providers)('The $provider report model (live)', (target) => {
         REPORT_PROVIDER: target.provider,
       });
 
-      const draft = await model.draft(input);
+      const { assessment } = await model.draft(input);
 
-      expect(draft.assessment.overview).not.toBe('');
-      expect(Array.isArray(draft.assessment.strengths)).toBe(true);
-      expect(Array.isArray(draft.assessment.improvements)).toBe(true);
+      // The draft, before `composeReport` would cut it: the prompt alone has
+      // to keep the model within the limits.
+      expect(assessment.overview).not.toBe('');
+      expect(assessment.overview.length).toBeLessThanOrEqual(
+        ASSESSMENT_LIMITS.overviewLength,
+      );
+      expect(assessment.strengths.length).toBeLessThanOrEqual(
+        ASSESSMENT_LIMITS.strengths,
+      );
+      expect(assessment.improvements.length).toBeLessThanOrEqual(
+        ASSESSMENT_LIMITS.improvements,
+      );
+      for (const item of [
+        ...assessment.strengths,
+        ...assessment.improvements,
+      ]) {
+        expect(item.length).toBeLessThanOrEqual(ASSESSMENT_LIMITS.itemLength);
+      }
     },
   );
 });

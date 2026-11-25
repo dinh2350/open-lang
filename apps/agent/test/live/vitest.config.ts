@@ -9,6 +9,7 @@ export default defineProject({
     name: 'agent-live',
     root: import.meta.dirname,
     include: ['**/*.spec.ts'],
-    testTimeout: 60_000,
+    // A check may take several turns, each of them spoken by a real model.
+    testTimeout: 120_000,
   },
 });
