@@ -388,6 +388,28 @@ describe('Report generation', () => {
     expect(model.inputs).toHaveLength(1);
   });
 
+  it('an over-long draft with an emoji across the cut is stored ready', async () => {
+    const overview = `${'x'.repeat(158)}😀${'x'.repeat(20)}`;
+    await start({
+      draft: () =>
+        Promise.resolve({
+          assessment: {
+            overview,
+            strengths: [`${'s'.repeat(88)}😀${'s'.repeat(20)}`],
+            improvements: [],
+          },
+        }),
+    });
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+
+    const detail = await reportOf();
+
+    expect(detail.reportStatus).toBe('ready');
+    expect((await storedReport())?.status).toBe('ready');
+    expect(detail.report?.assessment.overview).toBe(`${'x'.repeat(158)}…`);
+    expect(detail.report?.assessment.strengths).toEqual([`${'s'.repeat(88)}…`]);
+  });
+
   it('a Report that fails validation is stored as failed and asking again retries', async () => {
     const fake: ReportModel = new FakeReportModel();
     let calls = 0;

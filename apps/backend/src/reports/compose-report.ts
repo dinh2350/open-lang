@@ -5,10 +5,21 @@ import type { TimedTurn } from './resolve-misses.js';
 
 const ELLIPSIS = '…';
 
-/** `text` cut to at most `maxLength` characters, ending in `…` when it was cut. */
+/** A UTF-16 unit that starts a character outside the Basic Multilingual Plane. */
+const HIGH_SURROGATE = /[\uD800-\uDBFF]$/;
+
+/**
+ * `text` cut to at most `maxLength` UTF-16 units, ending in `…` when it was
+ * cut. The cut never splits a character such as an emoji, whose lone half
+ * the database would refuse to store.
+ */
 function clamp(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - ELLIPSIS.length).trimEnd()}${ELLIPSIS}`;
+  const cut = text
+    .slice(0, maxLength - ELLIPSIS.length)
+    .replace(HIGH_SURROGATE, '')
+    .trimEnd();
+  return `${cut}${ELLIPSIS}`;
 }
 
 /** The first `count` items, each cut to the length of an item. */

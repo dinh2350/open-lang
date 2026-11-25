@@ -26,6 +26,10 @@ const turns: TimedTurn[] = [
   },
 ];
 
+/** Half of a character outside the Basic Multilingual Plane, without its other half. */
+const LONE_SURROGATE =
+  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
 const shortDraft: ReportDraft = {
   assessment: {
     overview: 'Bạn trả lời rõ ràng.',
@@ -85,6 +89,31 @@ describe('composeReport', () => {
     expect(assessment.improvements[0]).toBe(
       'w'.repeat(ASSESSMENT_LIMITS.itemLength),
     );
+  });
+
+  it('never cuts an overview or an item in the middle of a character', () => {
+    const { overviewLength, itemLength } = ASSESSMENT_LIMITS;
+    // The emoji's two UTF-16 units sit on either side of the cut.
+    const draft: ReportDraft = {
+      assessment: {
+        overview: `${'x'.repeat(overviewLength - 2)}😀${'x'.repeat(20)}`,
+        strengths: [`${'s'.repeat(itemLength - 2)}😀${'s'.repeat(20)}`],
+        improvements: [],
+      },
+    };
+
+    const { assessment } = composeReport(turns, draft);
+
+    const overview = assessment.overview;
+    const [strength = ''] = assessment.strengths;
+    for (const [clamped, limit] of [
+      [overview, overviewLength],
+      [strength, itemLength],
+    ] as const) {
+      expect(clamped).not.toMatch(LONE_SURROGATE);
+      expect(clamped.endsWith('…')).toBe(true);
+      expect(clamped.length).toBeLessThanOrEqual(limit);
+    }
   });
 
   it('returns an empty assessment for an empty draft', () => {
