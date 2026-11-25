@@ -1,5 +1,5 @@
 import { initializeLogger, voice } from '@livekit/agents';
-import type { Note } from '@open-lang/shared';
+import { NOTE_LIMITS, type Note } from '@open-lang/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TutorAgent } from '../src/agent.ts';
 import { createBackendClient } from '../src/backend-client.ts';
@@ -141,6 +141,92 @@ describe('The saveNote tool, called by the model', () => {
       .event().item.output;
     expect(output).toMatch(/said/);
     expect(notesSentTo(backend)).toEqual([]);
+  });
+
+  it('treats an empty said on a non-correction as null', async () => {
+    backend = await startFakeBackend();
+    session = await tutorSession(backend, [
+      {
+        input: 'ghi lại câu này',
+        toolCalls: [{ name: 'saveNote', args: { ...phrase, said: '' } }],
+      },
+    ]);
+
+    const result = await session.run({ userInput: 'ghi lại câu này' }).wait();
+
+    result.expect.containsFunctionCallOutput({ isError: false });
+    expect(notesSentTo(backend).map(({ body }) => body)).toEqual([
+      { ...phrase, said: null },
+    ]);
+  });
+
+  it('treats a whitespace-only said on a non-correction as null', async () => {
+    backend = await startFakeBackend();
+    session = await tutorSession(backend, [
+      {
+        input: 'What is blocking you?',
+        toolCalls: [{ name: 'saveNote', args: { ...missed, said: '  \n ' } }],
+      },
+    ]);
+
+    const result = await session
+      .run({ userInput: 'What is blocking you?' })
+      .wait();
+
+    result.expect.containsFunctionCallOutput({ isError: false });
+    expect(notesSentTo(backend).map(({ body }) => body)).toEqual([
+      { ...missed, said: null },
+    ]);
+  });
+
+  it.each([
+    ['an empty said', ''],
+    ['a whitespace-only said', '   '],
+  ])('still refuses a blank said on a correction: %s', async (_name, blank) => {
+    backend = await startFakeBackend();
+    session = await tutorSession(backend, [
+      {
+        input: 'Yesterday I fix the bug.',
+        toolCalls: [
+          {
+            name: 'saveNote',
+            args: {
+              kind: 'correction',
+              english: 'Yesterday I fixed the bug.',
+              meaning: 'Quá khứ: fix thành fixed.',
+              said: blank,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = await session
+      .run({ userInput: 'Yesterday I fix the bug.' })
+      .wait();
+
+    const output = result.expect
+      .containsFunctionCallOutput({ isError: true })
+      .event().item.output;
+    expect(output).toMatch(/said/);
+    expect(notesSentTo(backend)).toEqual([]);
+  });
+
+  it('tells the model the limit of each field in the tool description', async () => {
+    backend = await startFakeBackend();
+    const client = createBackendClient({
+      backendUrl: backend.url,
+      agentApiKey: TEST_AGENT_API_KEY,
+      retryDelayMs: 1,
+    });
+
+    const tool = createSaveNoteTool({ backend: client, roomName: ROOM });
+
+    expect(tool.description).toContain(
+      `Keep each field under ${String(NOTE_LIMITS.english)} characters.`,
+    );
+    // One limit for every field, so the sentence cannot say the wrong number.
+    expect(new Set(Object.values(NOTE_LIMITS)).size).toBe(1);
   });
 
   it('keeps talking when the backend is down', async () => {

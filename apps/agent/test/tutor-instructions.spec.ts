@@ -55,6 +55,11 @@ describe('The tutor instructions', () => {
     expect(TUTOR_INSTRUCTIONS).toMatch(/Never save the same thing twice/);
   });
 
+  it('tells the tutor to speak first and call saveNote after speaking', () => {
+    expect(TUTOR_INSTRUCTIONS).toMatch(/say your reply first/i);
+    expect(TUTOR_INSTRUCTIONS).toMatch(/saveNote after speaking/);
+  });
+
   it('says a plain request to repeat is not a missed sentence', () => {
     expect(TUTOR_INSTRUCTIONS).toMatch(
       /request to repeat or to speak slower is not a missed sentence/,

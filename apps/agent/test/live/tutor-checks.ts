@@ -31,9 +31,11 @@ export const basicChecks: readonly TutorCheck[] = [
   {
     name: 'the tutor calls saveNote after teaching a sentence',
     run: async (tutor) => {
-      await tutor.say(ASK_TO_LEARN);
+      const teaching = await tutor.say(ASK_TO_LEARN);
       // The User says an English sentence back, as in a lesson.
-      await tutor.say('Could you help me with this report, please?');
+      const practising = await tutor.say(
+        'Could you help me with this report, please?',
+      );
 
       const kinds = tutor.notes().map(({ kind }) => kind);
       expect(kinds, 'the kinds of the notes the tutor saved').toContain(
@@ -41,6 +43,19 @@ export const basicChecks: readonly TutorCheck[] = [
       );
       // Few notes: only what is worth keeping.
       expect(kinds.length).toBeLessThanOrEqual(3);
+
+      // saveNote completes silently, so a turn made only of the call would
+      // leave the User in silence: the tutor has to speak in the same turn.
+      const savingTurns = [teaching, practising].filter(({ events }) =>
+        events.some(
+          ({ type, item }) =>
+            type === 'function_call' && item.name === 'saveNote',
+        ),
+      );
+      expect(savingTurns, 'the turns with a saveNote call').not.toHaveLength(0);
+      for (const turn of savingTurns) {
+        turn.expect.containsMessage({ role: 'assistant' });
+      }
     },
   },
   {

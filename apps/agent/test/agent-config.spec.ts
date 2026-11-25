@@ -97,7 +97,7 @@ describe('Agent configuration in Realtime mode with OpenAI', () => {
     );
   });
 
-  it('asks OpenAI to speak at the normal speed of 1, whatever the job says', async () => {
+  it('asks OpenAI to speak at the normal speed of 1', async () => {
     initializeLogger({ pretty: false, level: 'error' });
     const realtimeApi = await startFakeRealtimeApi();
     onTestFinished(() => realtimeApi.close());

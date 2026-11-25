@@ -26,6 +26,7 @@ export const TUTOR_INSTRUCTIONS = [
   'Never save the same thing twice.',
   'Save few notes: only what is worth keeping, a few per topic.',
   'When the User says "ghi lại câu này", save a note of that sentence.',
+  'Always say your reply first, then call saveNote after speaking, in the same turn.',
   'Do not read your notes aloud.',
 ].join('\n');
 

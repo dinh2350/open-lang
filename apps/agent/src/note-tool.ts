@@ -8,6 +8,8 @@ const DESCRIPTION = [
   'Use it for a few important items only: a useful phrase, a word, a correction of what the User said, or a sentence the User missed.',
   'Also use it when the User says "ghi lại câu này".',
   'Do not use it for small talk, for something already saved, or for every sentence.',
+  // The limit is in the parameters too, but a model can overshoot it: say it.
+  `Keep each field under ${String(NOTE_LIMITS.english)} characters.`,
 ].join(' ');
 
 /**
@@ -51,7 +53,10 @@ export function createSaveNoteTool(deps: {
     description: DESCRIPTION,
     parameters,
     execute: async (args) => {
-      const note = noteSchema.safeParse(args);
+      // Models often send "" for what should be null. A blank `said` is none,
+      // so a correction without one is still refused, with a clear reason.
+      const said = args.said?.trim() ? args.said : null;
+      const note = noteSchema.safeParse({ ...args, said });
       if (!note.success) {
         throw new llm.ToolError(
           `The note was not saved: ${note.error.issues
