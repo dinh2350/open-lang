@@ -26,6 +26,8 @@ const summarySelect = {
   turns: { select: { role: true, startedAt: true, endedAt: true } },
   // The content too: a ready Report whose content breaks the contract is shown as failed.
   report: { select: { status: true, content: true } },
+  // Counted in the same query, so a list of Conversations does not ask once for each.
+  _count: { select: { notes: true } },
 } as const;
 
 /** The Conversations of Users. */
@@ -208,6 +210,7 @@ function summarize(
       startedAt: Date;
       endedAt: Date | null;
     }[];
+    readonly _count: { readonly notes: number };
   },
   report: { readonly status: ReportStatus } | null,
 ): Record<string, unknown> {
@@ -216,5 +219,6 @@ function summarize(
     createdAt: conversation.createdAt.toISOString(),
     durationSeconds: conversationDurationSeconds(conversation.turns),
     reportStatus: report?.status ?? null,
+    noteCount: conversation._count.notes,
   };
 }

@@ -60,6 +60,8 @@ export const conversationSummarySchema = z.object({
   createdAt: z.iso.datetime(),
   durationSeconds: z.number().nullable(),
   reportStatus: reportStatusSchema.nullable(),
+  /** How many Notes the Conversation has, so the Member sees which one holds something to look back at. */
+  noteCount: z.number().int().min(0),
 });
 
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;

@@ -1,6 +1,8 @@
 import { Banner } from '@astryxdesign/core/Banner';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from '@astryxdesign/core/Link';
 import { Stack } from '@astryxdesign/core/Stack';
 import {
@@ -16,6 +18,7 @@ import type { ConversationSummary, ReportStatus } from '@open-lang/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { useAuth } from '@/auth/auth-context';
+import { NotebookIcon } from '@/icons';
 import { formatDate, formatDuration } from './conversation-format';
 import { fetchConversations } from './conversations-api';
 
@@ -90,6 +93,12 @@ export function HistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHeaderCell scope="col">Ngày</TableHeaderCell>
+                <TableHeaderCell scope="col">
+                  <HStack as="span" gap={2} align="center">
+                    <Icon icon={NotebookIcon} color="secondary" />
+                    <span>Ghi chú</span>
+                  </HStack>
+                </TableHeaderCell>
                 <TableHeaderCell scope="col">Thời lượng</TableHeaderCell>
                 <TableHeaderCell scope="col">Báo cáo</TableHeaderCell>
               </TableRow>
@@ -124,6 +133,7 @@ function ConversationRow({
           </time>
         </Link>
       </TableHeaderCell>
+      <TableCell>{conversation.noteCount}</TableCell>
       <TableCell>{formatDuration(conversation.durationSeconds)}</TableCell>
       <TableCell>{reportLabels[conversation.reportStatus ?? 'none']}</TableCell>
     </TableRow>

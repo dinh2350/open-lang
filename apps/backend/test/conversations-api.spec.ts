@@ -88,12 +88,14 @@ describe('The Conversation API', () => {
           createdAt: '2026-11-23T09:00:00.000Z',
           durationSeconds: null,
           reportStatus: null,
+          noteCount: 1,
         },
         {
           roomName: 'room-old',
           createdAt: '2026-11-22T09:00:00.000Z',
           durationSeconds: 4.5,
           reportStatus: 'ready',
+          noteCount: 0,
         },
       ],
     });
@@ -109,6 +111,53 @@ describe('The Conversation API', () => {
       .parse(response.body)
       .conversations.map((conversation) => conversation.roomName);
   }
+
+  it('lists noteCount', async () => {
+    await startConversation(app, ada.user, 'room-two');
+    await startConversation(app, ada.user, 'room-none');
+    await startConversation(app, grace.user, 'room-grace');
+    await ingestNote(app, 'room-two', ANY_NOTE);
+    await ingestNote(app, 'room-two', {
+      kind: 'phrase',
+      english: 'Let me circle back to that.',
+      meaning: 'Để tôi quay lại việc đó sau.',
+      said: null,
+    });
+    await ingestNote(app, 'room-grace', ANY_NOTE);
+    await ingestTurn(app, 'room-none', {
+      itemId: 'a',
+      role: 'agent',
+      text: 'Morning!',
+      startedAt: at(0),
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/conversations')
+      .auth(ada.authToken, { type: 'bearer' });
+
+    expect(response.status).toBe(200);
+    const counts = Object.fromEntries(
+      conversationListSchema
+        .parse(response.body)
+        .conversations.map(({ roomName, noteCount }) => [roomName, noteCount]),
+    );
+    expect(counts).toEqual({ 'room-two': 2, 'room-none': 0 });
+  });
+
+  it('shows noteCount in the Conversation too', async () => {
+    await startConversation(app, ada.user, 'room-two');
+    await ingestNote(app, 'room-two', ANY_NOTE);
+    await ingestNote(app, 'room-two', {
+      kind: 'phrase',
+      english: 'Let me circle back to that.',
+      meaning: 'Để tôi quay lại việc đó sau.',
+      said: null,
+    });
+
+    const detail = await readConversation(app, ada.authToken, 'room-two');
+
+    expect(detail.noteCount).toBe(2);
+  });
 
   it('does not list a Conversation that has no turns and no Notes', async () => {
     await startConversation(app, ada.user, 'room-empty');
