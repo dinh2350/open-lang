@@ -1,40 +1,39 @@
-import type { ConversationReport, ListeningMiss } from '@open-lang/shared';
+import { ASSESSMENT_LIMITS, type ConversationReport } from '@open-lang/shared';
 import { computeFluency } from './fluency.js';
 import type { ReportDraft } from './report-model.js';
 import type { TimedTurn } from './resolve-misses.js';
 
-const MAX_GRAMMAR_ISSUES = 5;
+const ELLIPSIS = '…';
+
+/** `text` cut to at most `maxLength` characters, ending in `…` when it was cut. */
+function clamp(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - ELLIPSIS.length).trimEnd()}${ELLIPSIS}`;
+}
+
+/** The first `count` items, each cut to the length of an item. */
+function clampItems(items: readonly string[], count: number): string[] {
+  return items
+    .slice(0, count)
+    .map((item) => clamp(item, ASSESSMENT_LIMITS.itemLength));
+}
 
 /**
- * Builds the Report from the model's draft. The Agent's words come from the
- * transcript, not from the model, and a miss the Member did not press for is dropped.
+ * Builds the Report from the model's draft. A draft longer than a Report
+ * allows is cut to the limits rather than refused, so the Member still gets
+ * the Report; the fluency numbers come from the turns, not from the model.
  */
 export function composeReport(
   turns: readonly TimedTurn[],
-  missedTurnIndexes: readonly number[],
   draft: ReportDraft,
 ): ConversationReport {
-  const missed = new Set(missedTurnIndexes);
-  const seen = new Set<number>();
-  const listeningMisses: ListeningMiss[] = draft.listeningMisses.flatMap(
-    (miss) => {
-      const turn = turns.at(miss.turnIndex);
-      if (turn === undefined || !missed.has(miss.turnIndex)) return [];
-      if (seen.has(miss.turnIndex)) return [];
-      seen.add(miss.turnIndex);
-      return [
-        {
-          agentText: turn.text,
-          keyPhrases: [...miss.keyPhrases],
-          explanation: miss.explanation,
-        },
-      ];
-    },
-  );
-
+  const { overview, strengths, improvements } = draft.assessment;
   return {
-    listeningMisses,
-    grammarIssues: draft.grammarIssues.slice(0, MAX_GRAMMAR_ISSUES),
+    assessment: {
+      overview: clamp(overview, ASSESSMENT_LIMITS.overviewLength),
+      strengths: clampItems(strengths, ASSESSMENT_LIMITS.strengths),
+      improvements: clampItems(improvements, ASSESSMENT_LIMITS.improvements),
+    },
     fluency: computeFluency(turns),
   };
 }

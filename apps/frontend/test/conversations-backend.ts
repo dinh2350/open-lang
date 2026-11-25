@@ -51,13 +51,16 @@ export function summaryOf(
   };
 }
 
-/** A Report with one of each section and every fluency number set. */
+/** A Report with a short assessment and every fluency number set. */
 export function reportOf(
   overrides: Partial<ConversationReport> = {},
 ): ConversationReport {
   return {
-    listeningMisses: [],
-    grammarIssues: [],
+    assessment: {
+      overview: 'Bạn trả lời rõ ràng và đúng ý.',
+      strengths: ['Trả lời nhanh.'],
+      improvements: ['Dùng thì quá khứ khi kể chuyện.'],
+    },
     fluency: {
       wordsPerMinute: 96.4,
       talkRatio: 0.42,

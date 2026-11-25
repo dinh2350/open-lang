@@ -7,7 +7,9 @@ import { browserIsSignedInAs } from './auth-backend';
 import { backend } from './backend';
 import {
   backendHasConversation,
+  backendHasNotes,
   conversationRequestAuthorizations,
+  noteOf,
   reportOf,
   summaryOf,
 } from './conversations-backend';
@@ -104,17 +106,10 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-7', { reportStatus: 'ready' }),
       {
-        report: reportOf({
-          grammarIssues: [
-            {
-              said: 'I goed',
-              corrected: 'I went',
-              reason: 'Quá khứ bất quy tắc.',
-            },
-          ],
-        }),
+        report: reportOf(),
       },
     );
+    backendHasNotes('conversation-7', [noteOf('phrase', 'I went')]);
     renderApp('/conversations');
     const row = (await screen.findByText('Sẵn sàng')).closest('tr');
     expect(row).not.toBeNull();
@@ -124,8 +119,9 @@ describe('History page', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /13 phút/ }),
+      await screen.findByRole('heading', { name: 'Hôm nay bạn học được gì' }),
     ).toBeVisible();
+    expect(await screen.findByText(/13 phút/)).toBeVisible();
     expect(await screen.findByText('I went')).toBeVisible();
   });
 });

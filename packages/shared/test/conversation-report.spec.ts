@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASSESSMENT_LIMITS,
+  assessmentSchema,
   conversationReportSchema,
   fluencySchema,
   turnIngestSchema,
 } from '../src/conversation-report.ts';
-
-const grammarIssue = {
-  said: 'I goes to the office',
-  corrected: 'I go to the office',
-  reason: 'Use "go" with "I".',
-};
 
 const fluency = {
   wordsPerMinute: 110,
@@ -19,15 +15,57 @@ const fluency = {
 };
 
 describe('Conversation Report contracts', () => {
-  it('caps grammar issues at five', () => {
-    const report = (count: number) => ({
-      listeningMisses: [],
-      grammarIssues: Array.from({ length: count }, () => grammarIssue),
-      fluency,
-    });
+  it('assessmentSchema refuses an overview over 160 characters, three strengths, or four improvements', () => {
+    const assessment = {
+      overview: 'a'.repeat(160),
+      strengths: ['b'.repeat(90), 'c'],
+      improvements: ['d', 'e', 'f'.repeat(90)],
+    };
 
-    expect(conversationReportSchema.safeParse(report(5)).success).toBe(true);
-    expect(conversationReportSchema.safeParse(report(6)).success).toBe(false);
+    expect(ASSESSMENT_LIMITS).toEqual({
+      overviewLength: 160,
+      itemLength: 90,
+      strengths: 2,
+      improvements: 3,
+    });
+    expect(assessmentSchema.safeParse(assessment).success).toBe(true);
+    expect(
+      assessmentSchema.safeParse({ ...assessment, overview: 'a'.repeat(161) })
+        .success,
+    ).toBe(false);
+    expect(
+      assessmentSchema.safeParse({
+        ...assessment,
+        strengths: ['b', 'c', 'd'],
+      }).success,
+    ).toBe(false);
+    expect(
+      assessmentSchema.safeParse({
+        ...assessment,
+        improvements: ['d', 'e', 'f', 'g'],
+      }).success,
+    ).toBe(false);
+    expect(
+      assessmentSchema.safeParse({
+        ...assessment,
+        strengths: ['b'.repeat(91)],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('a Report is the assessment and the fluency, and nothing of the old shape', () => {
+    const assessment = { overview: '', strengths: [], improvements: [] };
+
+    expect(
+      conversationReportSchema.safeParse({ assessment, fluency }).success,
+    ).toBe(true);
+    expect(
+      conversationReportSchema.safeParse({
+        listeningMisses: [],
+        grammarIssues: [],
+        fluency,
+      }).success,
+    ).toBe(false);
   });
 
   it('allows null fluency numbers but requires every field', () => {

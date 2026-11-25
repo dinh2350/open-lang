@@ -5,26 +5,32 @@ export const reportStatusSchema = z.enum(['generating', 'ready', 'failed']);
 
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
 
-/** A moment the Member pressed "I did not catch that", with help to follow it. */
-export const listeningMissSchema = z.object({
-  /** What the Agent said that the Member did not catch. */
-  agentText: z.string(),
-  /** The words in `agentText` worth learning. */
-  keyPhrases: z.array(z.string()),
-  /** A short Vietnamese explanation of the sentence. */
-  explanation: z.string(),
+/**
+ * How long the tutor's assessment may be, so the Member reads all of it: the
+ * most characters of the overview and of each item, and the most items.
+ */
+export const ASSESSMENT_LIMITS = {
+  overviewLength: 160,
+  itemLength: 90,
+  strengths: 2,
+  improvements: 3,
+} as const;
+
+const assessmentItemSchema = z.string().max(ASSESSMENT_LIMITS.itemLength);
+
+/** The tutor's short assessment of a Conversation, in Vietnamese. */
+export const assessmentSchema = z.object({
+  /** One or two short sentences; empty when there was too little to assess. */
+  overview: z.string().max(ASSESSMENT_LIMITS.overviewLength),
+  /** What the Member did well. */
+  strengths: z.array(assessmentItemSchema).max(ASSESSMENT_LIMITS.strengths),
+  /** What the Member should work on next. */
+  improvements: z
+    .array(assessmentItemSchema)
+    .max(ASSESSMENT_LIMITS.improvements),
 });
 
-export type ListeningMiss = z.infer<typeof listeningMissSchema>;
-
-/** One grammar mistake the Member made, with the fix. */
-export const grammarIssueSchema = z.object({
-  said: z.string(),
-  corrected: z.string(),
-  reason: z.string(),
-});
-
-export type GrammarIssue = z.infer<typeof grammarIssueSchema>;
+export type Assessment = z.infer<typeof assessmentSchema>;
 
 /** How fluently the Member spoke. A number is null when it cannot be measured. */
 export const fluencySchema = z.object({
@@ -37,10 +43,12 @@ export const fluencySchema = z.object({
 
 export type Fluency = z.infer<typeof fluencySchema>;
 
-/** The Report of one Conversation. At most five grammar issues. */
+/**
+ * The Report of one Conversation: the tutor's assessment and the fluency
+ * numbers. What the Member learned is in the Conversation's Notes.
+ */
 export const conversationReportSchema = z.object({
-  listeningMisses: z.array(listeningMissSchema),
-  grammarIssues: z.array(grammarIssueSchema).max(5),
+  assessment: assessmentSchema,
   fluency: fluencySchema,
 });
 

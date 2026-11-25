@@ -1,19 +1,23 @@
-import { grammarIssueSchema, type GrammarIssue } from '@open-lang/shared';
+import type { Note } from '@open-lang/shared';
 import { z } from 'zod';
 import type { Role } from './resolve-misses.js';
 
+/** What the model reads: the Conversation's turns, in order, and its Notes. */
 export interface ReportInput {
   readonly transcript: readonly { role: Role; text: string }[];
-  readonly missedTurnIndexes: readonly number[];
+  readonly notes: readonly Note[];
 }
 
+/**
+ * What the model writes. It may be longer than a Report allows;
+ * `composeReport` cuts it to the limits.
+ */
 export interface ReportDraft {
-  readonly listeningMisses: readonly {
-    turnIndex: number;
-    keyPhrases: string[];
-    explanation: string;
-  }[];
-  readonly grammarIssues: readonly GrammarIssue[];
+  readonly assessment: {
+    readonly overview: string;
+    readonly strengths: readonly string[];
+    readonly improvements: readonly string[];
+  };
 }
 
 /** The injection token of the configured ReportModel. */
@@ -35,15 +39,11 @@ export const REPORT_REQUEST_TIMEOUT_MS = 60_000;
 /** The model failed, or answered in a shape we cannot use. */
 export class ReportModelError extends Error {}
 
-const reportDraftSchema = z.object({
-  listeningMisses: z.array(
-    z.object({
-      turnIndex: z.number().int().min(0),
-      keyPhrases: z.array(z.string()),
-      explanation: z.string(),
-    }),
-  ),
-  grammarIssues: z.array(grammarIssueSchema),
+/** The model's answer. No limits here: an answer that is too long is cut, not refused. */
+const assessmentAnswerSchema = z.object({
+  overview: z.string(),
+  strengths: z.array(z.string()),
+  improvements: z.array(z.string()),
 });
 
 const FENCE = '```';
@@ -95,11 +95,11 @@ export function parseReportDraft(text: string): ReportDraft {
     throw new ReportModelError('The report model did not answer with JSON.');
   }
 
-  const parsed = reportDraftSchema.safeParse(json);
+  const parsed = assessmentAnswerSchema.safeParse(json);
   if (!parsed.success) {
     throw new ReportModelError(
       `The report model answered in the wrong shape: ${z.prettifyError(parsed.error)}`,
     );
   }
-  return parsed.data;
+  return { assessment: parsed.data };
 }

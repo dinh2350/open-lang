@@ -72,13 +72,18 @@ describe('Conversations of another User', () => {
     backendHasConversation(summaryOf(ROOM, { reportStatus: 'ready' }), {
       owner: ADA,
       report: reportOf({
-        grammarIssues: [
-          { said: ADAS_SENTENCE, corrected: 'Ada said this.', reason: 'x' },
-        ],
+        assessment: {
+          overview: ADAS_SENTENCE,
+          strengths: [],
+          improvements: [],
+        },
       }),
     });
     await userEvent.click(screen.getByRole('link', { name: 'Lịch sử' }));
     await userEvent.click(await screen.findByRole('link', { name: /2026/ }));
+    await userEvent.click(
+      await screen.findByRole('tab', { name: 'Gia sư đánh giá' }),
+    );
     await screen.findByText(ADAS_SENTENCE);
     await signOutAndSignInAs(BEN);
     // Ben's own Conversation happens to have the same room name.
@@ -108,13 +113,18 @@ describe('Conversations of another User', () => {
     browserIsSignedInAs(ADA, PASSWORD);
     backendHasConversation(summaryOf(ROOM, { reportStatus: 'ready' }), {
       report: reportOf({
-        grammarIssues: [
-          { said: ADAS_SENTENCE, corrected: 'Ada said this.', reason: 'x' },
-        ],
+        assessment: {
+          overview: ADAS_SENTENCE,
+          strengths: [],
+          improvements: [],
+        },
       }),
     });
     renderApp('/conversations');
     await userEvent.click(await screen.findByRole('link', { name: /2026/ }));
+    await userEvent.click(
+      await screen.findByRole('tab', { name: 'Gia sư đánh giá' }),
+    );
     await screen.findByText(ADAS_SENTENCE);
     await userEvent.click(screen.getByRole('link', { name: 'Lịch sử' }));
     const link = await screen.findByRole('link', { name: /2026/ });

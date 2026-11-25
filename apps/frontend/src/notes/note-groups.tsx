@@ -1,5 +1,5 @@
 import { Badge } from '@astryxdesign/core/Badge';
-import { Heading } from '@astryxdesign/core/Heading';
+import { Heading, type HeadingLevel } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Stack } from '@astryxdesign/core/Stack';
@@ -30,6 +30,8 @@ interface NoteGroupsProps {
   readonly notes: readonly StoredNote[];
   /** The ids of the Notes to mark Mới. */
   readonly newNoteIds?: ReadonlySet<string>;
+  /** The level of each group's heading, so it fits the page's outline. */
+  readonly headingLevel?: HeadingLevel;
 }
 
 /**
@@ -37,7 +39,11 @@ interface NoteGroupsProps {
  * many Notes it has; a group with no Notes is left out. Note text is the
  * Agent's, so it is shown as plain text, never as markup.
  */
-export function NoteGroups({ notes, newNoteIds = NO_NOTES }: NoteGroupsProps) {
+export function NoteGroups({
+  notes,
+  newNoteIds = NO_NOTES,
+  headingLevel = 3,
+}: NoteGroupsProps) {
   return (
     <Stack gap={6}>
       {NOTE_GROUPS.map((group) => {
@@ -48,6 +54,7 @@ export function NoteGroups({ notes, newNoteIds = NO_NOTES }: NoteGroupsProps) {
             group={group}
             notes={groupNotes}
             newNoteIds={newNoteIds}
+            headingLevel={headingLevel}
           />
         );
       })}
@@ -59,15 +66,17 @@ function NoteGroupSection({
   group,
   notes,
   newNoteIds,
+  headingLevel,
 }: {
   readonly group: NoteGroup;
   readonly notes: readonly StoredNote[];
   readonly newNoteIds: ReadonlySet<string>;
+  readonly headingLevel: HeadingLevel;
 }) {
   const headingId = useId();
   return (
     <Stack as="section" aria-labelledby={headingId} gap={3}>
-      <Heading level={3} id={headingId}>
+      <Heading level={headingLevel} id={headingId}>
         <HStack as="span" gap={2} align="center">
           <Icon icon={group.Icon} color="secondary" />
           <span>{`${group.title} (${String(notes.length)})`}</span>

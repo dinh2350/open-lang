@@ -1,4 +1,4 @@
-import type { AuthResponse } from '@open-lang/shared';
+import type { AuthResponse, Note } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import type { App } from 'supertest/types.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -16,8 +16,9 @@ import {
   at,
   endConversation,
   getConversation,
-  ingestMiss,
+  ingestNote,
   ingestTurn,
+  listNotes,
   readConversation,
   requestReport,
   startConversation,
@@ -30,7 +31,7 @@ const ROOM = 'room-under-test';
 /** The Fake model, recording what it was asked. */
 class SpyModel implements ReportModel {
   readonly inputs: ReportInput[] = [];
-  private readonly fake = new FakeReportModel();
+  private readonly fake: ReportModel = new FakeReportModel();
 
   draft(input: ReportInput): Promise<ReportDraft> {
     this.inputs.push(input);
@@ -104,25 +105,16 @@ describe('Report generation', () => {
       endedAt: at(to),
     });
 
-  it('a Report lists each missed Agent sentence with its explanation', async () => {
-    await start();
-    await agentTurn('a1', 'Any blockers today?', 0, 4.5);
-    await ingestMiss(app, ROOM, at(2));
+  const correction: Note = {
+    kind: 'correction',
+    english: 'I have no blockers.',
+    meaning: 'Dùng "have no" thay cho "am no".',
+    said: 'I am no blocker.',
+  };
 
-    const detail = await reportOf();
-
-    expect(detail.reportStatus).toBe('ready');
-    expect(detail.report?.listeningMisses).toEqual([
-      {
-        agentText: 'Any blockers today?',
-        keyPhrases: [],
-        explanation: 'Giải thích thử nghiệm.',
-      },
-    ]);
-  });
-
-  it("a Report lists grammar issues from the User's turns", async () => {
-    await start();
+  it('writes the Report from stored notes and turns after the end marker', async () => {
+    const model = new SpyModel();
+    await start(model);
     await agentTurn('a1', 'Any blockers today?', 0, 4);
     await ingestTurn(app, ROOM, {
       itemId: 'u1',
@@ -131,13 +123,42 @@ describe('Report generation', () => {
       startedAt: at(5),
       endedAt: at(8),
     });
+    await ingestNote(app, ROOM, correction);
 
     const detail = await reportOf();
 
-    expect(detail.report?.grammarIssues.map((issue) => issue.said)).toEqual([
-      'I am no blocker.',
-    ]);
+    expect(detail.reportStatus).toBe('ready');
+    expect(detail.report?.assessment).toEqual({
+      overview: 'Nhận xét thử nghiệm.',
+      strengths: ['Điểm mạnh thử nghiệm.'],
+      improvements: ['Điểm cần cải thiện thử nghiệm.'],
+    });
     expect(detail.report?.fluency.longestTurnSeconds).toBe(3);
+    expect(Object.keys(detail.report ?? {})).toEqual(['assessment', 'fluency']);
+    expect(model.inputs).toEqual([
+      {
+        transcript: [
+          { role: 'agent', text: 'Any blockers today?' },
+          { role: 'user', text: 'I am no blocker.' },
+        ],
+        notes: [correction],
+      },
+    ]);
+  });
+
+  it('notes endpoint still lists the notes when the Report failed', async () => {
+    await start({
+      draft: () => Promise.reject(new ReportModelError('The model is down.')),
+    });
+    await agentTurn('a1', 'Any blockers today?', 0, 4);
+    await ingestNote(app, ROOM, correction);
+
+    const detail = await reportOf();
+
+    expect(detail.reportStatus).toBe('failed');
+    expect(await listNotes(app, ada.authToken, ROOM)).toMatchObject([
+      correction,
+    ]);
   });
 
   it('orders turns by start time even when they arrived late', async () => {
@@ -152,9 +173,8 @@ describe('Report generation', () => {
       endedAt: at(8),
     });
     await agentTurn('a1', 'Any blockers today?', 0, 4);
-    await ingestMiss(app, ROOM, at(2));
 
-    const detail = await reportOf();
+    await reportOf();
 
     expect(model.inputs).toHaveLength(1);
     expect(model.inputs[0]?.transcript.map((turn) => turn.text)).toEqual([
@@ -162,10 +182,6 @@ describe('Report generation', () => {
       'Fine.',
       'Great, thanks.',
     ]);
-    expect(model.inputs[0]?.missedTurnIndexes).toEqual([0]);
-    expect(
-      detail.report?.listeningMisses.map((miss) => miss.agentText),
-    ).toEqual(['Any blockers today?']);
   });
 
   it('a Conversation never ended still produces a Report from its stored turns', async () => {
@@ -182,13 +198,11 @@ describe('Report generation', () => {
       text: 'No blockers.',
       startedAt: at(4),
     });
-    await ingestMiss(app, ROOM, at(1));
 
     const detail = await reportOf();
 
     expect(detail.reportStatus).toBe('ready');
-    expect(detail.report?.listeningMisses).toHaveLength(1);
-    expect(detail.report?.grammarIssues).toHaveLength(1);
+    expect(detail.report?.assessment.overview).toBe('Nhận xét thử nghiệm.');
   });
 
   it('an empty Conversation gets an empty ready Report and the model is never called', async () => {
@@ -199,8 +213,7 @@ describe('Report generation', () => {
 
     expect(detail.reportStatus).toBe('ready');
     expect(detail.report).toEqual({
-      listeningMisses: [],
-      grammarIssues: [],
+      assessment: { overview: '', strengths: [], improvements: [] },
       fluency: {
         wordsPerMinute: null,
         talkRatio: null,
@@ -211,19 +224,8 @@ describe('Report generation', () => {
     expect(model.inputs).toHaveLength(0);
   });
 
-  it('a press with no earlier Agent turn is left out', async () => {
-    await start();
-    await agentTurn('a1', 'Any blockers today?', 10, 14);
-    await ingestMiss(app, ROOM, at(1));
-
-    const detail = await reportOf();
-
-    expect(detail.reportStatus).toBe('ready');
-    expect(detail.report?.listeningMisses).toEqual([]);
-  });
-
   it('a model error marks the Report failed, keeps the turns, and asking again makes it ready', async () => {
-    const fake = new FakeReportModel();
+    const fake: ReportModel = new FakeReportModel();
     let calls = 0;
     await start({
       draft: (input) => {
@@ -260,7 +262,7 @@ describe('Report generation', () => {
   });
 
   it('a Report that is generating and younger than two minutes is not started again', async () => {
-    const fake = new FakeReportModel();
+    const fake: ReportModel = new FakeReportModel();
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -335,22 +337,25 @@ describe('Report generation', () => {
     expect(await app.get(PrismaService).report.count()).toBe(0);
   });
 
-  it('a turn or Miss that arrives after the Report is requested but before the end marker still appears in the Report', async () => {
-    await start();
+  it('a turn or note that arrives after the Report is requested but before the end marker still reaches the model', async () => {
+    const model = new SpyModel();
+    await start(model);
     await agentTurn('a1', 'Any blockers today?', 0, 4);
     await requestReport(app, ada.authToken, ROOM).expect(202);
 
-    // What the Agent sends while the room closes: the last sentence and a
-    // press just before Kết thúc.
+    // What the Agent sends while the room closes: the last sentence and the
+    // last note.
     await agentTurn('a2', 'Then let us wrap up.', 5, 8);
-    await ingestMiss(app, ROOM, at(6));
+    await ingestNote(app, ROOM, correction);
     await endConversation(app, ROOM);
     const detail = await settled();
 
     expect(detail.reportStatus).toBe('ready');
-    expect(
-      detail.report?.listeningMisses.map((miss) => miss.agentText),
-    ).toEqual(['Then let us wrap up.']);
+    expect(model.inputs[0]?.transcript.map((turn) => turn.text)).toEqual([
+      'Any blockers today?',
+      'Then let us wrap up.',
+    ]);
+    expect(model.inputs[0]?.notes).toEqual([correction]);
   });
 
   it('generation waits for the end marker', async () => {
@@ -384,24 +389,20 @@ describe('Report generation', () => {
   });
 
   it('a Report that fails validation is stored as failed and asking again retries', async () => {
-    const fake = new FakeReportModel();
+    const fake: ReportModel = new FakeReportModel();
     let calls = 0;
     await start({
       draft: async (input) => {
         calls += 1;
         const draft = await fake.draft(input);
         if (calls > 1) return draft;
-        // Six issues where a Report holds five is capped; a said that is not
-        // text is not, and only the Report's contract catches it.
+        // A draft that is too long is clamped; an overview that is not text
+        // is not, and only the Report's contract catches it.
         return {
-          ...draft,
-          grammarIssues: [
-            { said: 42, corrected: 'x', reason: 'y' } as unknown as {
-              said: string;
-              corrected: string;
-              reason: string;
-            },
-          ],
+          assessment: {
+            ...draft.assessment,
+            overview: 42 as unknown as string,
+          },
         };
       },
     });
@@ -437,7 +438,17 @@ describe('Report generation', () => {
       data: {
         conversationId: conversation.id,
         status: 'ready',
-        content: { listeningMisses: 'not a list' },
+        // A Report of the old shape.
+        content: {
+          listeningMisses: [],
+          grammarIssues: [],
+          fluency: {
+            wordsPerMinute: null,
+            talkRatio: null,
+            fillerWordsEstimate: 0,
+            longestTurnSeconds: null,
+          },
+        },
       },
     });
 

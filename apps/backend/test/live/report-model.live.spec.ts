@@ -10,7 +10,14 @@ const input: ReportInput = {
     { role: 'agent', text: 'Morning! Any blockers I should loop in on?' },
     { role: 'user', text: 'No blocker. I finish the report yesterday.' },
   ],
-  missedTurnIndexes: [0],
+  notes: [
+    {
+      kind: 'correction',
+      english: 'I finished the report yesterday.',
+      meaning: 'Dùng thì quá khứ với yesterday.',
+      said: 'I finish the report yesterday.',
+    },
+  ],
 };
 
 const providers = [
@@ -32,9 +39,9 @@ describe.each(providers)('The $provider report model (live)', (target) => {
 
       const draft = await model.draft(input);
 
-      expect(draft.listeningMisses.map((miss) => miss.turnIndex)).toEqual([0]);
-      expect(draft.listeningMisses[0]?.explanation).not.toBe('');
-      expect(draft.grammarIssues.length).toBeLessThanOrEqual(5);
+      expect(draft.assessment.overview).not.toBe('');
+      expect(Array.isArray(draft.assessment.strengths)).toBe(true);
+      expect(Array.isArray(draft.assessment.improvements)).toBe(true);
     },
   );
 });

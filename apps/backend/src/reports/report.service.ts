@@ -11,7 +11,6 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { composeReport } from './compose-report.js';
 import { REPORT_END_WAIT, type EndWait } from './end-wait.js';
 import { REPORT_MODEL, type ReportModel } from './report-model.js';
-import { resolveMisses } from './resolve-misses.js';
 import { readStoredReport } from './stored-report.js';
 
 /** A Report still generating after this long is taken as lost, and may be started again. */
@@ -20,7 +19,7 @@ const GENERATING_TIMEOUT_MS = 120_000;
 /**
  * The longest a Report waits for the Agent's end marker, from its claim,
  * before it reads the Conversation anyway. The Agent posts the marker once
- * it has sent its last turns and Misses, a few seconds after the User leaves.
+ * it has sent its last turns and Notes, a few seconds after the User leaves.
  * A run may then wait up to `REPORT_REQUEST_TIMEOUT_MS` (60 000 ms) for the
  * model, so the two must stay below `GENERATING_TIMEOUT_MS`: 15 s + 60 s <
  * 120 s, or a second run could start while the first still runs.
@@ -146,7 +145,7 @@ export class ReportService {
 
   /**
    * Waits until the Agent has posted the Conversation's end marker, so the
-   * last turns and Misses are stored, or until `endWait.timeoutMs` has passed
+   * last turns and Notes are stored, or until `endWait.timeoutMs` has passed
    * since the claim. It reads the Conversation every `endWait.pollMs`.
    */
   private async waitForEnd(
@@ -170,35 +169,34 @@ export class ReportService {
   }
 
   /**
-   * Builds the Report from the stored turns. The turns, the transcript the
-   * model sees and the indexes of the missed turns all come from one array,
-   * sorted by start time, never by arrival.
+   * Builds the Report from the stored turns, sorted by start time, never by
+   * arrival, and the Notes the tutor wrote, oldest first. A Conversation
+   * with no turns gets an empty assessment without asking the model.
    */
   private async write(conversationId: string): Promise<ConversationReport> {
-    const [turns, misses] = await Promise.all([
+    const [turns, notes] = await Promise.all([
       this.prisma.turn.findMany({
         where: { conversationId },
         orderBy: [{ startedAt: 'asc' }, { id: 'asc' }],
         select: { role: true, text: true, startedAt: true, endedAt: true },
       }),
-      this.prisma.miss.findMany({
+      this.prisma.note.findMany({
         where: { conversationId },
-        select: { pressedAt: true },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        select: { kind: true, english: true, meaning: true, said: true },
       }),
     ]);
     if (turns.length === 0) {
-      return composeReport([], [], { listeningMisses: [], grammarIssues: [] });
+      return composeReport([], {
+        assessment: { overview: '', strengths: [], improvements: [] },
+      });
     }
 
-    const missedTurnIndexes = resolveMisses(
-      turns,
-      misses.map((miss) => miss.pressedAt),
-    );
     const draft = await this.model.draft({
       transcript: turns.map(({ role, text }) => ({ role, text })),
-      missedTurnIndexes,
+      notes,
     });
-    return composeReport(turns, missedTurnIndexes, draft);
+    return composeReport(turns, draft);
   }
 
   /** Stores the outcome, unless a newer run has taken the Report over meanwhile. */
