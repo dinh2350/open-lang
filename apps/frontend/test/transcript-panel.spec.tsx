@@ -17,13 +17,13 @@ function renderTranscriptPanel() {
   return liveKit;
 }
 
-/** Each line on screen as [who, what they said in English], top to bottom. */
-function lines(): (string | undefined)[][] {
+/** Each line on screen as [who, what they said], top to bottom. */
+function lines(): (string | null | undefined)[][] {
   return screen
     .getAllByRole('listitem')
     .map((line) => [
       within(line).getByText(/^(Gia sư|Bạn)$/).textContent,
-      line.querySelector('[lang="en"]')?.textContent,
+      line.querySelector('p')?.textContent,
     ]);
 }
 
@@ -48,6 +48,28 @@ describe('TranscriptPanel', () => {
         ['Gia sư', 'What did you do?'],
       ]);
     });
+  });
+
+  it('does not mark a line as English: the tutor explains in Vietnamese', async () => {
+    const liveKit = renderTranscriptPanel();
+
+    act(() => {
+      liveKit.agentSays(
+        'segment-1',
+        'Bạn nói "I fixed the bug." nhé, vì chuyện đã xảy ra rồi.',
+      );
+    });
+    act(() => {
+      liveKit.memberSays('segment-2', 'I fixed the bug.');
+    });
+
+    await screen.findByText('I fixed the bug.');
+    const allLines = screen.getAllByRole('listitem');
+    expect(allLines).toHaveLength(2);
+    for (const line of allLines) {
+      expect(line.querySelector('[lang]')).toBeNull();
+      expect(line).not.toHaveAttribute('lang', 'en');
+    }
   });
 
   it('marks the line being spoken as live', async () => {

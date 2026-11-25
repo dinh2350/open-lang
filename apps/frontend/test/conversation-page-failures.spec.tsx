@@ -46,7 +46,7 @@ describe('Conversation page failures', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'quyền dùng micro đang bị chặn',
+      'Gia sư không nghe được bạn vì quyền dùng micro đang bị chặn',
     );
     await waitFor(() => {
       expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
@@ -106,7 +106,9 @@ describe('Conversation page failures', () => {
     expect(getStatusMessage()).toHaveTextContent('Đang chờ Gia sư');
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
-    expect(screen.getByRole('alert')).toHaveTextContent('Agent không sẵn sàng');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Gia sư không sẵn sàng',
+    );
     expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
     expect(queryStatusMessage()).toBeNull();
     expect(screen.getByRole('button', { name: 'Bắt đầu' })).toBeVisible();
@@ -129,7 +131,9 @@ describe('Conversation page failures', () => {
 
     await act(() => vi.advanceTimersByTimeAsync(5_000));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Agent không sẵn sàng');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Gia sư không sẵn sàng',
+    );
   });
 
   describe('pressing Bắt đầu again', () => {
@@ -196,7 +200,7 @@ describe('Conversation page failures', () => {
       await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));
       await act(() => vi.advanceTimersByTimeAsync(15_000));
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Agent không sẵn sàng',
+        'Gia sư không sẵn sàng',
       );
 
       await user.click(screen.getByRole('button', { name: 'Bắt đầu' }));

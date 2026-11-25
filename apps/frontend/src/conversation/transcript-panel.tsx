@@ -78,9 +78,7 @@ export function TranscriptPanel() {
             </Text>
             {isLive && <Badge variant="blue" label="Đang nói" />}
           </HStack>
-          <Text as="p">
-            <span lang="en">{text}</span>
-          </Text>
+          <Text as="p">{text}</Text>
         </Stack>
       ))}
     </Stack>

@@ -13,7 +13,7 @@ interface ConversationPageProps {
   readonly room: Room;
   /**
    * How long a Conversation waits for the Agent to join and start listening
-   * before it shows "Agent không sẵn sàng" and ends.
+   * before it shows "Gia sư không sẵn sàng" and ends.
    */
   readonly agentJoinTimeoutMilliseconds: number;
   /**
@@ -25,10 +25,10 @@ interface ConversationPageProps {
 
 const failureMessages: Record<ConversationFailure, string> = {
   'microphone-denied':
-    'Agent không nghe được bạn vì quyền dùng micro đang bị chặn. Hãy cho phép micro cho trang này trong cài đặt trình duyệt, rồi bấm Bắt đầu.',
+    'Gia sư không nghe được bạn vì quyền dùng micro đang bị chặn. Hãy cho phép micro cho trang này trong cài đặt trình duyệt, rồi bấm Bắt đầu.',
   'start-failed': 'Không bắt đầu được buổi học. Bấm Bắt đầu để thử lại.',
   'agent-unavailable':
-    'Agent không sẵn sàng nên buổi học đã kết thúc. Bấm Bắt đầu để thử lại.',
+    'Gia sư không sẵn sàng nên buổi học đã kết thúc. Bấm Bắt đầu để thử lại.',
 };
 
 /**
