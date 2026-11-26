@@ -53,9 +53,14 @@ export function createSaveNoteTool(deps: {
     description: DESCRIPTION,
     parameters,
     execute: async (args) => {
-      // Models often send "" for what should be null. A blank `said` is none,
-      // so a correction without one is still refused, with a clear reason.
-      const said = args.said?.trim() ? args.said : null;
+      // Models often send "" for what should be null, and Gemini often sends
+      // the User's words as `said` on a note that is not a correction.
+      // Refusing such a note costs it, and the model answers the refusal with
+      // another turn of speech. Only a correction keeps its `said`, and a
+      // blank one is none, so a correction without one is still refused, with
+      // a clear reason.
+      const said =
+        args.kind === 'correction' && args.said?.trim() ? args.said : null;
       const note = noteSchema.safeParse({ ...args, said });
       if (!note.success) {
         throw new llm.ToolError(

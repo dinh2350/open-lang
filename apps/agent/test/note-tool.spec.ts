@@ -179,6 +179,31 @@ describe('The saveNote tool, called by the model', () => {
     ]);
   });
 
+  it.each(['missed', 'phrase', 'word'] as const)(
+    'drops a said the model gives a %s note, which only a correction has',
+    async (kind) => {
+      // Gemini does this often: the User's words as `said` on a note that is
+      // not a correction. Refusing the note costs it, and the model answers
+      // the refusal with another turn of speech.
+      backend = await startFakeBackend();
+      session = await tutorSession(backend, [
+        {
+          input: 'algorithm',
+          toolCalls: [
+            { name: 'saveNote', args: { ...missed, kind, said: 'algoritmo' } },
+          ],
+        },
+      ]);
+
+      const result = await session.run({ userInput: 'algorithm' }).wait();
+
+      result.expect.containsFunctionCallOutput({ isError: false });
+      expect(notesSentTo(backend).map(({ body }) => body)).toEqual([
+        { ...missed, kind, said: null },
+      ]);
+    },
+  );
+
   it.each([
     ['an empty said', ''],
     ['a whitespace-only said', '   '],
