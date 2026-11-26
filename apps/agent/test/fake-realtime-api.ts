@@ -21,8 +21,14 @@ export interface RealtimeConnection {
 export interface FakeRealtimeApi {
   /** The URL to give the plugin instead of the Provider's, over plain HTTP. */
   readonly baseUrl: string;
-  /** Opens a RealtimeSession on the realtime model, and returns what it sent. */
-  connect(realtimeModel: unknown): Promise<RealtimeConnection>;
+  /**
+   * Opens a RealtimeSession on the realtime model, with the given tools if
+   * any, and returns what it sent.
+   */
+  connect(
+    realtimeModel: unknown,
+    options?: { tools?: llm.ToolContext },
+  ): Promise<RealtimeConnection>;
   close(): Promise<void>;
 }
 
@@ -33,7 +39,7 @@ export async function startFakeRealtimeApi(): Promise<FakeRealtimeApi> {
 
   return {
     baseUrl: `http://127.0.0.1:${String(port)}`,
-    async connect(realtimeModel) {
+    async connect(realtimeModel, { tools } = {}) {
       if (!(realtimeModel instanceof llm.RealtimeModel)) {
         throw new TypeError('Realtime mode has a realtime model');
       }
@@ -51,6 +57,7 @@ export async function startFakeRealtimeApi(): Promise<FakeRealtimeApi> {
       });
       const session = realtimeModel.session();
       try {
+        if (tools) await session.updateTools(tools);
         return await connected;
       } finally {
         await session.close();

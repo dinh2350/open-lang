@@ -8,4 +8,4 @@ export {
   modelsOf,
   type Provider,
 } from './agent-config.ts';
-export { createSessionOptions } from './session-options.ts';
+export { createSessionOptions, noteOrderOf } from './session-options.ts';

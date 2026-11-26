@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { TutorAgent } from '../src/agent.ts';
 import { createBackendClient } from '../src/backend-client.ts';
 import { createSaveNoteTool } from '../src/note-tool.ts';
-import { TUTOR_INSTRUCTIONS } from '../src/tutor-instructions.ts';
+import {
+  TUTOR_INSTRUCTIONS,
+  tutorInstructions,
+} from '../src/tutor-instructions.ts';
 
 describe('TutorAgent', () => {
   it('is a voice.Agent', () => {
@@ -12,6 +15,12 @@ describe('TutorAgent', () => {
 
   it('follows the tutor instructions', () => {
     expect(new TutorAgent().instructions).toBe(TUTOR_INSTRUCTIONS);
+  });
+
+  it('follows the instructions of the note order it is given', () => {
+    expect(new TutorAgent([], 'before-speaking').instructions).toBe(
+      tutorInstructions('before-speaking'),
+    );
   });
 
   it('has the tools it is given, and only those', () => {

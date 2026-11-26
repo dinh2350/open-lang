@@ -11,6 +11,7 @@ import {
   onTestFinished,
   vi,
 } from 'vitest';
+import { z } from 'zod';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
 import { startFakeRealtimeApi } from './fake-realtime-api.ts';
 
@@ -129,6 +130,36 @@ describe('Agent configuration in Realtime mode with Google', () => {
 
     expect(options.turnHandling?.turnDetection).toBe('realtime_llm');
     expect(options.vad).toBeNull();
+  });
+
+  it('declares every tool NON_BLOCKING, so the tutor keeps talking while saveNote runs', async () => {
+    // Left BLOCKING, as the Node.js plugin does by default, Gemini stops at
+    // the call and starts a new turn by itself once the result is in. The SDK
+    // takes that turn for the User speaking: it cuts the tutor off, and the
+    // microphone stays closed while a call is unanswered.
+    const liveApi = await startFakeRealtimeApi();
+    onTestFinished(() => liveApi.close());
+    vi.stubEnv('GOOGLE_GEMINI_BASE_URL', liveApi.baseUrl);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    const options = createSessionOptions(loadAgentConfig(realtimeWithGoogle));
+
+    const connection = await liveApi.connect(options.llm, {
+      tools: new llm.ToolContext([
+        llm.tool({
+          name: 'saveNote',
+          description: 'Saves a note.',
+          parameters: z.object({ english: z.string() }),
+          execute: () => Promise.resolve(),
+        }),
+      ]),
+    });
+
+    expect(connection.firstMessage).toHaveProperty(
+      'setup.tools[0].functionDeclarations[0].behavior',
+      'NON_BLOCKING',
+    );
   });
 });
 

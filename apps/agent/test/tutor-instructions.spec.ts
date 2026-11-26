@@ -3,6 +3,7 @@ import {
   OPENING_INSTRUCTIONS,
   OPENING_LINE,
   TUTOR_INSTRUCTIONS,
+  tutorInstructions,
 } from '../src/tutor-instructions.ts';
 
 describe('The tutor instructions', () => {
@@ -55,9 +56,36 @@ describe('The tutor instructions', () => {
     expect(TUTOR_INSTRUCTIONS).toMatch(/Never save the same thing twice/);
   });
 
-  it('tells the tutor to speak first and call saveNote after speaking', () => {
+  it('tells the tutor to speak first and call saveNote after speaking, by default', () => {
+    expect(TUTOR_INSTRUCTIONS).toBe(tutorInstructions('after-speaking'));
     expect(TUTOR_INSTRUCTIONS).toMatch(/say your reply first/i);
     expect(TUTOR_INSTRUCTIONS).toMatch(/saveNote after speaking/);
+    expect(TUTOR_INSTRUCTIONS).not.toMatch(/saveNote first/);
+  });
+
+  it('tells the tutor to call saveNote first and then speak, when asked', () => {
+    const instructions = tutorInstructions('before-speaking');
+
+    expect(instructions).toMatch(/call saveNote first, before you speak/i);
+    expect(instructions).not.toMatch(/say your reply first/i);
+    expect(instructions).not.toMatch(/saveNote after speaking/);
+  });
+
+  it('gives no order for the missed note, which would contradict the one it was asked for', () => {
+    for (const order of ['after-speaking', 'before-speaking'] as const) {
+      expect(tutorInstructions(order)).not.toMatch(
+        /Then call saveNote with kind 'missed'/,
+      );
+    }
+  });
+
+  it('differs only in the order of the note and the reply', () => {
+    const lines = (text: string) => text.split('\n');
+    const same = (line: string) => !/saveNote (first|after)/.test(line);
+
+    expect(lines(tutorInstructions('before-speaking')).filter(same)).toEqual(
+      lines(tutorInstructions('after-speaking')).filter(same),
+    );
   });
 
   it('says a plain request to repeat is not a missed sentence', () => {

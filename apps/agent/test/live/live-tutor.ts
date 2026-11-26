@@ -6,6 +6,7 @@ import { createBackendClient } from '../../src/backend-client.ts';
 import {
   createSessionOptions,
   loadAgentConfig,
+  noteOrderOf,
 } from '../../src/config/index.ts';
 import { startConversation } from '../../src/conversation-agent.ts';
 import { createSaveNoteTool } from '../../src/note-tool.ts';
@@ -78,9 +79,8 @@ export function liveTutor(target: LiveTarget): () => Promise<LiveTutor> {
 
   return async () => {
     initializeLogger({ pretty: true, level: 'warn' });
-    const session = new voice.AgentSession(
-      createSessionOptions(loadAgentConfig(agentEnvironment(target))),
-    );
+    const config = loadAgentConfig(agentEnvironment(target));
+    const session = new voice.AgentSession(createSessionOptions(config));
     const backend = await startFakeBackend();
     cleanups.push(async () => {
       await session.close();
@@ -95,6 +95,8 @@ export function liveTutor(target: LiveTarget): () => Promise<LiveTutor> {
     });
     await startConversation(session, {
       tools: [createSaveNoteTool({ backend: client, roomName: ROOM })],
+      // As the job does: Gemini Live's tutor calls the tool before it speaks.
+      noteOrder: noteOrderOf(config),
     });
 
     return {

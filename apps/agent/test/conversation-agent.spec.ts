@@ -18,6 +18,7 @@ import {
   startFakeBackend,
   TEST_AGENT_API_KEY,
 } from './fake-backend.ts';
+import { tutorInstructions } from '../src/tutor-instructions.ts';
 import { dispatchToRoom } from './fake-job.ts';
 
 describe('Agent dispatched into a Conversation room', () => {
@@ -65,6 +66,19 @@ describe('Agent dispatched into a Conversation room', () => {
         agentMode: 'realtime',
         provider: 'fake',
         model: 'fake-llm',
+      }),
+    );
+  });
+
+  it('logs where the tutor calls saveNote in its turn when the Conversation starts', async () => {
+    const job = await dispatchToRoom(conversationAgent, 'conversation-654');
+    await job.end();
+
+    expect(job.logs()).toContainEqual(
+      expect.objectContaining({
+        msg: 'Conversation started',
+        roomName: 'conversation-654',
+        noteOrder: 'after-speaking',
       }),
     );
   });
@@ -377,6 +391,30 @@ describe('Agent dispatched into a Conversation room', () => {
 });
 
 describe('The tutor, run with voice.testing', () => {
+  it('follows the instructions of the note order the Conversation starts with', async () => {
+    initializeLogger({ pretty: false, level: 'error' });
+    const session = new voice.AgentSession({
+      ...createSessionOptions(
+        loadAgentConfig({
+          AGENT_MODE: 'pipeline',
+          STT_PROVIDER: 'fake',
+          LLM_PROVIDER: 'fake',
+          TTS_PROVIDER: 'fake',
+        }),
+      ),
+      llm: new voice.testing.FakeLLM([]),
+    });
+    try {
+      await startConversation(session, { noteOrder: 'before-speaking' });
+
+      expect(session.currentAgent.instructions).toBe(
+        tutorInstructions('before-speaking'),
+      );
+    } finally {
+      await session.close();
+    }
+  });
+
   it('the Agent no longer handles listening-help text', async () => {
     initializeLogger({ pretty: false, level: 'error' });
     const session = new voice.AgentSession({

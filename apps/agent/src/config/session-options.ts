@@ -1,4 +1,4 @@
-import { ThinkingLevel } from '@google/genai';
+import { Behavior, ThinkingLevel } from '@google/genai';
 import {
   inference,
   type llm,
@@ -8,8 +8,10 @@ import {
 } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import * as openai from '@livekit/agents-plugin-openai';
+import type { NoteOrder } from '../tutor-instructions.ts';
 import type {
   AgentConfig,
+  GoogleCredentials,
   ModelConfig,
   PipelineConfig,
   Provider,
@@ -127,7 +129,14 @@ const PLUGINS: { readonly [P in Provider]: Plugin<P> } = {
     // none, so Gemini's pace comes from the instructions alone.
     realtime: ({ model, voice, credentials }) =>
       serverDetectsTurns(
-        new google.realtime.RealtimeModel({ model, voice, ...credentials }),
+        new google.realtime.RealtimeModel({
+          model,
+          voice,
+          ...credentials,
+          ...(declaresNonBlockingTools(credentials)
+            ? { toolBehavior: Behavior.NON_BLOCKING }
+            : {}),
+        }),
       ),
     stt: ({ model, credentials }) =>
       new google.beta.GeminiSTT({ model, ...credentials }),
@@ -153,6 +162,36 @@ const PLUGINS: { readonly [P in Provider]: Plugin<P> } = {
     tts: () => undefined,
   },
 };
+
+/**
+ * Whether the tools of Gemini Live are declared NON_BLOCKING, so that the
+ * model keeps talking while a tool runs. The Node.js plugin leaves them
+ * BLOCKING, unlike the Python one on Gemini 3.8 Live. Then Gemini stops at a
+ * saveNote call and starts a new turn on its own once the result is in; the
+ * SDK takes that for the User speaking, cuts the tutor off mid-word, and the
+ * microphone stays closed while a call is unanswered, so the lesson goes
+ * silent. Vertex AI does not support NON_BLOCKING.
+ */
+function declaresNonBlockingTools(credentials: GoogleCredentials): boolean {
+  return !credentials.vertexai;
+}
+
+/**
+ * Where the tutor calls saveNote in its turn. On Gemini Live it calls the
+ * tool before it speaks: the plugin closes a turn at a tool call and takes
+ * what follows, the end of that same turn, for a new turn started by the
+ * User. It then cuts the tutor off while its audio, which Gemini generates
+ * far faster than it plays, is still playing. A call made before the tutor
+ * speaks has no audio to cut. Every other model speaks first and calls the
+ * tool after.
+ */
+export function noteOrderOf(config: AgentConfig): NoteOrder {
+  return config.agentMode === 'realtime' &&
+    config.realtime.provider === 'google' &&
+    declaresNonBlockingTools(config.realtime.credentials)
+    ? 'before-speaking'
+    : 'after-speaking';
+}
 
 function pluginOf<P extends Provider>(provider: P): Plugin<P> {
   return PLUGINS[provider];

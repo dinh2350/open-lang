@@ -10,28 +10,34 @@ import {
   createSessionOptions,
   loadAgentConfig,
   modelsOf,
+  noteOrderOf,
 } from './config/index.ts';
 import { TutorAgent } from './agent.ts';
 import { loadBackendEnvironment } from './agent-environment.ts';
 import { createBackendClient, trackPendingSends } from './backend-client.ts';
 import { createSaveNoteTool } from './note-tool.ts';
-import { OPENING_INSTRUCTIONS } from './tutor-instructions.ts';
+import { type NoteOrder, OPENING_INSTRUCTIONS } from './tutor-instructions.ts';
 import { recordTranscript } from './transcript-recorder.ts';
 
 /**
  * Starts a Conversation: the tutor joins the room, if there is one, in the
  * given AgentSession, with the given tools, and opens with its opening line,
- * so the User knows it is listening. Without a room, the AgentSession runs
+ * so the User knows it is listening. The tutor calls its tools in the given
+ * order, after it speaks by default. Without a room, the AgentSession runs
  * as in LiveKit's testing docs. Text the User types is handled as the SDK
  * does by default.
  */
 export async function startConversation(
   session: voice.AgentSession,
-  options: { room?: Room; tools?: llm.ToolContextLike } = {},
+  options: {
+    room?: Room;
+    tools?: llm.ToolContextLike;
+    noteOrder?: NoteOrder;
+  } = {},
 ): Promise<void> {
   // In a job, start() also connects to the room.
   await session.start({
-    agent: new TutorAgent(options.tools),
+    agent: new TutorAgent(options.tools, options.noteOrder),
     room: options.room,
   });
   // Greets only once the room is connected: the Agent's state changes
@@ -74,12 +80,14 @@ export default defineAgent({
     // The Notes still being sent when the job ends are awaited before the
     // end marker.
     const pendingSends = trackPendingSends(backend);
+    const noteOrder = noteOrderOf(config);
     // Without a room name, the Notes would belong to no Conversation.
     await startConversation(session, {
       room: ctx.room,
       tools: roomName
         ? [createSaveNoteTool({ backend: pendingSends.client, roomName })]
         : [],
+      noteOrder,
     });
     // Each turn goes to the backend as soon as it is in the history, so a
     // Conversation that ends abruptly keeps its transcript. The job process
@@ -94,6 +102,9 @@ export default defineAgent({
         await backend.sendEnd(roomName);
       });
     }
-    logger.info({ roomName, ...modelsOf(config) }, 'Conversation started');
+    logger.info(
+      { roomName, ...modelsOf(config), noteOrder },
+      'Conversation started',
+    );
   },
 });
