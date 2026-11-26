@@ -10,7 +10,7 @@ export default defineProject({
   test: {
     name: 'frontend',
     environment: 'jsdom',
-    include: ['test/**/*.spec.tsx'],
+    include: ['test/**/*.spec.{ts,tsx}'],
     setupFiles: ['test/setup.ts'],
   },
 });

@@ -37,7 +37,7 @@ describe('The app', () => {
     await import('@/main');
 
     expect(
-      await screen.findByRole('heading', { name: 'Luyện nói hôm nay' }),
+      await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
     ).toBeVisible();
     // StrictMode runs effects twice; a second refresh would send a cookie
     // the first one already rotated, which signs the User out everywhere.

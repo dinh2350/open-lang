@@ -1,5 +1,5 @@
 import type { Fluency } from '@open-lang/shared';
-import type { TimedTurn, TurnTimes } from './resolve-misses.js';
+import type { TimedTurn, TurnTimes } from './turn-times.js';
 
 const FILLER_WORDS = /\b(?:um|uh|er|erm)\b/gi;
 const MILLISECONDS_PER_SECOND = 1000;

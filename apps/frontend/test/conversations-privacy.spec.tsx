@@ -44,7 +44,7 @@ async function signOutAndSignInAs(email: string): Promise<void> {
   await screen.findByRole('heading', { name: 'Sign in' });
   backendHasUser(email, PASSWORD);
   await submitCredentials(email, PASSWORD, 'Sign in');
-  await screen.findByRole('heading', { name: 'Luyện nói hôm nay' });
+  await screen.findByRole('heading', { name: 'Gia sư tiếng Anh của bạn' });
 }
 
 describe('Conversations of another User', () => {
@@ -64,9 +64,7 @@ describe('Conversations of another User', () => {
     } finally {
       release();
     }
-    expect(
-      await screen.findByText('Bạn chưa có buổi luyện nào.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Bạn chưa có buổi học nào.')).toBeVisible();
   });
 
   it("does not show the previous User's Report to the next User on the same tab", async () => {
@@ -74,13 +72,18 @@ describe('Conversations of another User', () => {
     backendHasConversation(summaryOf(ROOM, { reportStatus: 'ready' }), {
       owner: ADA,
       report: reportOf({
-        grammarIssues: [
-          { said: ADAS_SENTENCE, corrected: 'Ada said this.', reason: 'x' },
-        ],
+        assessment: {
+          overview: ADAS_SENTENCE,
+          strengths: [],
+          improvements: [],
+        },
       }),
     });
     await userEvent.click(screen.getByRole('link', { name: 'Lịch sử' }));
     await userEvent.click(await screen.findByRole('link', { name: /2026/ }));
+    await userEvent.click(
+      await screen.findByRole('tab', { name: 'Gia sư đánh giá' }),
+    );
     await screen.findByText(ADAS_SENTENCE);
     await signOutAndSignInAs(BEN);
     // Ben's own Conversation happens to have the same room name.
@@ -102,7 +105,7 @@ describe('Conversations of another User', () => {
       release();
     }
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
   });
 
@@ -110,13 +113,18 @@ describe('Conversations of another User', () => {
     browserIsSignedInAs(ADA, PASSWORD);
     backendHasConversation(summaryOf(ROOM, { reportStatus: 'ready' }), {
       report: reportOf({
-        grammarIssues: [
-          { said: ADAS_SENTENCE, corrected: 'Ada said this.', reason: 'x' },
-        ],
+        assessment: {
+          overview: ADAS_SENTENCE,
+          strengths: [],
+          improvements: [],
+        },
       }),
     });
     renderApp('/conversations');
     await userEvent.click(await screen.findByRole('link', { name: /2026/ }));
+    await userEvent.click(
+      await screen.findByRole('tab', { name: 'Gia sư đánh giá' }),
+    );
     await screen.findByText(ADAS_SENTENCE);
     await userEvent.click(screen.getByRole('link', { name: 'Lịch sử' }));
     const link = await screen.findByRole('link', { name: /2026/ });
@@ -129,7 +137,7 @@ describe('Conversations of another User', () => {
     await userEvent.click(link);
 
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
     expect(screen.queryByText(ADAS_SENTENCE)).not.toBeInTheDocument();
   });

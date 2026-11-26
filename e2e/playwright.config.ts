@@ -27,7 +27,7 @@ const DATABASE_URL = `postgresql://open_lang:open_lang@localhost:${postgresPort}
 process.env.E2E_AGENT_NAME ??= `e2e-agent-${randomUUID()}`;
 
 // A new key every run, shared by the backend and the Agent, which sends the
-// transcript with it. The tests send turns and Misses with it too, in the
+// transcript with it. The tests send turns and Notes with it too, in the
 // Agent's place: Playwright workers inherit it through the environment.
 process.env.E2E_AGENT_API_KEY ??= randomBytes(48).toString('base64url');
 const AGENT_API_KEY = process.env.E2E_AGENT_API_KEY;

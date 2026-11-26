@@ -1,29 +1,34 @@
 import { voice } from '@livekit/agents';
-import { SCENARIOS } from '@open-lang/shared';
 import { describe, expect, it } from 'vitest';
-import { ConversationAgent } from '../src/agent.ts';
+import { TutorAgent } from '../src/agent.ts';
+import { createBackendClient } from '../src/backend-client.ts';
+import { createSaveNoteTool } from '../src/note-tool.ts';
+import { TUTOR_INSTRUCTIONS } from '../src/tutor-instructions.ts';
 
-const choice = { scenarioId: 'daily-standup', speed: 0.85 } as const;
-
-describe('ConversationAgent', () => {
+describe('TutorAgent', () => {
   it('is a voice.Agent', () => {
-    expect(new ConversationAgent(choice)).toBeInstanceOf(voice.Agent);
+    expect(new TutorAgent()).toBeInstanceOf(voice.Agent);
   });
 
-  it('plays the persona of the chosen Scenario at the chosen speed', () => {
-    const { instructions } = new ConversationAgent(choice);
-
-    expect(instructions).toContain(`You are ${SCENARIOS[0].personaName}`);
-    expect(instructions).toContain('Speak slightly slower than normal');
+  it('follows the tutor instructions', () => {
+    expect(new TutorAgent().instructions).toBe(TUTOR_INSTRUCTIONS);
   });
 
-  it('has no tools', () => {
-    const { functionTools, providerTools, toolsets } = new ConversationAgent(
-      choice,
-    ).toolCtx;
+  it('has the tools it is given, and only those', () => {
+    const backend = createBackendClient({
+      backendUrl: 'http://127.0.0.1:1',
+      agentApiKey: 'unused',
+    });
+    const { functionTools, providerTools, toolsets } = new TutorAgent([
+      createSaveNoteTool({ backend, roomName: 'conversation-123' }),
+    ]).toolCtx;
 
-    expect(Object.keys(functionTools)).toEqual([]);
+    expect(Object.keys(functionTools)).toEqual(['saveNote']);
     expect(providerTools).toEqual([]);
     expect(toolsets).toEqual([]);
+  });
+
+  it('has no tools when given none', () => {
+    expect(Object.keys(new TutorAgent().toolCtx.functionTools)).toEqual([]);
   });
 });

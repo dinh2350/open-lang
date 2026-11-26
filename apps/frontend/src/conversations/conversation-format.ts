@@ -1,5 +1,3 @@
-import { SCENARIOS, type ScenarioId } from '@open-lang/shared';
-
 /** Shown where a number is missing. */
 export const NO_VALUE = '—';
 
@@ -18,9 +16,4 @@ export function formatDuration(durationSeconds: number | null): string {
   }
   const minutes = Math.round(durationSeconds / 60);
   return minutes < 1 ? 'Dưới 1 phút' : `${String(minutes)} phút`;
-}
-
-/** The Vietnamese title of a Scenario. */
-export function scenarioTitle(scenarioId: ScenarioId): string {
-  return SCENARIOS.find(({ id }) => id === scenarioId)?.title ?? scenarioId;
 }

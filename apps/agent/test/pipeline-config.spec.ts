@@ -57,10 +57,7 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
   });
 
   it("builds the OpenAI plugin's STT, LLM and TTS with their models, without connecting to OpenAI", () => {
-    const options = createSessionOptions(
-      loadAgentConfig(pipelineWithOpenAi),
-      1,
-    );
+    const options = createSessionOptions(loadAgentConfig(pipelineWithOpenAi));
 
     expect(options.stt).toBeInstanceOf(openai.STT);
     expect(options.stt).toHaveProperty('model', 'gpt-live-transcribe');
@@ -75,7 +72,6 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
     const requestBodies = fakeOpenAiApi();
     const languageModel = createSessionOptions(
       loadAgentConfig(pipelineWithOpenAi),
-      1,
     ).llm;
     assert(languageModel instanceof llm.LLM);
     const chatCtx = llm.ChatContext.empty();
@@ -95,10 +91,7 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
   });
 
   it('detects speech with Silero and turns with the local v1-mini turn detector, never LiveKit Inference', () => {
-    const options = createSessionOptions(
-      loadAgentConfig(pipelineWithOpenAi),
-      1,
-    );
+    const options = createSessionOptions(loadAgentConfig(pipelineWithOpenAi));
 
     expect(options.vad).toBeInstanceOf(inference.VAD);
     expect(options.vad).toHaveProperty('model', 'silero');
@@ -121,7 +114,6 @@ describe('Agent configuration in Pipeline mode with OpenAI for every step', () =
         TTS_MODEL: 'gpt-4o-mini-tts-2025-12-15',
         TTS_VOICE: 'cedar',
       }),
-      1,
     );
 
     expect(options.stt).toHaveProperty('model', 'gpt-transcribe');
@@ -251,7 +243,6 @@ describe.each([
             LLM_PROVIDER: llmProvider,
             TTS_PROVIDER: ttsProvider,
           }),
-          1,
         );
 
         expect(options.stt?.constructor).toBe(builtBy.stt[sttProvider]);

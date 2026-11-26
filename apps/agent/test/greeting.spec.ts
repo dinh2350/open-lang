@@ -2,6 +2,7 @@ import { initializeLogger, llm, voice } from '@livekit/agents';
 import { describe, expect, it } from 'vitest';
 import { createSessionOptions, loadAgentConfig } from '../src/config/index.ts';
 import { startConversation } from '../src/conversation-agent.ts';
+import { OPENING_LINE } from '../src/tutor-instructions.ts';
 import { firstAgentMessage } from './agent-messages.ts';
 import { LiteralLLM } from './literal-llm.ts';
 
@@ -13,24 +14,20 @@ const pipelineWithFakes = {
 };
 
 describe('Agent in Pipeline mode, run with voice.testing', () => {
-  it("opens first, before the User says anything, with the Scenario's opening line", async () => {
+  it('the opening line is Vietnamese', async () => {
     initializeLogger({ pretty: false, level: 'error' });
     const session = new voice.AgentSession({
-      ...createSessionOptions(loadAgentConfig(pipelineWithFakes), 1),
+      ...createSessionOptions(loadAgentConfig(pipelineWithFakes)),
       llm: new LiteralLLM(),
     });
     const greeting = firstAgentMessage(session);
 
     try {
       // Without a room, as in LiveKit's testing docs: the User says nothing.
-      await startConversation(session, {
-        scenarioId: 'daily-standup',
-        speed: 1,
-      });
+      await startConversation(session);
 
-      expect((await greeting).textContent).toBe(
-        "Morning! Let's start the standup. What did you work on yesterday?",
-      );
+      expect((await greeting).textContent).toBe(OPENING_LINE);
+      expect(OPENING_LINE).toBe('Chào bạn! Hôm nay bạn muốn học gì?');
       expect(
         session.history.items
           .filter((item) => item instanceof llm.ChatMessage)

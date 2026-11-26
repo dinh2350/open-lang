@@ -1,48 +1,42 @@
-import { defineAgent, type JobContext, log, voice } from '@livekit/agents';
+import {
+  defineAgent,
+  type JobContext,
+  type llm,
+  log,
+  voice,
+} from '@livekit/agents';
 import type { Room } from '@livekit/rtc-node';
-import type { ConversationChoice } from '@open-lang/shared';
 import {
   createSessionOptions,
   loadAgentConfig,
   modelsOf,
 } from './config/index.ts';
-import { ConversationAgent } from './agent.ts';
+import { TutorAgent } from './agent.ts';
 import { loadBackendEnvironment } from './agent-environment.ts';
 import { createBackendClient, trackPendingSends } from './backend-client.ts';
-import { readConversationChoice } from './conversation-choice.ts';
-import { createListeningHelpHandler } from './listening-help.ts';
-import { greetingInstructions } from './scenario-instructions.ts';
+import { createSaveNoteTool } from './note-tool.ts';
+import { OPENING_INSTRUCTIONS } from './tutor-instructions.ts';
 import { recordTranscript } from './transcript-recorder.ts';
 
 /**
- * Starts a Conversation: the Agent joins the room, if there is one, in the
- * given AgentSession, plays the chosen Scenario, and opens it with its
- * opening line, so the User knows it is listening. Without a room, the
- * AgentSession runs as in LiveKit's testing docs. `extras.textInputCallback`
- * replaces what happens when the User types a message in the room.
+ * Starts a Conversation: the tutor joins the room, if there is one, in the
+ * given AgentSession, with the given tools, and opens with its opening line,
+ * so the User knows it is listening. Without a room, the AgentSession runs
+ * as in LiveKit's testing docs. Text the User types is handled as the SDK
+ * does by default.
  */
 export async function startConversation(
   session: voice.AgentSession,
-  choice: ConversationChoice,
-  room?: Room,
-  extras: { textInputCallback?: voice.TextInputCallback } = {},
+  options: { room?: Room; tools?: llm.ToolContextLike } = {},
 ): Promise<void> {
   // In a job, start() also connects to the room.
   await session.start({
-    agent: new ConversationAgent(choice),
-    room,
-    // Left out, the SDK's default applies. An undefined value would replace it.
-    ...(extras.textInputCallback && {
-      inputOptions: { textInputCallback: extras.textInputCallback },
-    }),
-    // The browser shows no text of the Conversation: it is all audio.
-    outputOptions: { transcriptionEnabled: false },
+    agent: new TutorAgent(options.tools),
+    room: options.room,
   });
   // Greets only once the room is connected: the Agent's state changes
   // before that never reach the User's browser.
-  session.generateReply({
-    instructions: greetingInstructions(choice.scenarioId),
-  });
+  session.generateReply({ instructions: OPENING_INSTRUCTIONS });
 }
 
 /** The session close reasons that mean the job is ending already. */
@@ -61,11 +55,8 @@ export default defineAgent({
     const roomName = ctx.job.room?.name;
     const config = loadAgentConfig(process.env);
     const { BACKEND_URL, AGENT_API_KEY } = loadBackendEnvironment(process.env);
-    const choice = readConversationChoice(ctx.job.metadata);
-
-    const session = new voice.AgentSession(
-      createSessionOptions(config, choice.speed),
-    );
+    // The job's metadata is not read: every Conversation is the same lesson.
+    const session = new voice.AgentSession(createSessionOptions(config));
     session.on(voice.AgentSessionEventTypes.Close, (event) => {
       logger.info({ roomName, reason: event.reason }, 'Conversation ended');
       // One session per job: once it closes (the User left, say), the job
@@ -80,24 +71,16 @@ export default defineAgent({
       backendUrl: BACKEND_URL,
       agentApiKey: AGENT_API_KEY,
     });
-    // The Misses still being sent when the job ends are awaited before the
+    // The Notes still being sent when the job ends are awaited before the
     // end marker.
-    const misses = trackPendingSends(backend);
-    // "Chưa nghe kịp" reaches the Agent as a typed message in the room, and
-    // is recorded as a Miss of this room's Conversation.
-    await startConversation(
-      session,
-      choice,
-      ctx.room,
-      roomName
-        ? {
-            textInputCallback: createListeningHelpHandler({
-              backend: misses.client,
-              roomName,
-            }),
-          }
-        : {},
-    );
+    const pendingSends = trackPendingSends(backend);
+    // Without a room name, the Notes would belong to no Conversation.
+    await startConversation(session, {
+      room: ctx.room,
+      tools: roomName
+        ? [createSaveNoteTool({ backend: pendingSends.client, roomName })]
+        : [],
+    });
     // Each turn goes to the backend as soon as it is in the history, so a
     // Conversation that ends abruptly keeps its transcript. The job process
     // exits after its shutdown callbacks, so the last sends are awaited
@@ -107,13 +90,10 @@ export default defineAgent({
     if (roomName) {
       const recorder = recordTranscript(session, backend, roomName);
       ctx.addShutdownCallback(async () => {
-        await Promise.all([recorder.flush(), misses.settled()]);
+        await Promise.all([recorder.flush(), pendingSends.settled()]);
         await backend.sendEnd(roomName);
       });
     }
-    logger.info(
-      { roomName, ...choice, ...modelsOf(config) },
-      'Conversation started',
-    );
+    logger.info({ roomName, ...modelsOf(config) }, 'Conversation started');
   },
 });

@@ -1,6 +1,8 @@
 import { Banner } from '@astryxdesign/core/Banner';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from '@astryxdesign/core/Link';
 import { Stack } from '@astryxdesign/core/Stack';
 import {
@@ -16,11 +18,8 @@ import type { ConversationSummary, ReportStatus } from '@open-lang/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useId } from 'react';
 import { useAuth } from '@/auth/auth-context';
-import {
-  formatDate,
-  formatDuration,
-  scenarioTitle,
-} from './conversation-format';
+import { NotebookIcon } from '@/icons';
+import { formatDate, formatDuration } from './conversation-format';
 import { fetchConversations } from './conversations-api';
 
 const reportLabels: Record<ReportStatus | 'none', string> = {
@@ -55,7 +54,7 @@ export function HistoryPage() {
       maxWidth="56rem"
       style={{ marginInline: 'auto' }}
     >
-      <Heading level={1}>Lịch sử luyện nói</Heading>
+      <Heading level={1}>Lịch sử học</Heading>
       {conversations.isPending && (
         <div role="status">
           <Text as="p" color="secondary">
@@ -71,7 +70,7 @@ export function HistoryPage() {
         />
       )}
       {conversations.data?.conversations.length === 0 && (
-        <EmptyState title="Bạn chưa có buổi luyện nào." headingLevel={2} />
+        <EmptyState title="Bạn chưa có buổi học nào." headingLevel={2} />
       )}
       {conversations.data !== undefined &&
         conversations.data.conversations.length > 0 && (
@@ -88,13 +87,18 @@ export function HistoryPage() {
               }}
             >
               <Text type="supporting" color="secondary">
-                Các buổi luyện của bạn, mới nhất trước.
+                Các buổi học của bạn, mới nhất trước.
               </Text>
             </caption>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell scope="col">Ngày</TableHeaderCell>
-                <TableHeaderCell scope="col">Tình huống</TableHeaderCell>
+                <TableHeaderCell scope="col">
+                  <HStack as="span" gap={2} align="center">
+                    <Icon icon={NotebookIcon} color="secondary" />
+                    <span>Ghi chú</span>
+                  </HStack>
+                </TableHeaderCell>
                 <TableHeaderCell scope="col">Thời lượng</TableHeaderCell>
                 <TableHeaderCell scope="col">Báo cáo</TableHeaderCell>
               </TableRow>
@@ -129,7 +133,7 @@ function ConversationRow({
           </time>
         </Link>
       </TableHeaderCell>
-      <TableCell>{scenarioTitle(conversation.scenarioId)}</TableCell>
+      <TableCell>{conversation.noteCount}</TableCell>
       <TableCell>{formatDuration(conversation.durationSeconds)}</TableCell>
       <TableCell>{reportLabels[conversation.reportStatus ?? 'none']}</TableCell>
     </TableRow>

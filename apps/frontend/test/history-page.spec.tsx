@@ -7,20 +7,21 @@ import { browserIsSignedInAs } from './auth-backend';
 import { backend } from './backend';
 import {
   backendHasConversation,
+  backendHasNotes,
   conversationRequestAuthorizations,
+  noteOf,
   reportOf,
   summaryOf,
 } from './conversations-backend';
 
 const ADA = 'ada@example.test';
 
-describe('History page', () => {
+describe('HistoryPage', () => {
   it('lists past Conversations, newest first', async () => {
     browserIsSignedInAs(ADA, PASSWORD);
     backendHasConversation(
       summaryOf('conversation-1', {
         createdAt: '2026-11-21T12:00:00.000Z',
-        scenarioId: 'one-on-one',
         durationSeconds: 300,
         reportStatus: 'ready',
       }),
@@ -28,7 +29,6 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-2', {
         createdAt: '2026-11-23T12:00:00.000Z',
-        scenarioId: 'daily-standup',
         durationSeconds: 754,
         reportStatus: 'generating',
       }),
@@ -36,7 +36,6 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-3', {
         createdAt: '2026-11-22T12:00:00.000Z',
-        scenarioId: 'client-delay-call',
         durationSeconds: null,
         reportStatus: null,
       }),
@@ -45,18 +44,70 @@ describe('History page', () => {
     renderApp('/conversations');
 
     expect(
-      await screen.findByRole('heading', { name: 'Lịch sử luyện nói' }),
+      await screen.findByRole('heading', { name: 'Lịch sử học' }),
     ).toBeVisible();
     const rows = within(await screen.findByRole('table')).getAllByRole('row');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'NgàyTình huốngThời lượngBáo cáo',
-      '23 thg 11, 2026Họp standup13 phútĐang tạo',
-      '22 thg 11, 2026Gọi khách trễ hạn—Chưa có',
-      '21 thg 11, 2026Họp 1:1 với quản lý5 phútSẵn sàng',
+      'NgàyGhi chúThời lượngBáo cáo',
+      '23 thg 11, 2026013 phútĐang tạo',
+      '22 thg 11, 20260—Chưa có',
+      '21 thg 11, 202605 phútSẵn sàng',
     ]);
     expect(conversationRequestAuthorizations()).toEqual([
       expect.stringMatching(/^Bearer /),
     ]);
+  });
+
+  it('shows note counts under Ghi chú', async () => {
+    browserIsSignedInAs(ADA, PASSWORD);
+    backendHasConversation(
+      summaryOf('conversation-1', {
+        createdAt: '2026-11-21T12:00:00.000Z',
+        noteCount: 12,
+      }),
+    );
+    backendHasConversation(
+      summaryOf('conversation-2', {
+        createdAt: '2026-11-22T12:00:00.000Z',
+        noteCount: 0,
+      }),
+    );
+    backendHasConversation(
+      summaryOf('conversation-3', {
+        createdAt: '2026-11-23T12:00:00.000Z',
+        noteCount: 3,
+      }),
+    );
+
+    renderApp('/conversations');
+
+    const table = await screen.findByRole('table');
+    const header = within(table).getByRole('columnheader', { name: 'Ghi chú' });
+    // The icon is decoration: the column is still named by its text alone.
+    expect(header.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Ngày', 'Ghi chú', 'Thời lượng', 'Báo cáo']);
+    const counts = within(table)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0]?.textContent);
+    expect(counts).toEqual(['3', '0', '12']);
+  });
+
+  it('has no Tình huống column', async () => {
+    browserIsSignedInAs(ADA, PASSWORD);
+    backendHasConversation(summaryOf('conversation-1', { noteCount: 2 }));
+
+    renderApp('/conversations');
+
+    const table = await screen.findByRole('table');
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Tình huống' }),
+    ).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
   });
 
   it('names the table, and the region it scrolls in, by its caption', async () => {
@@ -67,12 +118,12 @@ describe('History page', () => {
 
     expect(
       await screen.findByRole('table', {
-        name: 'Các buổi luyện của bạn, mới nhất trước.',
+        name: 'Các buổi học của bạn, mới nhất trước.',
       }),
     ).toBeVisible();
     expect(
       screen.getByRole('group', {
-        name: 'Các buổi luyện của bạn, mới nhất trước.',
+        name: 'Các buổi học của bạn, mới nhất trước.',
       }),
     ).toBeVisible();
   });
@@ -82,9 +133,7 @@ describe('History page', () => {
 
     renderApp('/conversations');
 
-    expect(
-      await screen.findByText('Bạn chưa có buổi luyện nào.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Bạn chưa có buổi học nào.')).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -109,19 +158,12 @@ describe('History page', () => {
     backendHasConversation(
       summaryOf('conversation-7', { reportStatus: 'ready' }),
       {
-        report: reportOf({
-          grammarIssues: [
-            {
-              said: 'I goed',
-              corrected: 'I went',
-              reason: 'Quá khứ bất quy tắc.',
-            },
-          ],
-        }),
+        report: reportOf(),
       },
     );
+    backendHasNotes('conversation-7', [noteOf('phrase', 'I went')]);
     renderApp('/conversations');
-    const row = (await screen.findByText('Họp standup')).closest('tr');
+    const row = (await screen.findByText('Sẵn sàng')).closest('tr');
     expect(row).not.toBeNull();
 
     await userEvent.click(
@@ -129,8 +171,9 @@ describe('History page', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /Họp standup/ }),
+      await screen.findByRole('heading', { name: 'Hôm nay bạn học được gì' }),
     ).toBeVisible();
+    expect(await screen.findByText(/13 phút/)).toBeVisible();
     expect(await screen.findByText('I went')).toBeVisible();
   });
 });

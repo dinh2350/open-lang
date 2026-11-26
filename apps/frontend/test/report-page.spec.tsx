@@ -5,25 +5,42 @@ import { PASSWORD, renderApp } from './app';
 import { browserIsSignedInAs } from './auth-backend';
 import {
   backendHasConversation,
+  backendHasNotes,
   type BackendConversationOptions,
   detailRequestsReceived,
+  noteOf,
   reportOf,
   reportRequestsReceived,
   summaryOf,
 } from './conversations-backend';
-import type { ConversationSummary } from '@open-lang/shared';
+import type { ConversationSummary, StoredNote } from '@open-lang/shared';
 
 const ADA = 'ada@example.test';
 const ROOM = 'conversation-1';
 
-/** Ada has this Conversation, and opens its Report page. */
+const OVERVIEW = 'Bạn trả lời rõ ràng và đúng ý.';
+const GENERATING = 'Đang tạo phần đánh giá…';
+const FAILED = 'Không tạo được phần đánh giá. Ghi chú của bạn vẫn còn nguyên.';
+const NO_NOTES = 'Chưa có ghi chú nào trong buổi này.';
+
+/** Ada has this Conversation and these Notes, and opens its Report page. */
 function openReport(
   summary: Partial<ConversationSummary>,
   options?: BackendConversationOptions,
+  notes: readonly StoredNote[] = [],
 ): void {
   browserIsSignedInAs(ADA, PASSWORD);
   backendHasConversation(summaryOf(ROOM, summary), options);
+  backendHasNotes(ROOM, notes);
   renderApp(`/conversations/${ROOM}`);
+}
+
+/** Opens the Gia sư đánh giá tab and returns its panel. */
+async function openAssessment(): Promise<HTMLElement> {
+  await userEvent.click(
+    await screen.findByRole('tab', { name: 'Gia sư đánh giá' }),
+  );
+  return screen.getByRole('tabpanel', { name: 'Gia sư đánh giá' });
 }
 
 describe('Report page', () => {
@@ -31,21 +48,148 @@ describe('Report page', () => {
     vi.useRealTimers();
   });
 
-  it('asks the backend to make the Report and shows the generating state, then the ready Report', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it('opens on Đã học with the notes before the Report exists', async () => {
+    openReport({}, { afterRequest: [['generating']] }, [
+      noteOf('phrase', 'Could you walk me through it?'),
+      noteOf('correction', 'I went home.', { said: 'I goed home.' }),
+    ]);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Hôm nay bạn học được gì',
+      }),
+    ).toBeVisible();
+    const tab = screen.getByRole('tab', { name: 'Đã học' });
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    const panel = screen.getByRole('tabpanel', { name: 'Đã học' });
+    expect(
+      await within(panel).findByText('Could you walk me through it?'),
+    ).toBeVisible();
+    expect(
+      within(panel).getByText('I goed home.').closest('del'),
+    ).not.toBeNull();
+    await waitFor(() => {
+      expect(reportRequestsReceived()).toEqual([ROOM]);
+    });
+  });
+
+  it('shows Chưa có ghi chú nào trong buổi này. when there are none', async () => {
+    openReport({ reportStatus: 'ready' });
+
+    const panel = await screen.findByRole('tabpanel', { name: 'Đã học' });
+
+    expect(await within(panel).findByText(NO_NOTES)).toBeVisible();
+  });
+
+  it('a missed note shows under Câu nghe sót', async () => {
+    openReport({ reportStatus: 'ready' }, {}, [
+      noteOf('missed', "Let's circle back after lunch.", {
+        meaning: 'Mình bàn lại sau bữa trưa nhé.',
+      }),
+    ]);
+
+    const group = await screen.findByRole('region', {
+      name: 'Câu nghe sót (1)',
+    });
+
+    expect(group).toHaveTextContent("Let's circle back after lunch.");
+    expect(group).toHaveTextContent('Mình bàn lại sau bữa trưa nhé.');
+  });
+
+  it('heads the page with the number of notes, the duration and the date', async () => {
+    openReport({ reportStatus: 'ready' }, {}, [
+      noteOf('phrase', 'One.'),
+      noteOf('word', 'two'),
+    ]);
+
+    expect(
+      await screen.findByText('2 ghi chú · 13 phút · 23 thg 11, 2026'),
+    ).toBeVisible();
+  });
+
+  it('Gia sư đánh giá shows overview, Làm tốt and Cần cải thiện when ready', async () => {
     openReport(
-      {},
+      { reportStatus: 'ready' },
       {
-        afterRequest: [['generating', 'ready']],
         report: reportOf({
-          grammarIssues: [
-            { said: 'I goed', corrected: 'I went', reason: 'Quá khứ.' },
-          ],
+          assessment: {
+            overview: OVERVIEW,
+            strengths: ['Trả lời nhanh.', 'Dùng từ đúng.'],
+            improvements: ['Dùng thì quá khứ.'],
+          },
         }),
       },
     );
 
-    expect(await screen.findByText('Đang tạo báo cáo…')).toBeVisible();
+    const panel = await openAssessment();
+
+    expect(within(panel).getByText(OVERVIEW)).toBeVisible();
+    const strengths = within(panel).getByRole('region', { name: 'Làm tốt' });
+    expect(
+      within(strengths)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Trả lời nhanh.', 'Dùng từ đúng.']);
+    const improvements = within(panel).getByRole('region', {
+      name: 'Cần cải thiện',
+    });
+    expect(improvements).toHaveTextContent('Dùng thì quá khứ.');
+    expect(reportRequestsReceived()).toEqual([]);
+  });
+
+  it('leaves out Làm tốt and Cần cải thiện when their lists are empty', async () => {
+    openReport(
+      { reportStatus: 'ready' },
+      {
+        report: reportOf({
+          assessment: { overview: OVERVIEW, strengths: [], improvements: [] },
+        }),
+      },
+    );
+
+    const panel = await openAssessment();
+
+    expect(within(panel).getByText(OVERVIEW)).toBeVisible();
+    expect(
+      within(panel).queryByRole('region', { name: 'Làm tốt' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(panel).queryByRole('region', { name: 'Cần cải thiện' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('says there is not enough to assess when the assessment is empty', async () => {
+    openReport(
+      { reportStatus: 'ready' },
+      {
+        report: reportOf({
+          assessment: { overview: '', strengths: [], improvements: [] },
+        }),
+      },
+    );
+
+    const panel = await openAssessment();
+
+    expect(
+      within(panel).getByText('Chưa có đủ nội dung để đánh giá.'),
+    ).toBeVisible();
+  });
+
+  it('Gia sư đánh giá shows a spinner while generating', async () => {
+    openReport({}, { afterRequest: [['generating']] });
+
+    const panel = await openAssessment();
+
+    expect(await within(panel).findByText(GENERATING)).toBeVisible();
+  });
+
+  it('asks for the Report once and looks again every two seconds until it is ready', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    openReport({}, { afterRequest: [['generating', 'ready']] });
+
+    const panel = await openAssessment();
+    expect(await within(panel).findByText(GENERATING)).toBeVisible();
     await waitFor(() => {
       expect(reportRequestsReceived()).toEqual([ROOM]);
     });
@@ -54,24 +198,13 @@ describe('Report page', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1900);
     });
-    expect(screen.getByText('Đang tạo báo cáo…')).toBeVisible();
+    expect(within(panel).getByText(GENERATING)).toBeVisible();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
     });
-    expect(await screen.findByText('I went')).toBeVisible();
-    expect(screen.queryByText('Đang tạo báo cáo…')).not.toBeInTheDocument();
-    expect(reportRequestsReceived()).toEqual([ROOM]);
-  });
-
-  it('stops polling once the Report is ready', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    openReport({}, { afterRequest: [['generating', 'ready']] });
-    await screen.findByText('Đang tạo báo cáo…');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2100);
-    });
-    await screen.findByRole('heading', { name: '1. Câu bạn nghe sót' });
+    expect(await within(panel).findByText(OVERVIEW)).toBeVisible();
+    expect(within(panel).queryByText(GENERATING)).not.toBeInTheDocument();
     const detailRequestsBefore = detailRequestsReceived().length;
 
     await act(async () => {
@@ -80,182 +213,36 @@ describe('Report page', () => {
 
     expect(detailRequestsReceived()).toHaveLength(detailRequestsBefore);
     expect(reportRequestsReceived()).toEqual([ROOM]);
+  });
+
+  it('a failed Report shows the banner on Gia sư đánh giá and the notes on Đã học', async () => {
+    openReport({}, { afterRequest: [['failed']] }, [noteOf('word', 'blocker')]);
+
+    const panel = await openAssessment();
+    expect(await within(panel).findByText(FAILED)).toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Đã học' }));
+
+    const notes = screen.getByRole('tabpanel', { name: 'Đã học' });
+    expect(within(notes).getByText('blocker')).toBeVisible();
+  });
+
+  it('Thử lại asks for the Report again', async () => {
+    openReport({}, { afterRequest: [['failed'], ['generating', 'ready']] });
+
+    const panel = await openAssessment();
+    expect(await within(panel).findByText(FAILED)).toBeVisible();
+    expect(reportRequestsReceived()).toEqual([ROOM]);
+
+    await userEvent.click(
+      within(panel).getByRole('button', { name: 'Thử lại' }),
+    );
+
     expect(
-      screen.getByRole('heading', { name: '1. Câu bạn nghe sót' }),
+      await within(panel).findByText(OVERVIEW, {}, { timeout: 5000 }),
     ).toBeVisible();
-  });
-
-  it('does not ask for a Report that is already ready', async () => {
-    openReport({ reportStatus: 'ready' });
-
-    expect(
-      await screen.findByRole('heading', { name: '1. Câu bạn nghe sót' }),
-    ).toBeVisible();
-    expect(reportRequestsReceived()).toEqual([]);
-  });
-
-  it('titles the Report with the Scenario, duration, date and speed, above three number cards', async () => {
-    openReport(
-      { reportStatus: 'ready', scenarioId: 'one-on-one', speed: 0.7 },
-      {
-        report: reportOf({
-          listeningMisses: [
-            {
-              agentText: 'Could you repeat?',
-              keyPhrases: [],
-              explanation: 'Lời nhờ nhắc lại.',
-            },
-            {
-              agentText: 'Say again.',
-              keyPhrases: [],
-              explanation: 'Nhắc lại.',
-            },
-          ],
-          grammarIssues: [
-            { said: 'I goed', corrected: 'I went', reason: 'Quá khứ.' },
-          ],
-        }),
-      },
-    );
-
-    const title = await screen.findByRole('heading', { level: 1 });
-
-    expect(title).toHaveTextContent(
-      'Họp 1:1 với quản lý · 13 phút · 23 thg 11, 2026 · Chậm',
-    );
-    const cards = screen.getByRole('group', { name: 'Tóm tắt' });
-    expect(cards).toHaveTextContent('2câu nghe sót1lỗi ngữ pháp96từ/phút');
-  });
-
-  it('shows the missed sentences with key phrases in bold and the Vietnamese explanation', async () => {
-    openReport(
-      { reportStatus: 'ready' },
-      {
-        report: reportOf({
-          listeningMisses: [
-            {
-              agentText: 'Could you walk me through the blockers, then?',
-              keyPhrases: ['walk me through', 'THE BLOCKERS', 'blockers'],
-              explanation:
-                'Nghĩa là: hãy kể từng bước <b>về</b> các vướng mắc.',
-            },
-          ],
-        }),
-      },
-    );
-
-    const section = await screen.findByRole('region', {
-      name: '1. Câu bạn nghe sót',
-    });
-
-    expect(section).toHaveTextContent(
-      'Could you walk me through the blockers, then?',
-    );
-    const bold = [...section.querySelectorAll('strong')].map(
-      (element) => element.textContent,
-    );
-    expect(bold).toEqual(['walk me through', 'the blockers']);
-    // The explanation is plain text, never HTML.
-    expect(
-      within(section).getByText(
-        'Nghĩa là: hãy kể từng bước <b>về</b> các vướng mắc.',
-      ),
-    ).toBeVisible();
-    expect(section.querySelector('b')).toBeNull();
-  });
-
-  it('matches a key phrase as text, not as a pattern', async () => {
-    openReport(
-      { reportStatus: 'ready' },
-      {
-        report: reportOf({
-          listeningMisses: [
-            {
-              agentText: 'Is it (really) done? a+b',
-              keyPhrases: ['(really)', 'a+b', '.*'],
-              explanation: 'x',
-            },
-          ],
-        }),
-      },
-    );
-
-    const section = await screen.findByRole('region', {
-      name: '1. Câu bạn nghe sót',
-    });
-
-    expect(
-      [...section.querySelectorAll('strong')].map((e) => e.textContent),
-    ).toEqual(['(really)', 'a+b']);
-  });
-
-  it('shows each grammar issue with the wrong sentence struck, the correction and the reason', async () => {
-    openReport(
-      { reportStatus: 'ready' },
-      {
-        report: reportOf({
-          grammarIssues: [
-            {
-              said: 'Yesterday I goed to the office.',
-              corrected: 'Yesterday I went to the office.',
-              reason: 'Go là động từ bất quy tắc: quá khứ là went.',
-            },
-          ],
-        }),
-      },
-    );
-
-    const section = await screen.findByRole('region', {
-      name: '2. Lỗi ngữ pháp',
-    });
-
-    expect(
-      within(section)
-        .getByText('Yesterday I goed to the office.')
-        .closest('del'),
-    ).not.toBeNull();
-    expect(
-      within(section)
-        .getByText('Yesterday I went to the office.')
-        .closest('ins'),
-    ).not.toBeNull();
-    expect(
-      within(section).getByText('Go là động từ bất quy tắc: quá khứ là went.'),
-    ).toBeVisible();
-  });
-
-  it('tells which sentence is wrong and which is the correction, in words', async () => {
-    openReport(
-      { reportStatus: 'ready' },
-      {
-        report: reportOf({
-          grammarIssues: [
-            {
-              said: 'Yesterday I goed to the office.',
-              corrected: 'Yesterday I went to the office.',
-              reason: 'Go là động từ bất quy tắc.',
-            },
-          ],
-        }),
-      },
-    );
-
-    const section = await screen.findByRole('region', {
-      name: '2. Lỗi ngữ pháp',
-    });
-
-    const text = section.textContent;
-    const said = text.indexOf('Bạn nói:');
-    const wrong = text.indexOf('Yesterday I goed to the office.');
-    const fix = text.indexOf('Sửa thành:');
-    const corrected = text.indexOf('Yesterday I went to the office.');
-    expect(said).toBeGreaterThanOrEqual(0);
-    expect(wrong).toBeGreaterThan(said);
-    expect(fix).toBeGreaterThan(wrong);
-    expect(corrected).toBeGreaterThan(fix);
-    expect(text.indexOf('Go là động từ bất quy tắc.')).toBeGreaterThan(
-      corrected,
-    );
+    expect(reportRequestsReceived()).toEqual([ROOM, ROOM]);
+    expect(within(panel).queryByText(FAILED)).not.toBeInTheDocument();
   });
 
   it('shows the fluency line with an em dash for missing numbers', async () => {
@@ -273,9 +260,9 @@ describe('Report page', () => {
       },
     );
 
-    const section = await screen.findByRole('region', { name: '3. Trôi chảy' });
+    const panel = await openAssessment();
 
-    expect(section).toHaveTextContent(
+    expect(panel).toHaveTextContent(
       '— từ/phút · bạn nói 42% thời gian · từ đệm khoảng 3 (ước lượng) · lượt dài nhất — giây',
     );
   });
@@ -283,23 +270,11 @@ describe('Report page', () => {
   it('shows the fluency line with every number', async () => {
     openReport({ reportStatus: 'ready' });
 
-    const section = await screen.findByRole('region', { name: '3. Trôi chảy' });
+    const panel = await openAssessment();
 
-    expect(section).toHaveTextContent(
+    expect(panel).toHaveTextContent(
       '96 từ/phút · bạn nói 42% thời gian · từ đệm khoảng 3 (ước lượng) · lượt dài nhất 12 giây',
     );
-  });
-
-  it('shows the empty states', async () => {
-    openReport({ reportStatus: 'ready' });
-
-    const misses = await screen.findByRole('region', {
-      name: '1. Câu bạn nghe sót',
-    });
-    expect(misses).toHaveTextContent('Bạn không bấm "Chưa nghe kịp" lần nào.');
-    expect(
-      screen.getByRole('region', { name: '2. Lỗi ngữ pháp' }),
-    ).toHaveTextContent('Không tìm thấy lỗi ngữ pháp.');
   });
 
   it('says the Conversation was not found when the backend answers 404', async () => {
@@ -308,41 +283,21 @@ describe('Report page', () => {
     renderApp('/conversations/someone-elses-room');
 
     expect(
-      await screen.findByText('Không tìm thấy buổi luyện này.'),
+      await screen.findByText('Không tìm thấy buổi học này.'),
     ).toBeVisible();
     expect(reportRequestsReceived()).toEqual([]);
   });
 
-  it('shows a failed Report as an error, and Thử lại asks again', async () => {
-    openReport({}, { afterRequest: [['failed'], ['generating', 'ready']] });
-
-    expect(await screen.findByText('Không tạo được báo cáo.')).toBeVisible();
-    expect(reportRequestsReceived()).toEqual([ROOM]);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
-
-    expect(
-      await screen.findByRole(
-        'heading',
-        { name: '1. Câu bạn nghe sót' },
-        { timeout: 5000 },
-      ),
-    ).toBeVisible();
-    expect(reportRequestsReceived()).toEqual([ROOM, ROOM]);
-    expect(
-      screen.queryByText('Không tạo được báo cáo.'),
-    ).not.toBeInTheDocument();
-  });
-
   it('shows the nav links for a signed-in User', async () => {
     openReport({ reportStatus: 'ready' });
-    await screen.findByRole('heading', { name: '1. Câu bạn nghe sót' });
+    await screen.findByRole('heading', { name: 'Hôm nay bạn học được gì' });
 
     const nav = screen.getByRole('navigation', { name: 'Chính' });
 
-    expect(
-      within(nav).getByRole('link', { name: 'Luyện nói' }),
-    ).toHaveAttribute('href', '/');
+    expect(within(nav).getByRole('link', { name: 'Học' })).toHaveAttribute(
+      'href',
+      '/',
+    );
     expect(within(nav).getByRole('link', { name: 'Lịch sử' })).toHaveAttribute(
       'href',
       '/conversations',
@@ -350,7 +305,7 @@ describe('Report page', () => {
     await userEvent.click(within(nav).getByRole('link', { name: 'Lịch sử' }));
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: 'Lịch sử luyện nói' }),
+        screen.getByRole('heading', { name: 'Lịch sử học' }),
       ).toBeVisible();
     });
     expect(within(nav).getByRole('link', { name: 'Lịch sử' })).toHaveAttribute(

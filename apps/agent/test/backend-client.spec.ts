@@ -1,5 +1,5 @@
 import { initializeLogger } from '@livekit/agents';
-import type { TurnIngest } from '@open-lang/shared';
+import type { Note, TurnIngest } from '@open-lang/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createBackendClient,
@@ -17,6 +17,13 @@ const turn: TurnIngest = {
   text: "Morning! Let's start the standup.",
   startedAt: '2026-11-23T09:00:00.000Z',
   endedAt: '2026-11-23T09:00:03.500Z',
+};
+
+const note: Note = {
+  kind: 'correction',
+  english: 'Yesterday I fixed the bug.',
+  meaning: 'Quá khứ của fix là fixed.',
+  said: 'Yesterday I fix the bug.',
 };
 
 describe('Backend client', () => {
@@ -60,25 +67,52 @@ describe('Backend client', () => {
     ]);
   });
 
-  it('posts a Miss to the misses route', async () => {
+  it('the Agent client has no sendMiss', () => {
+    const client = createBackendClient({
+      backendUrl: 'http://127.0.0.1:1',
+      agentApiKey: AGENT_API_KEY,
+    });
+
+    expect('sendMiss' in client).toBe(false);
+  });
+
+  it('posts a note to the notes route', async () => {
     backend = await startFakeBackend([204]);
     const client = createBackendClient({
       backendUrl: backend.url,
       agentApiKey: AGENT_API_KEY,
     });
 
-    await client.sendMiss('conversation-123', {
-      pressedAt: '2026-11-23T09:00:02.000Z',
-    });
+    await client.sendNote('conversation-123', note);
 
     expect(backend.requests).toEqual([
-      expect.objectContaining({
+      {
         method: 'POST',
-        url: '/api/agent/conversations/conversation-123/misses',
+        url: '/api/agent/conversations/conversation-123/notes',
         authorization: `Bearer ${AGENT_API_KEY}`,
-        body: { pressedAt: '2026-11-23T09:00:02.000Z' },
-      }),
+        contentType: 'application/json',
+        body: note,
+      },
     ]);
+  });
+
+  it('sendNote retries three times and never rejects', async () => {
+    backend = await startFakeBackend([500, 503, 500, 204]);
+    const client = createBackendClient({
+      backendUrl: backend.url,
+      agentApiKey: AGENT_API_KEY,
+      retryDelayMs: 1,
+    });
+
+    await expect(
+      client.sendNote('conversation-123', note),
+    ).resolves.toBeUndefined();
+
+    expect(backend.requests).toHaveLength(3);
+    const log = logLines.join('');
+    expect(log).toContain('conversation-123');
+    expect(log).not.toContain(AGENT_API_KEY);
+    expect(log).not.toContain(note.english);
   });
 
   it('retries a failing request and succeeds on the next attempt', async () => {
@@ -125,11 +159,7 @@ describe('Backend client', () => {
       retryDelayMs: 1,
     });
 
-    await expect(
-      client.sendMiss('conversation-123', {
-        pressedAt: '2026-11-23T09:00:02.000Z',
-      }),
-    ).resolves.toBeUndefined();
+    await expect(client.sendEnd('conversation-123')).resolves.toBeUndefined();
     expect(logLines.join('')).toContain('conversation-123');
   });
 
@@ -177,9 +207,7 @@ describe('Backend client', () => {
     );
     await expect(tracked.settled()).resolves.toBeUndefined();
 
-    void tracked.client.sendMiss('conversation-123', {
-      pressedAt: '2026-11-23T09:00:02.000Z',
-    });
+    void tracked.client.sendNote('conversation-123', note);
     void tracked.client.sendTurn('conversation-123', turn);
     await tracked.settled();
 
@@ -190,7 +218,7 @@ describe('Backend client', () => {
     expect(answered).toHaveLength(2);
     expect(answered).toEqual(
       expect.arrayContaining([
-        'answered /api/agent/conversations/conversation-123/misses',
+        'answered /api/agent/conversations/conversation-123/notes',
         'answered /api/agent/conversations/conversation-123/turns',
       ]),
     );

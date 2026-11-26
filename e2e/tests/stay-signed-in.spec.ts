@@ -5,7 +5,7 @@ test('a User stays signed in across a reload, and once they sign out a reload ke
   page,
 }) => {
   const conversationPage = page.getByRole('heading', {
-    name: 'Luyện nói hôm nay',
+    name: 'Gia sư tiếng Anh của bạn',
   });
   const signInPage = page.getByRole('heading', { name: 'Sign in' });
   await page.goto('/');

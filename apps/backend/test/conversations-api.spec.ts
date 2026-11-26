@@ -1,4 +1,8 @@
-import { conversationListSchema, type AuthResponse } from '@open-lang/shared';
+import {
+  conversationListSchema,
+  type AuthResponse,
+  type Note,
+} from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -8,14 +12,24 @@ import {
   at,
   endConversation,
   getConversation,
-  ingestMiss,
+  getNotes,
+  ingestNote,
   ingestTurn,
+  listNotes,
   readConversation,
   requestReport,
   startConversation,
 } from './support/conversations.js';
 import { startTestApp, stopTestApp } from './support/test-app.js';
 import { registerUser } from './support/users.js';
+
+/** A Note that makes a Conversation worth listing, whatever else it holds. */
+const ANY_NOTE: Note = {
+  kind: 'word',
+  english: 'on track',
+  meaning: 'đúng tiến độ',
+  said: null,
+};
 
 describe('The Conversation API', () => {
   let app: INestApplication<App>;
@@ -32,10 +46,10 @@ describe('The Conversation API', () => {
     await stopTestApp(app);
   });
 
-  it("lists only the signed-in User's Conversations, newest first, with Scenario, speed, duration and report status", async () => {
-    await startConversation(app, ada.user, 'room-old', 'daily-standup');
-    await startConversation(app, ada.user, 'room-new', 'one-on-one');
-    await startConversation(app, grace.user, 'room-grace', 'client-delay-call');
+  it('lists Conversations without scenarioId or speed keys', async () => {
+    await startConversation(app, ada.user, 'room-old');
+    await startConversation(app, ada.user, 'room-new');
+    await startConversation(app, grace.user, 'room-grace');
     const prisma = app.get(PrismaService);
     await prisma.conversation.update({
       where: { roomName: 'room-old' },
@@ -45,8 +59,8 @@ describe('The Conversation API', () => {
       where: { roomName: 'room-new' },
       data: { createdAt: new Date('2026-11-23T09:00:00.000Z') },
     });
-    await ingestMiss(app, 'room-new', at(1));
-    await ingestMiss(app, 'room-grace', at(1));
+    await ingestNote(app, 'room-new', ANY_NOTE);
+    await ingestNote(app, 'room-grace', ANY_NOTE);
     await ingestTurn(app, 'room-old', {
       itemId: 'a',
       role: 'agent',
@@ -66,24 +80,25 @@ describe('The Conversation API', () => {
       .auth(ada.authToken, { type: 'bearer' });
 
     expect(response.status).toBe(200);
-    expect(conversationListSchema.parse(response.body).conversations).toEqual([
-      {
-        roomName: 'room-new',
-        scenarioId: 'one-on-one',
-        speed: 0.85,
-        createdAt: '2026-11-23T09:00:00.000Z',
-        durationSeconds: null,
-        reportStatus: null,
-      },
-      {
-        roomName: 'room-old',
-        scenarioId: 'daily-standup',
-        speed: 0.85,
-        createdAt: '2026-11-22T09:00:00.000Z',
-        durationSeconds: 4.5,
-        reportStatus: 'ready',
-      },
-    ]);
+    // The raw body, not the parsed one: parsing would strip extra keys.
+    expect(response.body).toEqual({
+      conversations: [
+        {
+          roomName: 'room-new',
+          createdAt: '2026-11-23T09:00:00.000Z',
+          durationSeconds: null,
+          reportStatus: null,
+          noteCount: 1,
+        },
+        {
+          roomName: 'room-old',
+          createdAt: '2026-11-22T09:00:00.000Z',
+          durationSeconds: 4.5,
+          reportStatus: 'ready',
+          noteCount: 0,
+        },
+      ],
+    });
   });
 
   /** The room names the User's list shows. */
@@ -97,7 +112,54 @@ describe('The Conversation API', () => {
       .conversations.map((conversation) => conversation.roomName);
   }
 
-  it('does not list a Conversation that has no turns and no Misses', async () => {
+  it('lists noteCount', async () => {
+    await startConversation(app, ada.user, 'room-two');
+    await startConversation(app, ada.user, 'room-none');
+    await startConversation(app, grace.user, 'room-grace');
+    await ingestNote(app, 'room-two', ANY_NOTE);
+    await ingestNote(app, 'room-two', {
+      kind: 'phrase',
+      english: 'Let me circle back to that.',
+      meaning: 'Để tôi quay lại việc đó sau.',
+      said: null,
+    });
+    await ingestNote(app, 'room-grace', ANY_NOTE);
+    await ingestTurn(app, 'room-none', {
+      itemId: 'a',
+      role: 'agent',
+      text: 'Morning!',
+      startedAt: at(0),
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/conversations')
+      .auth(ada.authToken, { type: 'bearer' });
+
+    expect(response.status).toBe(200);
+    const counts = Object.fromEntries(
+      conversationListSchema
+        .parse(response.body)
+        .conversations.map(({ roomName, noteCount }) => [roomName, noteCount]),
+    );
+    expect(counts).toEqual({ 'room-two': 2, 'room-none': 0 });
+  });
+
+  it('shows noteCount in the Conversation too', async () => {
+    await startConversation(app, ada.user, 'room-two');
+    await ingestNote(app, 'room-two', ANY_NOTE);
+    await ingestNote(app, 'room-two', {
+      kind: 'phrase',
+      english: 'Let me circle back to that.',
+      meaning: 'Để tôi quay lại việc đó sau.',
+      said: null,
+    });
+
+    const detail = await readConversation(app, ada.authToken, 'room-two');
+
+    expect(detail.noteCount).toBe(2);
+  });
+
+  it('does not list a Conversation that has no turns and no Notes', async () => {
     await startConversation(app, ada.user, 'room-empty');
 
     expect(await listedRooms()).toEqual([]);
@@ -115,16 +177,76 @@ describe('The Conversation API', () => {
     expect(await listedRooms()).toEqual(['room-turn']);
   });
 
-  it('lists a Conversation that has only a Miss', async () => {
-    await startConversation(app, ada.user, 'room-miss');
-    await ingestMiss(app, 'room-miss', at(1));
+  it('a Conversation with only notes appears in the list', async () => {
+    await startConversation(app, ada.user, 'room-notes');
+    await ingestNote(app, 'room-notes', {
+      kind: 'word',
+      english: 'on track',
+      meaning: 'đúng tiến độ',
+      said: null,
+    });
 
-    expect(await listedRooms()).toEqual(['room-miss']);
+    expect(await listedRooms()).toEqual(['room-notes']);
+  });
+
+  it('lists notes oldest first', async () => {
+    await startConversation(app, ada.user, 'room-notes');
+    const notes: Note[] = [
+      {
+        kind: 'phrase',
+        english: 'Let me circle back to that.',
+        meaning: 'Để tôi quay lại việc đó sau.',
+        said: null,
+      },
+      {
+        kind: 'correction',
+        english: 'I finished the report yesterday.',
+        meaning: 'Chuyện đã xong dùng thì quá khứ.',
+        said: 'I finish the report yesterday.',
+      },
+      {
+        kind: 'missed',
+        english: 'Could you walk me through it?',
+        meaning: 'Bạn có thể hướng dẫn tôi từng bước không?',
+        said: null,
+      },
+    ];
+    for (const note of notes) {
+      await ingestNote(app, 'room-notes', note);
+    }
+
+    const stored = await listNotes(app, ada.authToken, 'room-notes');
+
+    expect(stored).toMatchObject(notes);
+    const times = stored.map(({ createdAt }) => createdAt);
+    expect(times).toEqual([...times].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it('lists no notes for a Conversation that has none', async () => {
+    await startConversation(app, ada.user, 'room-empty');
+
+    expect(await listNotes(app, ada.authToken, 'room-empty')).toEqual([]);
+  });
+
+  it("answers 404 for a room that is another Member's", async () => {
+    await startConversation(app, grace.user, 'room-grace');
+    await ingestNote(app, 'room-grace', {
+      kind: 'word',
+      english: 'on track',
+      meaning: 'đúng tiến độ',
+      said: null,
+    });
+
+    const response = await getNotes(app, ada.authToken, 'room-grace');
+    const unknown = await getNotes(app, ada.authToken, 'no-such-room');
+
+    expect(response.status).toBe(404);
+    expect(unknown.status).toBe(404);
   });
 
   it('lists a ready Report whose stored content breaks the contract as failed', async () => {
     await startConversation(app, ada.user, 'room-broken');
-    await ingestMiss(app, 'room-broken', at(1));
+    await ingestNote(app, 'room-broken', ANY_NOTE);
     const prisma = app.get(PrismaService);
     const { id } = await prisma.conversation.findUniqueOrThrow({
       where: { roomName: 'room-broken' },
@@ -187,9 +309,10 @@ describe('The Conversation API', () => {
         request(app.getHttpServer()).get('/api/conversations'),
         request(app.getHttpServer()).get('/api/conversations/room-ada'),
         request(app.getHttpServer()).post('/api/conversations/room-ada/report'),
+        request(app.getHttpServer()).get('/api/conversations/room-ada/notes'),
       ])
     ).map(({ status }) => status);
 
-    expect(statuses).toEqual([401, 401, 401]);
+    expect(statuses).toEqual([401, 401, 401, 401]);
   });
 });

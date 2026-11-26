@@ -1,40 +1,50 @@
-import type { ConversationReport, ListeningMiss } from '@open-lang/shared';
+import { ASSESSMENT_LIMITS, type ConversationReport } from '@open-lang/shared';
 import { computeFluency } from './fluency.js';
 import type { ReportDraft } from './report-model.js';
-import type { TimedTurn } from './resolve-misses.js';
+import type { TimedTurn } from './turn-times.js';
 
-const MAX_GRAMMAR_ISSUES = 5;
+const ELLIPSIS = '…';
+
+/** A UTF-16 unit that starts a character outside the Basic Multilingual Plane. */
+const HIGH_SURROGATE = /[\uD800-\uDBFF]$/;
 
 /**
- * Builds the Report from the model's draft. The Agent's words come from the
- * transcript, not from the model, and a miss the Member did not press for is dropped.
+ * `text` cut to at most `maxLength` UTF-16 units, ending in `…` when it was
+ * cut. The cut never splits a character such as an emoji, whose lone half
+ * the database would refuse to store.
+ */
+function clamp(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const cut = text
+    .slice(0, maxLength - ELLIPSIS.length)
+    .replace(HIGH_SURROGATE, '')
+    .trimEnd();
+  return `${cut}${ELLIPSIS}`;
+}
+
+/** The first `count` items, each cut to the length of an item. */
+function clampItems(items: readonly string[], count: number): string[] {
+  return items
+    .slice(0, count)
+    .map((item) => clamp(item, ASSESSMENT_LIMITS.itemLength));
+}
+
+/**
+ * Builds the Report from the model's draft. A draft longer than a Report
+ * allows is cut to the limits rather than refused, so the Member still gets
+ * the Report; the fluency numbers come from the turns, not from the model.
  */
 export function composeReport(
   turns: readonly TimedTurn[],
-  missedTurnIndexes: readonly number[],
   draft: ReportDraft,
 ): ConversationReport {
-  const missed = new Set(missedTurnIndexes);
-  const seen = new Set<number>();
-  const listeningMisses: ListeningMiss[] = draft.listeningMisses.flatMap(
-    (miss) => {
-      const turn = turns.at(miss.turnIndex);
-      if (turn === undefined || !missed.has(miss.turnIndex)) return [];
-      if (seen.has(miss.turnIndex)) return [];
-      seen.add(miss.turnIndex);
-      return [
-        {
-          agentText: turn.text,
-          keyPhrases: [...miss.keyPhrases],
-          explanation: miss.explanation,
-        },
-      ];
-    },
-  );
-
+  const { overview, strengths, improvements } = draft.assessment;
   return {
-    listeningMisses,
-    grammarIssues: draft.grammarIssues.slice(0, MAX_GRAMMAR_ISSUES),
+    assessment: {
+      overview: clamp(overview, ASSESSMENT_LIMITS.overviewLength),
+      strengths: clampItems(strengths, ASSESSMENT_LIMITS.strengths),
+      improvements: clampItems(improvements, ASSESSMENT_LIMITS.improvements),
+    },
     fluency: computeFluency(turns),
   };
 }

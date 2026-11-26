@@ -1,7 +1,9 @@
 import {
   conversationDetailSchema,
+  noteListSchema,
   type ConversationDetail,
-  type ScenarioId,
+  type Note,
+  type StoredNote,
   type User,
 } from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
@@ -19,12 +21,8 @@ export function startConversation(
   app: INestApplication<App>,
   user: User,
   roomName: string,
-  scenarioId: ScenarioId = 'daily-standup',
 ): Promise<void> {
-  return app.get(ConversationsService).create(user, roomName, {
-    scenarioId,
-    speed: 0.85,
-  });
+  return app.get(ConversationsService).create(user, roomName);
 }
 
 /** The Agent reports a turn of the room's Conversation. */
@@ -50,19 +48,19 @@ export async function ingestTurn(
   }
 }
 
-/** The Agent reports a press of "I did not catch that" in the room. */
-export async function ingestMiss(
+/** The Agent writes a Note into the room's Conversation. */
+export async function ingestNote(
   app: INestApplication<App>,
   roomName: string,
-  pressedAt: string,
+  note: Note,
 ): Promise<void> {
   const response = await request(app.getHttpServer())
-    .post(`/api/agent/conversations/${roomName}/misses`)
+    .post(`/api/agent/conversations/${roomName}/notes`)
     .auth(testEnv.AGENT_API_KEY, { type: 'bearer' })
-    .send({ pressedAt });
+    .send(note);
   if (response.status !== 204) {
     throw new Error(
-      `Posting a Miss failed with status ${String(response.status)}`,
+      `Posting a note failed with status ${String(response.status)}`,
     );
   }
 }
@@ -102,6 +100,32 @@ export function getConversation(
   return request(app.getHttpServer())
     .get(`/api/conversations/${roomName}`)
     .auth(authToken, { type: 'bearer' });
+}
+
+/** The User reads the Notes of the room's Conversation. */
+export function getNotes(
+  app: INestApplication<App>,
+  authToken: string,
+  roomName: string,
+) {
+  return request(app.getHttpServer())
+    .get(`/api/conversations/${roomName}/notes`)
+    .auth(authToken, { type: 'bearer' });
+}
+
+/** Reads the Notes of the room's Conversation, oldest first, and checks them against the contract. */
+export async function listNotes(
+  app: INestApplication<App>,
+  authToken: string,
+  roomName: string,
+): Promise<StoredNote[]> {
+  const response = await getNotes(app, authToken, roomName);
+  if (response.status !== 200) {
+    throw new Error(
+      `Reading the notes failed with status ${String(response.status)}`,
+    );
+  }
+  return noteListSchema.parse(response.body).notes;
 }
 
 /** Reads the room's Conversation and checks it against the contract. */

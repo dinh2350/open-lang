@@ -1,13 +1,13 @@
-import { voice } from '@livekit/agents';
-import type { ConversationChoice } from '@open-lang/shared';
-import { scenarioInstructions } from './scenario-instructions.ts';
+import { type llm, voice } from '@livekit/agents';
+import { TUTOR_INSTRUCTIONS } from './tutor-instructions.ts';
 
 /**
- * The Agent that talks with the User in a Conversation. It plays the
- * persona of the chosen Scenario at the chosen speed, and has no tools.
+ * The Agent that talks with the User in a Conversation: an English tutor
+ * that explains in Vietnamese. It has the tools it is given, such as
+ * `saveNote`.
  */
-export class ConversationAgent extends voice.Agent {
-  constructor(choice: ConversationChoice) {
-    super({ instructions: scenarioInstructions(choice) });
+export class TutorAgent extends voice.Agent {
+  constructor(tools: llm.ToolContextLike = []) {
+    super({ instructions: TUTOR_INSTRUCTIONS, tools });
   }
 }

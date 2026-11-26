@@ -1,10 +1,16 @@
-import type { AuthResponse } from '@open-lang/shared';
+import {
+  MAX_NOTES_PER_CONVERSATION,
+  NOTE_LIMITS,
+  type AuthResponse,
+  type Note,
+} from '@open-lang/shared';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConversationsService } from '../src/conversations/conversations.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { ingestNote, listNotes } from './support/conversations.js';
 import { startTestApp, stopTestApp, testEnv } from './support/test-app.js';
 import { registerUser } from './support/users.js';
 
@@ -19,10 +25,7 @@ describe('The Agent ingest API', () => {
   beforeEach(async () => {
     app = await startTestApp();
     signedIn = await registerUser(app);
-    await app.get(ConversationsService).create(signedIn.user, ROOM_NAME, {
-      scenarioId: 'daily-standup',
-      speed: 0.85,
-    });
+    await app.get(ConversationsService).create(signedIn.user, ROOM_NAME);
   });
 
   afterEach(async () => {
@@ -31,7 +34,7 @@ describe('The Agent ingest API', () => {
 
   /** Posts to a room's ingest route with `key` as the bearer token, or with no key at all. */
   function ingest(
-    route: 'turns' | 'misses' | 'end',
+    route: 'turns' | 'notes' | 'end',
     body: object,
     key: string | null = testEnv.AGENT_API_KEY,
     roomName = ROOM_NAME,
@@ -50,10 +53,25 @@ describe('The Agent ingest API', () => {
     ...overrides,
   });
 
-  const miss = { pressedAt: STARTED_AT };
+  const note = (overrides: Readonly<Partial<Note>> = {}): Note => ({
+    kind: 'phrase',
+    english: 'I finished the report yesterday.',
+    meaning: 'Tôi đã hoàn thành báo cáo hôm qua.',
+    said: null,
+    ...overrides,
+  });
+
+  const correction = (overrides: Readonly<Partial<Note>> = {}): Note =>
+    note({
+      kind: 'correction',
+      english: 'I finished the report yesterday.',
+      said: 'I finish the report yesterday.',
+      meaning: 'Chuyện đã xong dùng thì quá khứ: finished.',
+      ...overrides,
+    });
 
   const storedTurns = () => app.get(PrismaService).turn.findMany();
-  const storedMisses = () => app.get(PrismaService).miss.findMany();
+  const storedNotes = () => app.get(PrismaService).note.findMany();
   const storedEnd = async () =>
     (
       await app.get(PrismaService).conversation.findUniqueOrThrow({
@@ -65,9 +83,7 @@ describe('The Agent ingest API', () => {
   it('returns 401 without a key and with a wrong key', async () => {
     const calls = [
       ingest('turns', turn(), null),
-      ingest('misses', miss, null),
       ingest('turns', turn(), 'wrong-key'),
-      ingest('misses', miss, 'wrong-key'),
       // One character short of the real key: a different length.
       ingest('turns', turn(), testEnv.AGENT_API_KEY.slice(1)),
       // The same length as the real key, but not the key.
@@ -76,19 +92,15 @@ describe('The Agent ingest API', () => {
 
     const statuses = (await Promise.all(calls)).map(({ status }) => status);
 
-    expect(statuses).toEqual([401, 401, 401, 401, 401, 401]);
+    expect(statuses).toEqual([401, 401, 401, 401]);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it("a User's own Auth Token is not an Agent key", async () => {
-    const turnResponse = await ingest('turns', turn(), signedIn.authToken);
-    const missResponse = await ingest('misses', miss, signedIn.authToken);
+    const response = await ingest('turns', turn(), signedIn.authToken);
 
-    expect(turnResponse.status).toBe(401);
-    expect(missResponse.status).toBe(401);
+    expect(response.status).toBe(401);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it('the Agent key is not a User token', async () => {
@@ -100,23 +112,15 @@ describe('The Agent ingest API', () => {
   });
 
   it('returns 404 for a room that has no Conversation', async () => {
-    const turnResponse = await ingest(
+    const response = await ingest(
       'turns',
       turn(),
       testEnv.AGENT_API_KEY,
       'no-such-room',
     );
-    const missResponse = await ingest(
-      'misses',
-      miss,
-      testEnv.AGENT_API_KEY,
-      'no-such-room',
-    );
 
-    expect(turnResponse.status).toBe(404);
-    expect(missResponse.status).toBe(404);
+    expect(response.status).toBe(404);
     expect(await storedTurns()).toEqual([]);
-    expect(await storedMisses()).toEqual([]);
   });
 
   it('stores a turn', async () => {
@@ -159,20 +163,14 @@ describe('The Agent ingest API', () => {
     expect(await storedTurns()).toEqual([]);
   });
 
-  it('rejects a Miss without a time', async () => {
-    const response = await ingest('misses', {});
+  it('POST …/misses answers 404', async () => {
+    // The route is gone: even the Agent's own key finds nothing there.
+    const response = await request(app.getHttpServer())
+      .post(`/api/agent/conversations/${ROOM_NAME}/misses`)
+      .auth(testEnv.AGENT_API_KEY, { type: 'bearer' })
+      .send({ pressedAt: STARTED_AT });
 
-    expect(response.status).toBe(400);
-    expect(await storedMisses()).toEqual([]);
-  });
-
-  it('stores a Miss', async () => {
-    const response = await ingest('misses', miss);
-
-    expect(response.status).toBe(204);
-    const misses = await storedMisses();
-    expect(misses).toHaveLength(1);
-    expect(misses[0]?.pressedAt).toEqual(new Date(STARTED_AT));
+    expect(response.status).toBe(404);
   });
 
   it('rejects a turn that ends before it starts, and stores nothing', async () => {
@@ -183,6 +181,143 @@ describe('The Agent ingest API', () => {
 
     expect(response.status).toBe(400);
     expect(await storedTurns()).toEqual([]);
+  });
+
+  it('stores a note the Agent sends', async () => {
+    await ingestNote(app, ROOM_NAME, correction());
+
+    const notes = await listNotes(app, signedIn.authToken, ROOM_NAME);
+
+    // `listNotes` has checked the id and the time against the contract.
+    expect(notes).toMatchObject([
+      {
+        kind: 'correction',
+        english: 'I finished the report yesterday.',
+        meaning: 'Chuyện đã xong dùng thì quá khứ: finished.',
+        said: 'I finish the report yesterday.',
+      },
+    ]);
+  });
+
+  it('stores the same note once, however often the Agent sends it', async () => {
+    const first = await ingest('notes', note());
+    const second = await ingest('notes', note());
+    // The same sentence as another kind of note is another note.
+    const otherKind = await ingest('notes', note({ kind: 'word' }));
+
+    expect([first.status, second.status, otherKind.status]).toEqual([
+      204, 204, 204,
+    ]);
+    const notes = await storedNotes();
+    expect(notes).toHaveLength(2);
+    expect(new Set(notes.map(({ kind }) => kind))).toEqual(
+      new Set(['phrase', 'word']),
+    );
+  });
+
+  it('keeps the first 50 notes and ignores the rest', async () => {
+    const statuses: number[] = [];
+    for (let index = 1; index <= MAX_NOTES_PER_CONVERSATION + 1; index += 1) {
+      const response = await ingest(
+        'notes',
+        note({ english: `Sentence number ${String(index)}.` }),
+      );
+      statuses.push(response.status);
+    }
+
+    expect(statuses).toEqual(
+      Array.from({ length: MAX_NOTES_PER_CONVERSATION + 1 }, () => 204),
+    );
+    const notes = await listNotes(app, signedIn.authToken, ROOM_NAME);
+    expect(notes).toHaveLength(MAX_NOTES_PER_CONVERSATION);
+    expect(notes.map(({ english }) => english)).not.toContain(
+      `Sentence number ${String(MAX_NOTES_PER_CONVERSATION + 1)}.`,
+    );
+  });
+
+  it('still answers 204 for a repeat of a note once the Conversation is full', async () => {
+    for (let index = 1; index <= MAX_NOTES_PER_CONVERSATION; index += 1) {
+      await ingestNote(
+        app,
+        ROOM_NAME,
+        note({ english: `Sentence number ${String(index)}.` }),
+      );
+    }
+
+    const response = await ingest(
+      'notes',
+      note({ english: 'Sentence number 1.' }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(await storedNotes()).toHaveLength(MAX_NOTES_PER_CONVERSATION);
+  });
+
+  it('refuses a correction without said', async () => {
+    const response = await ingest('notes', correction({ said: null }));
+
+    expect(response.status).toBe(400);
+    expect(await storedNotes()).toEqual([]);
+  });
+
+  it('refuses a said on a note that is not a correction', async () => {
+    const response = await ingest('notes', note({ said: 'I finish it.' }));
+
+    expect(response.status).toBe(400);
+    expect(await storedNotes()).toEqual([]);
+  });
+
+  it('refuses english over 120 characters', async () => {
+    const response = await ingest(
+      'notes',
+      note({ english: 'x'.repeat(NOTE_LIMITS.english + 1) }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await storedNotes()).toEqual([]);
+  });
+
+  it('refuses a request without the Agent key', async () => {
+    const calls = [
+      ingest('notes', note(), null),
+      ingest('notes', note(), 'wrong-key'),
+      ingest('notes', note(), signedIn.authToken),
+    ];
+    const turnWithoutKey = await ingest('turns', turn(), null);
+
+    const statuses = (await Promise.all(calls)).map(({ status }) => status);
+
+    expect(statuses).toEqual([
+      turnWithoutKey.status,
+      turnWithoutKey.status,
+      turnWithoutKey.status,
+    ]);
+    expect(turnWithoutKey.status).toBe(401);
+    expect(await storedNotes()).toEqual([]);
+  });
+
+  it('returns 404 for a note of a room that has no Conversation', async () => {
+    const response = await ingest(
+      'notes',
+      note(),
+      testEnv.AGENT_API_KEY,
+      'no-such-room',
+    );
+
+    expect(response.status).toBe(404);
+    expect(await storedNotes()).toEqual([]);
+  });
+
+  it('recordNote stores whatever the browser does', async () => {
+    // The Conversation has no Report and no turn: the browser never came back.
+    expect(await storedTurns()).toEqual([]);
+    expect(await app.get(PrismaService).report.findMany()).toEqual([]);
+
+    await app.get(ConversationsService).recordNote(ROOM_NAME, note());
+
+    expect(await storedNotes()).toMatchObject([
+      { kind: 'phrase', english: 'I finished the report yesterday.' },
+    ]);
   });
 
   it('the end route is Agent-only, 404 for unknown rooms and idempotent', async () => {

@@ -1,5 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
+import { postNote, roomNameOfNextConversation } from './agent-ingest.ts';
 import { registerNewUser } from './users.ts';
+
+/** The Agent has to join the room before the tutor listens. */
+const AGENT_JOIN_TIMEOUT = 30_000;
 
 declare global {
   interface Window {
@@ -61,13 +65,10 @@ test('a person registers, starts a Conversation, the Agent joins its room and sh
 
   await page.getByRole('button', { name: 'Bắt đầu' }).click();
 
-  // The first Scenario, Họp standup, is selected: Sam plays it. Every
-  // Astryx button renders an empty status region of its own.
+  // Every Astryx button renders an empty status region of its own.
   await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-    'Sam đang nghe bạn nói.',
-    {
-      timeout: 30_000,
-    },
+    'Gia sư đang nghe bạn nói.',
+    { timeout: AGENT_JOIN_TIMEOUT },
   );
   await expect.poll(() => microphoneBytesSent(page)).toBeGreaterThan(0);
 
@@ -75,4 +76,42 @@ test('a person registers, starts a Conversation, the Agent joins its room and sh
 
   await expect(page).toHaveURL(/\/conversations\/conversation-[\w-]+$/);
   await expect(page.getByRole('button', { name: 'Kết thúc' })).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'Hôm nay bạn học được gì' }),
+  ).toBeVisible();
+});
+
+test("a second User cannot open the first User's Report", async ({ page }) => {
+  const privateNote = 'My password is in this sentence.';
+  await page.goto('/');
+  await registerNewUser(page);
+  const nextRoomName = roomNameOfNextConversation(page);
+  await page.getByRole('button', { name: 'Bắt đầu' }).click();
+  const roomName = await nextRoomName;
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Gia sư đang nghe bạn nói.' }),
+  ).toBeVisible({ timeout: AGENT_JOIN_TIMEOUT });
+  await postNote(roomName, {
+    kind: 'phrase',
+    english: privateNote,
+    meaning: 'Một câu riêng tư.',
+    said: null,
+  });
+  await page.getByRole('button', { name: 'Kết thúc' }).click();
+  await expect(page).toHaveURL(`/conversations/${roomName}`);
+  await expect(page.getByText(privateNote)).toBeVisible({ timeout: 10_000 });
+  const firstUsersReport = page.url();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await registerNewUser(page);
+  await expect(
+    page.getByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
+  ).toBeVisible();
+  await page.goto(firstUsersReport);
+
+  await expect(page.getByRole('alert')).toHaveText(
+    'Không tìm thấy buổi học này.',
+  );
+  await expect(page.getByText(privateNote)).toHaveCount(0);
 });

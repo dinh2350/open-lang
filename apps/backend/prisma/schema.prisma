@@ -20,11 +20,11 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(uuid(7)) @db.Uuid
+  id            String         @id @default(uuid(7)) @db.Uuid
   /// Stored lowercase, so it is unique whatever case the User types.
-  email        String   @unique
+  email         String         @unique
   /// argon2id hash; the password itself is never stored.
-  passwordHash String
+  passwordHash  String
   role          Role           @default(member)
   /// A Locked User can't sign in or call the backend (GLOSSARY.md).
   locked        Boolean        @default(false)
@@ -67,24 +67,21 @@ enum ReportStatus {
   failed
 }
 
-/// One listening role-play of a User: created with the Room Token, in the room
-/// it names.
+/// One tutoring session of a User: created with the Room Token, in the room it
+/// names.
 model Conversation {
-  id         String   @id @default(uuid(7)) @db.Uuid
-  userId     String   @db.Uuid
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// The LiveKit room of the Conversation, `conversation-<uuid>`.
-  roomName   String   @unique
-  scenarioId String
-  /// How fast the Agent speaks: 0.7, 0.85 or 1.
-  speed      Float
-  createdAt  DateTime @default(now())
-  /// When the Agent said it had sent every turn and Miss (the end marker);
+  roomName  String    @unique
+  createdAt DateTime  @default(now())
+  /// When the Agent said it had sent every turn and Note (the end marker);
   /// null while the Conversation runs, or when the Agent never said so.
-  endedAt    DateTime?
-  turns      Turn[]
-  misses     Miss[]
-  report     Report?
+  endedAt   DateTime?
+  turns     Turn[]
+  notes     Note[]
+  report    Report?
 
   @@index([userId, createdAt])
 }
@@ -104,14 +101,32 @@ model Turn {
   @@unique([conversationId, itemId])
 }
 
-/// A press of "I did not catch that".
-model Miss {
+/// What a Note is for: a good sentence, a word or expression, the User's wrong
+/// sentence with the fix, or a sentence the User did not hear.
+enum NoteKind {
+  phrase
+  word
+  correction
+  missed
+}
+
+/// One thing the tutor wrote down for the User during a Conversation.
+model Note {
   id             String       @id @default(uuid(7)) @db.Uuid
   conversationId String       @db.Uuid
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  pressedAt      DateTime
+  kind           NoteKind
+  /// The English to learn. For a correction, the fixed sentence.
+  english        String
+  /// What the User said. Only a correction has it.
+  said           String?
+  /// What it means or why, in Vietnamese.
+  meaning        String
+  createdAt      DateTime     @default(now())
 
-  @@index([conversationId])
+  // The tutor may write a Note again; the same kind and English is one Note.
+  @@unique([conversationId, kind, english])
+  @@index([conversationId, createdAt])
 }
 
 /// The feedback on a finished Conversation.

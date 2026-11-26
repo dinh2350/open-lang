@@ -6,42 +6,36 @@ import {
 } from '@livekit/components-react';
 import './voice-bars.css';
 
-/** What the status line says about the persona in each state it reports. */
-function statusLine(personaName: string, agentState: AgentState): string {
+/** What the status line says about the tutor in each state it reports. */
+function statusLine(agentState: AgentState): string {
   switch (agentState) {
     case 'listening':
-      return `${personaName} đang nghe bạn nói.`;
+      return 'Gia sư đang nghe bạn nói.';
     case 'thinking':
-      return `${personaName} đang suy nghĩ.`;
+      return 'Gia sư đang suy nghĩ.';
     case 'speaking':
-      return `${personaName} đang nói…`;
+      return 'Gia sư đang nói…';
     default:
-      return `Đang chờ ${personaName}…`;
+      return 'Đang chờ Gia sư…';
   }
 }
 
 interface AgentStatusProps {
-  /** First name of the person the Agent plays in this Scenario. */
-  readonly personaName: string;
   readonly agentState: AgentState;
   /** The Agent's audio track, once the Agent publishes one. */
   readonly agentVoice: TrackReference | undefined;
 }
 
 /**
- * A visualizer that moves with the Agent's voice, and whether the persona is
+ * A visualizer that moves with the Agent's voice, and whether the tutor is
  * listening, thinking or speaking, so the Member knows when to talk.
  */
-export function AgentStatus({
-  personaName,
-  agentState,
-  agentVoice,
-}: AgentStatusProps) {
+export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
   return (
     <>
       <BarVisualizer
         role="img"
-        aria-label={`Giọng nói của ${personaName}`}
+        aria-label="Giọng nói của Gia sư"
         state={agentState}
         track={agentVoice}
         barCount={7}
@@ -49,7 +43,7 @@ export function AgentStatus({
       />
       <div role="status">
         <Text as="p" color="secondary">
-          {statusLine(personaName, agentState)}
+          {statusLine(agentState)}
         </Text>
       </div>
     </>

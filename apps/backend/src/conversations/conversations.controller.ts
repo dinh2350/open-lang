@@ -1,6 +1,7 @@
 import type {
   ConversationDetail,
   ConversationList,
+  NoteList,
   ReportStatus,
   User,
 } from '@open-lang/shared';
@@ -37,6 +38,15 @@ export class ConversationsController {
     @Param('roomName') roomName: string,
   ): Promise<ConversationDetail> {
     return this.conversations.get(user, roomName);
+  }
+
+  /** The Notes the tutor wrote in the room's Conversation, oldest first. `404` when the room is not the User's. */
+  @Get(':roomName/notes')
+  async notes(
+    @CurrentUser() user: User,
+    @Param('roomName') roomName: string,
+  ): Promise<NoteList> {
+    return { notes: await this.conversations.listNotes(user, roomName) };
   }
 
   /**

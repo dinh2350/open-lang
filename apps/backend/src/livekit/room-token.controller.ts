@@ -15,8 +15,7 @@ export class RoomTokenController {
   /**
    * LiveKit's standard token endpoint, called by the frontend's token source
    * with the Auth Token of a signed-in User. The body must have the standard
-   * request shape. Only `participant_metadata` is read, for the Member's
-   * choice of Scenario and speed; the backend chooses every other field.
+   * request shape, but no field of it is read: the backend chooses them all.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -24,6 +23,6 @@ export class RoomTokenController {
     @Body({ schema: roomTokenRequestSchema }) request: RoomTokenRequest,
     @CurrentUser() user: User,
   ): Promise<RoomTokenResponse> {
-    return this.roomTokens.issueRoomToken(user, request);
+    return this.roomTokens.issueRoomToken(user);
   }
 }

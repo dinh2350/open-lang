@@ -17,26 +17,27 @@ import {
 } from '../src/reports/report-model.js';
 
 const input: ReportInput = {
-  scenarioId: 'daily-standup',
   transcript: [
     { role: 'agent', text: 'Any blockers?' },
     { role: 'user', text: 'No blocker.' },
   ],
-  missedTurnIndexes: [0],
-};
-
-const draft = {
-  listeningMisses: [
-    { turnIndex: 0, keyPhrases: ['blockers'], explanation: 'Trở ngại.' },
-  ],
-  grammarIssues: [
+  notes: [
     {
-      said: 'No blocker.',
-      corrected: 'No blockers.',
-      reason: 'Dùng số nhiều.',
+      kind: 'word',
+      english: 'blocker',
+      meaning: 'Trở ngại.',
+      said: null,
     },
   ],
 };
+
+const answer = {
+  overview: 'Bạn trả lời ngắn gọn.',
+  strengths: ['Trả lời đúng ý.'],
+  improvements: ['Dùng số nhiều: blockers.'],
+};
+
+const draft = { assessment: answer };
 
 function openAiClientAnswering(outputText: string) {
   const create = vi.fn().mockResolvedValue({ output_text: outputText });
@@ -52,7 +53,7 @@ function googleClientAnswering(text: string | undefined) {
 
 describe('OpenAiReportModel', () => {
   it("returns the draft parsed from the client's JSON", async () => {
-    const { client, create } = openAiClientAnswering(JSON.stringify(draft));
+    const { client, create } = openAiClientAnswering(JSON.stringify(answer));
 
     const result = await new OpenAiReportModel(client, 'gpt-test').draft(input);
 
@@ -65,7 +66,7 @@ describe('OpenAiReportModel', () => {
       model: 'gpt-test',
       text: { format: { type: 'json_object' } },
     });
-    expect(String(body.input)).toContain('[1] User: No blocker.');
+    expect(String(body.input)).toContain('User: No blocker.');
     expect(String(body.instructions)).toContain('Vietnamese');
     // No SDK retries: one run must end within the timeout.
     expect(options).toMatchObject({ timeout: 60_000, maxRetries: 0 });
@@ -80,7 +81,7 @@ describe('OpenAiReportModel', () => {
   });
 
   it('lets the timeout be set', async () => {
-    const { client, create } = openAiClientAnswering(JSON.stringify(draft));
+    const { client, create } = openAiClientAnswering(JSON.stringify(answer));
 
     await new OpenAiReportModel(client, 'gpt-test', 5_000).draft(input);
 
@@ -91,7 +92,7 @@ describe('OpenAiReportModel', () => {
 describe('GoogleReportModel', () => {
   it("returns the draft parsed from the client's JSON", async () => {
     const { client, generateContent } = googleClientAnswering(
-      JSON.stringify(draft),
+      JSON.stringify(answer),
     );
 
     const result = await new GoogleReportModel(client, 'gemini-test').draft(
@@ -103,7 +104,7 @@ describe('GoogleReportModel', () => {
       { model: string; contents: string; config: Record<string, unknown> },
     ];
     expect(request.model).toBe('gemini-test');
-    expect(request.contents).toContain('[1] User: No blocker.');
+    expect(request.contents).toContain('User: No blocker.');
     expect(request.config).toMatchObject({
       responseMimeType: 'application/json',
       // One attempt: no SDK retries, so one run ends within the timeout.
@@ -126,7 +127,7 @@ describe('GoogleReportModel', () => {
 
   it('lets the timeout be set', async () => {
     const { client, generateContent } = googleClientAnswering(
-      JSON.stringify(draft),
+      JSON.stringify(answer),
     );
 
     await new GoogleReportModel(client, 'g', 5_000).draft(input);
@@ -157,7 +158,7 @@ describe('both real report models', () => {
         ReportModelError,
       );
       await expect(
-        make('{"listeningMisses":1}').draft(input),
+        make('{"listeningMisses":[],"grammarIssues":[]}').draft(input),
       ).rejects.toBeInstanceOf(ReportModelError);
       await expect(make(undefined).draft(input)).rejects.toBeInstanceOf(
         ReportModelError,
