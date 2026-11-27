@@ -1,18 +1,18 @@
 import { RoomContext, type AgentState } from '@livekit/components-react';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { AgentStatus } from '@/conversation/agent-status';
+import { AgentStatusLine } from '@/conversation/agent-status';
 import { getStatusMessage } from './status-message';
 import { createUnconnectedRoom } from './unconnected-room';
 
-/** AgentStatus in a room the Member joined with the microphone on. */
+/** AgentStatusLine in a room the Member joined with the microphone on. */
 async function renderAgentStatus(agentState: AgentState) {
   const liveKit = createUnconnectedRoom();
   liveKit.joins();
   await liveKit.room.localParticipant.setMicrophoneEnabled(true);
   const view = (state: AgentState) => (
     <RoomContext value={liveKit.room}>
-      <AgentStatus agentState={state} agentVoice={undefined} />
+      <AgentStatusLine agentState={state} />
     </RoomContext>
   );
   const { rerender } = render(view(agentState));
@@ -25,7 +25,7 @@ async function renderAgentStatus(agentState: AgentState) {
   };
 }
 
-describe('AgentStatus', () => {
+describe('AgentStatusLine', () => {
   it('says the tutor listens while the mic is on', async () => {
     await renderAgentStatus('listening');
 

@@ -2,16 +2,21 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectionState } from 'livekit-client';
 import { StrictMode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { ConversationPage } from '@/conversation/conversation-page';
+import { NOTES_POLL_MILLISECONDS } from '@/conversation/notes-panel';
 import {
   allRequestsAnswered,
   roomTokenRequestBodies,
   roomTokensIssued,
   TEST_LIVEKIT_URL,
 } from './backend';
-import { backendHasNotes, noteOf } from './conversations-backend';
-import { deviceHasWidth, deviceIsAPhone } from './device-mode';
+import {
+  backendHasNotes,
+  noteOf,
+  notesRequestsReceived,
+} from './conversations-backend';
+import { deviceHasWidth } from './device-mode';
 import { withQueryClient } from './query-client';
 import { createUnconnectedRoom } from './unconnected-room';
 import { findStatusMessage, getStatusMessage } from './status-message';
@@ -35,6 +40,50 @@ function renderConversationPage(
 /** Presses Bắt đầu. */
 async function pressStart(): Promise<void> {
   await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu' }));
+}
+
+/**
+ * Renders the page, presses Bắt đầu, and has the Agent join and listen; the
+ * lesson screen is then up, with the side panel closed.
+ */
+async function startLesson(onEnded: (roomName: string) => void = vi.fn()) {
+  const liveKit = createUnconnectedRoom();
+  renderConversationPage(liveKit, onEnded);
+  await pressStart();
+  act(() => {
+    liveKit.agentJoins();
+  });
+  await screen.findByRole('button', { name: 'Tắt mic' });
+  return liveKit;
+}
+
+/** Whether the side panel with Cuộc nói and Ghi chú is shown. */
+function panelIsOpen(): boolean {
+  return (
+    screen.queryByRole('complementary', { name: 'Cuộc nói và ghi chú' }) !==
+    null
+  );
+}
+
+/** The Badge on the Ghi chú button that shows `count`. */
+function noteCountBadge(count: string): HTMLElement {
+  const button = screen.getByRole('button', { name: /^Ghi chú/ });
+  const badge = within(button).getByText(count).closest('[data-variant]');
+  if (!(badge instanceof HTMLElement)) {
+    throw new Error(`no badge with ${count} on Ghi chú`);
+  }
+  return badge;
+}
+
+/** The next poll of the Notes: two seconds pass, and the backend answers. */
+async function nextPoll(): Promise<void> {
+  const requestsBefore = notesRequestsReceived().length;
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(NOTES_POLL_MILLISECONDS);
+  });
+  await waitFor(() => {
+    expect(notesRequestsReceived()).toHaveLength(requestsBefore + 1);
+  });
 }
 
 describe('Conversation page', () => {
@@ -187,96 +236,7 @@ describe('Conversation page', () => {
     ).toBeVisible();
   });
 
-  it('shows the transcript and the notes side by side on a wide screen', async () => {
-    backendHasNotes('conversation-1', [noteOf('phrase', 'That makes sense.')]);
-    const liveKit = createUnconnectedRoom();
-    renderConversationPage(liveKit);
-    await pressStart();
-    act(() => {
-      liveKit.agentJoins();
-    });
-
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Cuộc nói' })).toBeVisible();
-    const notes = screen.getByRole('region', { name: 'Ghi chú' });
-    expect(await within(notes).findByText('That makes sense.')).toBeVisible();
-  });
-
-  it('shows tabs Cuộc nói and Ghi chú with the count at phone width', async () => {
-    deviceIsAPhone();
-    backendHasNotes('conversation-1', [
-      noteOf('phrase', 'That makes sense.'),
-      noteOf('word', 'run by'),
-    ]);
-    const liveKit = createUnconnectedRoom();
-    renderConversationPage(liveKit);
-    await pressStart();
-    act(() => {
-      liveKit.agentJoins();
-    });
-
-    const tabs = screen.getByRole('tablist');
-    expect(within(tabs).getAllByRole('tab')).toHaveLength(2);
-    const notesTab = within(tabs).getByRole('tab', { name: /^Ghi chú/ });
-    expect(await within(notesTab).findByText('2')).toBeVisible();
-    expect(within(tabs).getByRole('tab', { name: 'Cuộc nói' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    expect(screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
-    expect(screen.queryByText('That makes sense.')).not.toBeVisible();
-
-    await userEvent.click(notesTab);
-
-    expect(notesTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('That makes sense.')).toBeVisible();
-    expect(
-      screen.queryByText('Chữ của cuộc nói sẽ hiện ở đây.'),
-    ).not.toBeVisible();
-  });
-
-  it('keeps the transcript when the layout changes', async () => {
-    const device = deviceHasWidth(1024);
-    const liveKit = createUnconnectedRoom();
-    renderConversationPage(liveKit);
-    await pressStart();
-    act(() => {
-      liveKit.agentJoins();
-    });
-    act(() => {
-      liveKit.agentSays('segment-1', 'Hi! How was your weekend?');
-    });
-    act(() => {
-      liveKit.memberSays('segment-2', 'It was great.');
-    });
-    expect(await screen.findByText('It was great.')).toBeVisible();
-    const transcriptIsThere = () => {
-      expect(screen.getByText('Hi! How was your weekend?')).toBeVisible();
-      expect(screen.getByText('It was great.')).toBeVisible();
-    };
-
-    // A phone turned upright: the panels become tabs.
-    act(() => {
-      device.resize(375);
-    });
-    const tabs = screen.getByRole('tablist');
-    transcriptIsThere();
-
-    // Switching to Ghi chú and back.
-    await userEvent.click(within(tabs).getByRole('tab', { name: /^Ghi chú/ }));
-    expect(screen.getByText('It was great.')).not.toBeVisible();
-    await userEvent.click(within(tabs).getByRole('tab', { name: 'Cuộc nói' }));
-    transcriptIsThere();
-
-    // Turned sideways again: side by side.
-    act(() => {
-      device.resize(1024);
-    });
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    transcriptIsThere();
-  });
-
-  it('the in-session screen shows the voice bars, the status, the controls and the two panels, and no Scenario or speed', async () => {
+  it('the lesson screen starts with only the aura, the status line and the controls', async () => {
     const liveKit = createUnconnectedRoom();
     renderConversationPage(liveKit);
     expect(
@@ -290,22 +250,277 @@ describe('Conversation page', () => {
     expect(
       screen.getByRole('img', { name: 'Giọng nói của Gia sư' }),
     ).toBeVisible();
+    expect(await findStatusMessage()).toHaveTextContent(
+      'Gia sư đang nghe bạn nói.',
+    );
     expect(
       (await screen.findAllByRole('button')).map(
         (button) => button.textContent,
       ),
-    ).toEqual(['Tắt mic', 'Kết thúc']);
+    ).toEqual(['Tắt mic', 'Cuộc nói', 'Ghi chú', 'Kết thúc']);
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('heading')).toEqual([]);
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
     expect(
-      screen.getAllByRole('heading').map((heading) => heading.textContent),
-    ).toEqual(['Cuộc nói', 'Ghi chú']);
-    await waitFor(() => {
-      expect(screen.getByRole('main')).toHaveTextContent(
-        /^Gia sư đang nghe bạn nói\.Tắt micKết thúcCuộc nóiChữ của cuộc nói sẽ hiện ở đây\.Ghi chúGia sư sẽ ghi những điều đáng nhớ ở đây\.$/,
-      );
-    });
+      screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.'),
+    ).not.toBeVisible();
   });
 
+  it('Cuộc nói opens the transcript and Ghi chú opens the notes, and each button closes its own tab', async () => {
+    backendHasNotes('conversation-1', [noteOf('phrase', 'That makes sense.')]);
+    await startLesson();
+    const transcriptButton = screen.getByRole('button', { name: 'Cuộc nói' });
+    const notesButton = screen.getByRole('button', { name: /^Ghi chú/ });
+    expect(transcriptButton).toHaveAttribute('aria-expanded', 'false');
+    expect(notesButton).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(transcriptButton);
+    expect(transcriptButton).toHaveAttribute('aria-expanded', 'true');
+    expect(notesButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('tab', { name: 'Cuộc nói' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
+    expect(await screen.findByText('That makes sense.')).not.toBeVisible();
+
+    await userEvent.click(notesButton);
+    expect(notesButton).toHaveAttribute('aria-expanded', 'true');
+    expect(transcriptButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('tab', { name: /^Ghi chú/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('That makes sense.')).toBeVisible();
+    expect(
+      screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.'),
+    ).not.toBeVisible();
+
+    await userEvent.click(notesButton);
+    expect(notesButton).toHaveAttribute('aria-expanded', 'false');
+    expect(panelIsOpen()).toBe(false);
+    expect(screen.getByText('That makes sense.')).not.toBeVisible();
+
+    await userEvent.click(transcriptButton);
+    await userEvent.click(transcriptButton);
+    expect(transcriptButton).toHaveAttribute('aria-expanded', 'false');
+    expect(panelIsOpen()).toBe(false);
+    expect(
+      screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.'),
+    ).not.toBeVisible();
+  });
+
+  it('pressing the tab that is already selected keeps the panel open', async () => {
+    await startLesson();
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Cuộc nói' }));
+
+    expect(panelIsOpen()).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Cuộc nói' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
+
+    // The other tab still switches.
+    await userEvent.click(screen.getByRole('tab', { name: /^Ghi chú/ }));
+    expect(screen.getByRole('button', { name: /^Ghi chú/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(panelIsOpen()).toBe(true);
+  });
+
+  it('keeps the lines said while the panel is closed', async () => {
+    const device = deviceHasWidth(1024);
+    const liveKit = await startLesson();
+    act(() => {
+      liveKit.agentSays('segment-1', 'Hi! How was your weekend?');
+    });
+    act(() => {
+      liveKit.memberSays('segment-2', 'It was great.');
+    });
+    const transcriptIsThere = () => {
+      expect(screen.getByText('Hi! How was your weekend?')).toBeVisible();
+      expect(screen.getByText('It was great.')).toBeVisible();
+    };
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    transcriptIsThere();
+
+    // Closed and opened again.
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    expect(screen.getByText('It was great.')).not.toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    transcriptIsThere();
+
+    // Switched to Ghi chú and back.
+    await userEvent.click(screen.getByRole('tab', { name: /^Ghi chú/ }));
+    expect(screen.getByText('It was great.')).not.toBeVisible();
+    await userEvent.click(screen.getByRole('tab', { name: 'Cuộc nói' }));
+    transcriptIsThere();
+
+    // A phone turned upright, then sideways again.
+    act(() => {
+      device.resize(375);
+      globalThis.dispatchEvent(new Event('resize'));
+    });
+    transcriptIsThere();
+    act(() => {
+      device.resize(1024);
+      globalThis.dispatchEvent(new Event('resize'));
+    });
+    transcriptIsThere();
+  });
+
+  it('shows the count of notes on Ghi chú before the panel is opened', async () => {
+    backendHasNotes('conversation-1', [
+      noteOf('phrase', 'That makes sense.'),
+      noteOf('word', 'run by'),
+    ]);
+    await startLesson();
+
+    const notesButton = await screen.findByRole('button', {
+      name: /^Ghi chú/,
+    });
+    expect(await within(notesButton).findByText('2')).toBeVisible();
+    expect(notesButton).toHaveAttribute('aria-expanded', 'false');
+    expect(panelIsOpen()).toBe(false);
+  });
+
+  it('marks new notes while the panel is closed, and clears the mark when the Ghi chú tab is shown', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    backendHasNotes('conversation-1', [noteOf('phrase', 'That makes sense.')]);
+    await startLesson();
+
+    // A note arrived while the panel was closed.
+    await waitFor(() => {
+      expect(noteCountBadge('1')).toHaveAttribute('data-variant', 'blue');
+    });
+
+    // The transcript does not show the notes, so the mark stays.
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    expect(noteCountBadge('1')).toHaveAttribute('data-variant', 'blue');
+
+    // The Ghi chú tab is shown: the mark clears, and stays clear once closed.
+    await userEvent.click(screen.getByRole('tab', { name: /^Ghi chú/ }));
+    expect(noteCountBadge('1')).toHaveAttribute('data-variant', 'neutral');
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(noteCountBadge('1')).toHaveAttribute('data-variant', 'neutral');
+
+    // A new note arrives while the panel is closed: marked again.
+    backendHasNotes('conversation-1', [
+      noteOf('phrase', 'That makes sense.'),
+      noteOf('word', 'run by'),
+    ]);
+    await nextPoll();
+    await waitFor(() => {
+      expect(noteCountBadge('2')).toHaveAttribute('data-variant', 'blue');
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: /^Ghi chú/ }));
+    expect(noteCountBadge('2')).toHaveAttribute('data-variant', 'neutral');
+    expect(screen.getByText('run by')).toBeVisible();
+  });
+
+  it('the controls stay usable while the panel is open', async () => {
+    const onEnded = vi.fn();
+    const liveKit = await startLesson(onEnded);
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    expect(panelIsOpen()).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tắt mic' }));
+
+    expect(liveKit.microphoneIsOn()).toBe(false);
+    expect(
+      await screen.findByRole('button', { name: 'Bật mic' }),
+    ).toBeVisible();
+    expect(
+      screen.getByText('Mic đang tắt. Gia sư không nghe thấy bạn.'),
+    ).toBeVisible();
+    expect(screen.getByText('Gia sư đang chờ bạn bật mic.')).toBeVisible();
+    expect(panelIsOpen()).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Kết thúc' }));
+
+    expect(liveKit.room.state).toBe(ConnectionState.Disconnected);
+    expect(onEnded).toHaveBeenCalledExactlyOnceWith(liveKit.room.name);
+  });
+
+  it('Escape and Đóng close the panel', async () => {
+    await startLesson();
+    await userEvent.click(screen.getByRole('button', { name: /^Ghi chú/ }));
+    expect(panelIsOpen()).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(panelIsOpen()).toBe(false);
+    expect(screen.getByRole('button', { name: /^Ghi chú/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Cuộc nói' }));
+    await userEvent.keyboard('{Escape}');
+    expect(panelIsOpen()).toBe(false);
+    expect(screen.getByRole('button', { name: 'Cuộc nói' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
+  it('gives the focus back to the button of the panel that was open when the panel closes', async () => {
+    await startLesson();
+    const transcriptButton = screen.getByRole('button', { name: 'Cuộc nói' });
+    const notesButton = screen.getByRole('button', { name: /^Ghi chú/ });
+
+    // Đóng, from Ghi chú.
+    await userEvent.click(notesButton);
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(notesButton).toHaveFocus();
+
+    // Escape, after switching from Cuộc nói to Ghi chú inside the panel.
+    await userEvent.click(transcriptButton);
+    await userEvent.click(screen.getByRole('tab', { name: /^Ghi chú/ }));
+    await userEvent.keyboard('{Escape}');
+    expect(notesButton).toHaveFocus();
+
+    // Escape, from Cuộc nói.
+    await userEvent.click(transcriptButton);
+    await userEvent.click(screen.getByRole('tab', { name: 'Cuộc nói' }));
+    await userEvent.keyboard('{Escape}');
+    expect(transcriptButton).toHaveFocus();
+
+    // The panel's own button keeps the focus.
+    await userEvent.click(transcriptButton);
+    await userEvent.click(transcriptButton);
+    expect(transcriptButton).toHaveFocus();
+  });
+
+  it('the lesson works when WebGL is not available', async () => {
+    const liveKit = await startLesson();
+
+    await waitFor(() => {
+      expect(document.querySelector('.aura-fallback')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole('img', { name: 'Giọng nói của Gia sư' }),
+    ).toBeVisible();
+    expect(getStatusMessage()).toHaveTextContent('Gia sư đang nghe bạn nói.');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cuộc nói' }));
+    expect(screen.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Tắt mic' }));
+    expect(liveKit.microphoneIsOn()).toBe(false);
+    expect(
+      await screen.findByRole('button', { name: 'Bật mic' }),
+    ).toBeVisible();
+  });
   it('Kết thúc leaves the room and calls onEnded with the room name', async () => {
     const liveKit = createUnconnectedRoom();
     const onEnded = vi.fn();

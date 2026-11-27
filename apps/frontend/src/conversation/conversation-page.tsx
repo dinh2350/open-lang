@@ -72,18 +72,10 @@ export function ConversationPage({
     }
   }
 
+  // The running Conversation fills the screen itself; the Start panel, and
+  // the alert of a Conversation that failed, are centred.
   return (
-    <Stack
-      as="main"
-      align="center"
-      justify="center"
-      gap={6}
-      padding={6}
-      minHeight="100svh"
-    >
-      {failure !== null && (
-        <Banner status="error" role="alert" title={failureMessages[failure]} />
-      )}
+    <main>
       {attempt !== null && (
         <ConversationSession
           key={attempt}
@@ -93,7 +85,24 @@ export function ConversationPage({
           onEnded={end}
         />
       )}
-      {(attempt === null || failure !== null) && <StartPanel onStart={start} />}
-    </Stack>
+      {(attempt === null || failure !== null) && (
+        <Stack
+          align="center"
+          justify="center"
+          gap={6}
+          padding={6}
+          minHeight="100svh"
+        >
+          {failure !== null && (
+            <Banner
+              status="error"
+              role="alert"
+              title={failureMessages[failure]}
+            />
+          )}
+          <StartPanel onStart={start} />
+        </Stack>
+      )}
+    </main>
   );
 }

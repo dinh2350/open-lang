@@ -1,0 +1,65 @@
+/*
+ * The lesson screen fills the window below the fixed header and never
+ * scrolls: the body takes the height the controls bar leaves, and the bar is
+ * the last row, so it is always inside the window.
+ *
+ * The body holds the Aura's stage and the side panel. On a phone they are one
+ * column, the panel under the Aura; from 640px, while the panel is open, the
+ * panel is a column on the right. min-height: 0 on every box from the screen
+ * down to the panel lets the panel take the height it is given instead of
+ * growing to its content, so only the transcript's box and the Ghi chú panel
+ * scroll.
+ */
+.conversation-screen {
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--app-header-height);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.conversation-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-4) 0;
+}
+
+/* On a phone the open panel takes most of the height, under a smaller Aura. */
+.conversation-body[data-panel-open='true'] {
+  grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+/*
+ * The stage is a size container, so the Aura can stay square and fit its
+ * shorter side: it never pushes the panel or the bar.
+ */
+.conversation-stage {
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.conversation-stage .agent-aura {
+  inline-size: min(60vmin, 22rem, 100cqmin);
+}
+
+.controls-bar {
+  flex: none;
+  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+  .conversation-body[data-panel-open='true'] {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
