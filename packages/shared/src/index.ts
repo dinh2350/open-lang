@@ -70,3 +70,14 @@ export {
   type NoteList,
   type StoredNote,
 } from './note.ts';
+export {
+  LEARNER_BRIEF_LIMITS,
+  LEARNER_BRIEF_VERSION,
+  learnerBriefItemSchema,
+  learnerBriefSchema,
+  learnerItemStatusSchema,
+  parseLearnerBrief,
+  type LearnerBrief,
+  type LearnerBriefItem,
+  type LearnerItemStatus,
+} from './learner-brief.ts';
