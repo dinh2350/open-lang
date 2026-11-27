@@ -1,5 +1,3 @@
-import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
 import {
   expect,
   type Locator,
@@ -11,13 +9,17 @@ import {
   type PostedNote,
   postNote,
   postTurn,
-  roomNameOfNextConversation,
   secondsAgo,
 } from './agent-ingest.ts';
-import { registerNewUser } from './users.ts';
+import {
+  notesButton,
+  registerAndOpenStart,
+  saveScreen,
+  startConversation,
+  statusLine,
+  transcriptButton,
+} from './lesson.ts';
 
-/** The Agent has to join the room before the tutor listens. */
-const AGENT_JOIN_TIMEOUT = 30_000;
 /** The notes panel asks the backend for the Notes every 2 s. */
 const NOTES_TIMEOUT = 10_000;
 /** The Report is written in the background, and the page looks every 2 s. */
@@ -47,57 +49,6 @@ const MISSED: PostedNote = {
   meaning: 'Chúng tôi dời bản phát hành sang thứ Sáu vì sự cố.',
   said: null,
 };
-
-/**
- * Where a test keeps a screenshot for a human to look at: next to the run's
- * evidence, when E2E_EVIDENCE_DIR (relative to the repository root) is set.
- */
-async function saveScreen(page: Page, name: string): Promise<void> {
-  const evidence = process.env.E2E_EVIDENCE_DIR;
-  if (evidence === undefined) {
-    return;
-  }
-  const screens = path.resolve(
-    import.meta.dirname,
-    '..',
-    '..',
-    evidence,
-    'screens',
-  );
-  await mkdir(screens, { recursive: true });
-  await page.screenshot({
-    path: path.join(screens, `${name}.png`),
-    fullPage: true,
-  });
-}
-
-/** Registers a new User and waits for the start screen. */
-async function registerAndOpenStart(page: Page): Promise<void> {
-  await page.goto('/');
-  await registerNewUser(page);
-  await expect(
-    page.getByRole('heading', { name: 'Gia sư tiếng Anh của bạn' }),
-  ).toBeVisible();
-}
-
-/** The status line; every Astryx button renders an empty status region too. */
-function statusLine(page: Page): Locator {
-  return page.getByRole('status').filter({ hasText: /\S/ });
-}
-
-/**
- * Registers a new User, presses Bắt đầu, waits until the tutor listens, and
- * gives the name of the Conversation's room.
- */
-async function startConversation(page: Page): Promise<string> {
-  await registerAndOpenStart(page);
-  const roomName = roomNameOfNextConversation(page);
-  await page.getByRole('button', { name: 'Bắt đầu' }).click();
-  await expect(
-    statusLine(page).filter({ hasText: 'Gia sư đang nghe bạn nói.' }),
-  ).toBeVisible({ timeout: AGENT_JOIN_TIMEOUT });
-  return roomName;
-}
 
 /** Presses Kết thúc and waits for the Conversation's Report page. */
 async function endConversation(page: Page, roomName: string): Promise<void> {
@@ -181,7 +132,9 @@ test('the session shows an empty transcript before anyone speaks', async ({
 }) => {
   await startConversation(page);
 
+  await transcriptButton(page).click();
   await expect(page.getByText('Chữ của cuộc nói sẽ hiện ở đây.')).toBeVisible();
+  await notesButton(page).click();
   await expect(
     page.getByText('Gia sư sẽ ghi những điều đáng nhớ ở đây.'),
   ).toBeVisible();
@@ -206,10 +159,27 @@ test('mic button mutes and unmutes; no Chưa nghe kịp button', async ({
   );
 });
 
+test('the status line says the tutor waits while the mic is off', async ({
+  page,
+}) => {
+  await startConversation(page);
+
+  await page.getByRole('button', { name: 'Tắt mic' }).click();
+  // With the mic off, the mic's own line is a second status region with text.
+  await expect(
+    statusLine(page).filter({ hasText: 'Gia sư đang chờ bạn bật mic.' }),
+  ).toBeVisible();
+  await expect(page.getByText('Gia sư đang nghe bạn nói.')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Bật mic' }).click();
+  await expect(statusLine(page)).toHaveText('Gia sư đang nghe bạn nói.');
+});
+
 test('a note the Agent saves appears in the notes panel', async ({ page }) => {
   const roomName = await startConversation(page);
 
   await postNote(roomName, PHRASE);
+  await notesButton(page).click();
 
   const phrases = noteGroup(page, 'Câu hay');
   await expect(phrases).toBeVisible({ timeout: NOTES_TIMEOUT });
@@ -222,6 +192,7 @@ test('a note the Agent saves appears in the notes panel', async ({ page }) => {
 test('the notes panel survives a failing poll', async ({ page }) => {
   const roomName = await startConversation(page);
   await postNote(roomName, PHRASE);
+  await notesButton(page).click();
   const phrase = page.getByText(PHRASE.english);
   await expect(phrase).toBeVisible({ timeout: NOTES_TIMEOUT });
 
@@ -298,6 +269,7 @@ test('Report opens on Đã học, and Gia sư đánh giá fills in', async ({
   await postNote(roomName, PHRASE);
   await postNote(roomName, WORD);
   await postNote(roomName, MISSED);
+  await notesButton(page).click();
   for (const title of ['Câu hay', 'Từ / cụm', 'Sửa lỗi', 'Câu nghe sót']) {
     await expect(noteGroup(page, title)).toBeVisible({
       timeout: NOTES_TIMEOUT,
@@ -391,6 +363,7 @@ test('closing the tab keeps the notes in Lịch sử học', async ({
   const roomName = await startConversation(page);
   await postTwoTurns(roomName);
   await postNote(roomName, PHRASE);
+  await notesButton(page).click();
   await expect(page.getByText(PHRASE.english)).toBeVisible({
     timeout: NOTES_TIMEOUT,
   });

@@ -69,6 +69,11 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         permissions: ['microphone'],
+        // Headless Chromium draws WebGL in software (SwiftShader), where the
+        // moving Aura takes most of the machine's CPU. The Agent's server
+        // then reports itself full, and LiveKit sends no Agent to the next
+        // test's room. Reduced motion draws the Aura once and keeps it still.
+        reducedMotion: 'reduce',
         launchOptions: {
           args: [
             '--use-fake-ui-for-media-stream',
