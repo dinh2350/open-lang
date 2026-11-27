@@ -2,6 +2,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -54,7 +55,12 @@ export function useStickToBottom(
     };
   }, []);
 
-  useEffect(() => {
+  // A layout effect, so the scroll happens in the same task that puts the new
+  // content in the DOM. A passive effect can run after the browser has fired
+  // the scroll event of the scroll before, which then reads the new content as
+  // distance from the bottom and stops following, and after it has painted the
+  // new line below the fold.
+  useLayoutEffect(() => {
     const box = ref.current;
     if (box !== null && isShown && isFollowing.current) {
       box.scrollTop = box.scrollHeight;
