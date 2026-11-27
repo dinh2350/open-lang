@@ -1,0 +1,23 @@
+/*
+ * The tutor's Aura: a square, centred in its row. The canvas fills it, and
+ * so does the still blue circle shown when the browser has no WebGL.
+ */
+.agent-aura {
+  display: block;
+  inline-size: min(60vmin, 22rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+.agent-aura-canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.aura-fallback {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  background-color: #0176fd;
+}
