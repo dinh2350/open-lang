@@ -1,3 +1,9 @@
+/*! @license Apache-2.0
+ * useAuraAnimation, from useAgentAudioVisualizerAura of LiveKit components-js
+ * (https://github.com/livekit/components-js, commit 370cbca2), modified.
+ * Copyright 2023 LiveKit, Inc. Licensed under the Apache License, Version 2.0:
+ * https://www.apache.org/licenses/LICENSE-2.0
+ */
 /**
  * The animation of the tutor's Aura: it turns the state of the voice agent
  * into the five numbers the Aura shader needs.

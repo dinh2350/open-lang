@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { '@': path.resolve(import.meta.dirname, 'src') },
     },
+    build: {
+      rolldownOptions: {
+        // Keeps `/*! @license */` comments in the minified bundle: the code
+        // derived from LiveKit ships with the Apache-2.0 notice it needs.
+        output: { comments: { legal: true } },
+      },
+    },
     server: {
       port: 5173,
       strictPort: true,

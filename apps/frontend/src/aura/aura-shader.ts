@@ -1,3 +1,9 @@
+/*! @license Apache-2.0
+ * The Aura fragment shader, from LiveKit components-js
+ * (https://github.com/livekit/components-js, commit 370cbca2), modified.
+ * Copyright 2023 LiveKit, Inc. Licensed under the Apache License, Version 2.0:
+ * https://www.apache.org/licenses/LICENSE-2.0
+ */
 /**
  * The fragment shader of LiveKit's Aura audio visualizer.
  *
