@@ -21,15 +21,19 @@ What was modified in `use-aura-animation.ts`: the hook was renamed to
 `useAuraAnimation`; it takes a `TrackReference` and has no `volume` override
 prop; the animated values are plain numbers; the animations stop when the hook
 unmounts; `speed` is worked out while rendering instead of being set in an
-effect; and the unused dependencies of the volume effect were dropped. The
-values and targets for each state are LiveKit's. The file says so in its header
-comment.
+effect; the moving values are not kept in React state, and the hook returns a
+function that reads them, so nothing renders on every frame; the volume is read
+with `createAudioAnalyser` (same settings and interval as `useTrackVolume`)
+instead of with that hook; and while the Aura is still no animation runs and no
+volume is read. The values and targets for each state are LiveKit's. The file
+says so in its header comment.
 
 What was modified in `use-aura-animation.spec.ts`: it tests the renamed hook,
-the tests of the `volume` prop are gone, the fake motion values stay the same
-object between renders and say which value they are, and the assertions check
-the targets passed to `animate`, state by state. The file says so in its header
-comment.
+the tests of the `volume` prop are gone, the volume comes from a mocked
+`createAudioAnalyser`, the fake motion values stay the same object between
+renders and say which value they are, the assertions check the targets passed
+to `animate`, state by state, and there are tests for a still Aura. The file
+says so in its header comment.
 
 `webgl-program.ts` is not derived from LiveKit's code; it is written for this
 project.

@@ -8,24 +8,33 @@
  *
  * MODIFIED: tests the renamed hook `useAuraAnimation`, which takes a
  * `TrackReference` and has no `volume` override prop, so the tests of that prop
- * are gone. The mocks of `motion/react` and `useTrackVolume` follow the
- * original. The fake motion values now stay the same object between renders
- * (as real ones do) and carry the value they started from, so a test can tell
- * which value an `animate` call was for. The assertions are rewritten to check
- * the targets passed to `animate`, state by state.
+ * are gone. The mock of `motion/react` follows the original; the volume comes
+ * from a mocked `createAudioAnalyser` of `livekit-client`, as the hook reads it
+ * itself instead of through `useTrackVolume`. The fake motion values stay the
+ * same object between renders (as real ones do) and carry the value they
+ * started from, so a test can tell which value an `animate` call was for. The
+ * assertions are rewritten to check the targets passed to `animate`, state by
+ * state, and the values the hook reads back; and there are tests for a still
+ * Aura, which runs no animation and reads no volume.
  */
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import type { AgentState, TrackReference } from '@livekit/components-react';
+import { createAudioAnalyser } from 'livekit-client';
 import {
-  type AgentState,
-  type TrackReference,
-  useTrackVolume,
-} from '@livekit/components-react';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from 'vitest';
 import { useAuraAnimation } from '@/aura/use-aura-animation';
 
 interface FakeMotionValue {
   /** The value it was created with, which tells the five values apart. */
   readonly initial: number;
+  readonly get: () => number;
   readonly isAnimating: () => boolean;
 }
 
@@ -44,26 +53,31 @@ const fakes = vi.hoisted(() => ({
         transition: Transition,
       ) => { stop: () => void }
     >(),
+  /** The volume the fake analyser hears. */
+  volume: 0,
+  cleanup: vi.fn<() => Promise<void>>(),
 }));
 
-vi.mock('@livekit/components-react', () => ({ useTrackVolume: vi.fn() }));
+vi.mock('livekit-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('livekit-client')>()),
+  createAudioAnalyser: vi.fn(() => ({
+    calculateVolume: () => fakes.volume,
+    cleanup: fakes.cleanup,
+  })),
+}));
 
 vi.mock('motion/react', async () => {
   const { useState } = await import('react');
   function useMotionValue(initial: number): FakeMotionValue {
     const [motionValue] = useState<FakeMotionValue>(() => ({
       initial,
+      // The fakes never move, so a value reads back as it started.
+      get: () => initial,
       isAnimating: () => fakes.isAnimating,
     }));
     return motionValue;
   }
-  return {
-    useMotionValue,
-    // The fakes never emit a change, so only `speed`, which the hook keeps
-    // in React state itself, can follow the state of the tutor.
-    useMotionValueEvent: vi.fn(),
-    animate: fakes.animate,
-  };
+  return { useMotionValue, animate: fakes.animate };
 });
 
 /** What each value starts from, which is how a fake motion value is named. */
@@ -115,23 +129,36 @@ const SPEAKING: Targets = {
   brightness: [1.5],
 };
 
+/** The tutor's voice: a reference to a published audio track. */
+const TRACK = {
+  publication: { track: { kind: 'audio', mediaStream: {} } },
+} as unknown as TrackReference;
+
+/** How often the hook reads the volume, as `useTrackVolume` did. */
+const VOLUME_INTERVAL_MS = 1000 / 30;
+
 describe('useAuraAnimation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fakes.isAnimating = false;
     fakes.controls.length = 0;
+    fakes.volume = 0;
+    fakes.cleanup.mockResolvedValue(undefined);
     fakes.animate.mockImplementation(() => {
       const controls = { stop: vi.fn<() => void>() };
       fakes.controls.push(controls);
       return controls;
     });
-    vi.mocked(useTrackVolume).mockReturnValue(0);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('starts from the default values', () => {
     const { result } = renderHook(() => useAuraAnimation(undefined));
 
-    expect(result.current).toEqual({
+    expect(result.current()).toEqual({
       speed: 10,
       scale: 0.2,
       amplitude: 2,
@@ -157,7 +184,7 @@ describe('useAuraAnimation', () => {
     const speeds = Object.fromEntries(
       states.map((state) => [
         state,
-        renderHook(() => useAuraAnimation(state)).result.current.speed,
+        renderHook(() => useAuraAnimation(state)).result.current().speed,
       ]),
     );
 
@@ -179,11 +206,11 @@ describe('useAuraAnimation', () => {
       ({ state }) => useAuraAnimation(state),
       { initialProps: { state: 'listening' as AgentState } },
     );
-    expect(result.current.speed).toBe(20);
+    expect(result.current().speed).toBe(20);
 
     rerender({ state: 'speaking' });
 
-    expect(result.current.speed).toBe(70);
+    expect(result.current().speed).toBe(70);
   });
 
   it.each<[AgentState, Targets]>([
@@ -230,9 +257,13 @@ describe('useAuraAnimation', () => {
   });
 
   it('grows the scale with the track volume while speaking', () => {
-    vi.mocked(useTrackVolume).mockReturnValue(0.5);
+    vi.useFakeTimers();
+    fakes.volume = 0.5;
 
-    renderHook(() => useAuraAnimation('speaking'));
+    renderHook(() => useAuraAnimation('speaking', TRACK));
+    act(() => {
+      vi.advanceTimersByTime(VOLUME_INTERVAL_MS);
+    });
 
     expect(animationsOf('scale')).toEqual([
       [0.3, expect.anything()],
@@ -241,9 +272,13 @@ describe('useAuraAnimation', () => {
   });
 
   it('ignores the volume when the tutor is not speaking', () => {
-    vi.mocked(useTrackVolume).mockReturnValue(0.8);
+    vi.useFakeTimers();
+    fakes.volume = 0.8;
 
-    renderHook(() => useAuraAnimation('listening'));
+    renderHook(() => useAuraAnimation('listening', TRACK));
+    act(() => {
+      vi.advanceTimersByTime(VOLUME_INTERVAL_MS * 3);
+    });
 
     expect(fakes.animate).not.toHaveBeenCalledWith(
       expect.anything(),
@@ -254,23 +289,30 @@ describe('useAuraAnimation', () => {
   });
 
   it('waits for the scale to settle before it follows the volume', () => {
-    vi.mocked(useTrackVolume).mockReturnValue(0.5);
+    vi.useFakeTimers();
+    fakes.volume = 0.5;
     fakes.isAnimating = true;
 
-    renderHook(() => useAuraAnimation('speaking'));
+    renderHook(() => useAuraAnimation('speaking', TRACK));
+    act(() => {
+      vi.advanceTimersByTime(VOLUME_INTERVAL_MS * 3);
+    });
 
     expect(targetsOf('scale')).toEqual([0.3]);
   });
 
-  it('reads the volume of the track it is given', () => {
-    const track = { source: 'microphone' } as unknown as TrackReference;
+  it('reads the volume of the track it is given, and lets it go on unmount', () => {
+    const { unmount } = renderHook(() => useAuraAnimation('speaking', TRACK));
 
-    renderHook(() => useAuraAnimation('speaking', track));
+    expect(createAudioAnalyser).toHaveBeenCalledExactlyOnceWith(
+      TRACK.publication.track,
+      { fftSize: 512, smoothingTimeConstant: 0.55 },
+    );
+    expect(fakes.cleanup).not.toHaveBeenCalled();
 
-    expect(useTrackVolume).toHaveBeenCalledWith(track, {
-      fftSize: 512,
-      smoothingTimeConstant: 0.55,
-    });
+    unmount();
+
+    expect(fakes.cleanup).toHaveBeenCalledOnce();
   });
 
   it('stops its animations when it unmounts', () => {
@@ -286,5 +328,37 @@ describe('useAuraAnimation', () => {
     for (const stop of stops) {
       expect(stop).toHaveBeenCalledOnce();
     }
+  });
+
+  it('runs no animation and reads no volume while the Aura is still', () => {
+    vi.useFakeTimers();
+    fakes.volume = 0.5;
+
+    const { result } = renderHook(() =>
+      useAuraAnimation('listening', TRACK, false),
+    );
+    act(() => {
+      vi.advanceTimersByTime(VOLUME_INTERVAL_MS * 3);
+    });
+
+    expect(fakes.animate).not.toHaveBeenCalled();
+    expect(createAudioAnalyser).not.toHaveBeenCalled();
+    expect(result.current().speed).toBe(20);
+  });
+
+  it('stops its animations when the Aura becomes still', () => {
+    const { rerender } = renderHook(
+      ({ isMoving }) => useAuraAnimation('listening', TRACK, isMoving),
+      { initialProps: { isMoving: true } },
+    );
+    const stops = fakes.controls.map(({ stop }) => stop);
+    expect(stops).toHaveLength(4);
+
+    rerender({ isMoving: false });
+
+    for (const stop of stops) {
+      expect(stop).toHaveBeenCalledOnce();
+    }
+    expect(fakes.cleanup).toHaveBeenCalledOnce();
   });
 });

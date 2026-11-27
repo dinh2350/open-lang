@@ -6,10 +6,11 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import type { ThemeMode } from '@/theme/theme-mode';
 import { useThemeMode } from '@/theme/theme-mode-provider';
 import { AURA_FRAGMENT_SHADER } from './aura-shader';
 import { ShaderCanvas } from './shader-canvas';
-import { useAuraAnimation } from './use-aura-animation';
+import { type AuraAnimation, useAuraAnimation } from './use-aura-animation';
 import type { Uniforms } from './webgl-program';
 import './agent-aura.css';
 
@@ -46,11 +47,28 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+/** The shader's uniforms for one frame of `animation`, in the light or dark `mode`. */
+function uniformsOf(animation: AuraAnimation, mode: ThemeMode): Uniforms {
+  return {
+    ...LOOK,
+    uMode: mode === 'light' ? 1 : 0,
+    uSpeed: animation.speed,
+    uScale: animation.scale,
+    uAmplitude: animation.amplitude,
+    uFrequency: animation.frequency,
+    uMix: animation.brightness,
+  };
+}
+
 /**
  * The tutor's voice, drawn as LiveKit's Aura in the brand blue. It moves with
  * the state of the Agent and the volume of `audioTrack`. When the Member asks
- * for reduced motion it is drawn still, as it looked on mount; without WebGL
- * it is a still blue circle.
+ * for reduced motion, or the browser draws WebGL in software (where a moving
+ * Aura would load the whole machine), it is drawn still, as it looked on
+ * mount; without WebGL it is a still blue circle.
+ *
+ * The moving values are read by the canvas each frame, so this renders when
+ * the state, the mode or the motion setting changes, not on every frame.
  */
 export function AgentAura({
   state,
@@ -60,32 +78,37 @@ export function AgentAura({
   readonly audioTrack: TrackReference | undefined;
 }): ReactElement {
   const { mode } = useThemeMode();
-  const animation = useAuraAnimation(state, audioTrack);
-  const [stillAnimation] = useState(animation);
-  const isStill = useSyncExternalStore(
+  const prefersStill = useSyncExternalStore(
     subscribeToReducedMotion,
     prefersReducedMotion,
   );
+  const [isSoftware, setIsSoftware] = useState(false);
   const [isUnavailable, setIsUnavailable] = useState(false);
+  const isStill = prefersStill || isSoftware;
+  const readAnimation = useAuraAnimation(
+    state,
+    audioTrack,
+    !isStill && !isUnavailable,
+  );
+  // What a still Aura shows: the values as they were on mount.
+  const [stillAnimation] = useState(() => readAnimation());
+
   const markUnavailable = useCallback(() => {
     setIsUnavailable(true);
   }, []);
+  const markSoftware = useCallback(() => {
+    setIsSoftware(true);
+  }, []);
 
-  const { speed, scale, amplitude, frequency, brightness } = isStill
-    ? stillAnimation
-    : animation;
-  const uniforms = useMemo<Uniforms>(
-    () => ({
-      ...LOOK,
-      uMode: mode === 'light' ? 1 : 0,
-      uSpeed: speed,
-      uScale: scale,
-      uAmplitude: amplitude,
-      uFrequency: frequency,
-      uMix: brightness,
-    }),
-    [mode, speed, scale, amplitude, frequency, brightness],
+  const readMovingUniforms = useCallback(
+    () => uniformsOf(readAnimation(), mode),
+    [readAnimation, mode],
   );
+  const stillUniforms = useMemo(
+    () => uniformsOf(stillAnimation, mode),
+    [stillAnimation, mode],
+  );
+  const readStillUniforms = useCallback(() => stillUniforms, [stillUniforms]);
 
   return (
     <div className="agent-aura" role="img" aria-label="Giọng nói của Gia sư">
@@ -95,9 +118,10 @@ export function AgentAura({
         <ShaderCanvas
           className="agent-aura-canvas"
           fragmentShader={AURA_FRAGMENT_SHADER}
-          uniforms={uniforms}
+          readUniforms={isStill ? readStillUniforms : readMovingUniforms}
           isStill={isStill}
           onUnavailable={markUnavailable}
+          onSoftwareRenderer={markSoftware}
         />
       )}
     </div>

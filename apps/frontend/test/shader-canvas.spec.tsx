@@ -1,5 +1,5 @@
 import { act, render } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { type ComponentProps, StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ShaderCanvas } from '@/aura/shader-canvas';
 import type { Uniforms } from '@/aura/webgl-program';
@@ -14,13 +14,18 @@ function setup() {
   return { ...fake, frames };
 }
 
-function canvas(uniforms: Uniforms, props: { isStill?: boolean } = {}) {
+function canvas(
+  uniforms: Uniforms,
+  props: Partial<ComponentProps<typeof ShaderCanvas>> = {},
+) {
   return (
     <ShaderCanvas
       fragmentShader={SHADER}
-      uniforms={uniforms}
-      isStill={props.isStill ?? false}
+      readUniforms={() => uniforms}
+      isStill={false}
       onUnavailable={() => undefined}
+      onSoftwareRenderer={() => undefined}
+      {...props}
     />
   );
 }
@@ -107,26 +112,25 @@ describe('ShaderCanvas', () => {
     expect(frames.pending).toBe(0);
   });
 
+  it('draws one more frame when it is still and given new uniforms', () => {
+    const { frames, fns, lastFloat } = setup();
+    const { rerender } = render(canvas({ uSpeed: 1 }, { isStill: true }));
+    frames.step(3);
+
+    rerender(canvas({ uSpeed: 2 }, { isStill: true }));
+    frames.step(3);
+
+    expect(fns.drawArrays).toHaveBeenCalledTimes(2);
+    expect(lastFloat('uSpeed')).toBe(2);
+    expect(frames.pending).toBe(0);
+  });
+
   it('calls onUnavailable, once, when WebGL is not available', () => {
     const frames = stubAnimationFrames();
     const onUnavailable = vi.fn();
 
-    const { rerender } = render(
-      <ShaderCanvas
-        fragmentShader={SHADER}
-        uniforms={{ uSpeed: 1 }}
-        isStill={false}
-        onUnavailable={onUnavailable}
-      />,
-    );
-    rerender(
-      <ShaderCanvas
-        fragmentShader={SHADER}
-        uniforms={{ uSpeed: 2 }}
-        isStill={false}
-        onUnavailable={onUnavailable}
-      />,
-    );
+    const { rerender } = render(canvas({ uSpeed: 1 }, { onUnavailable }));
+    rerender(canvas({ uSpeed: 2 }, { onUnavailable }));
     frames.step(3);
 
     expect(onUnavailable).toHaveBeenCalledTimes(1);
@@ -139,18 +143,95 @@ describe('ShaderCanvas', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const onUnavailable = vi.fn();
 
-    render(
-      <ShaderCanvas
-        fragmentShader={SHADER}
-        uniforms={{ uSpeed: 1 }}
-        isStill={false}
-        onUnavailable={onUnavailable}
-      />,
-    );
+    render(canvas({ uSpeed: 1 }, { onUnavailable }));
     frames.step(3);
 
     expect(onUnavailable).toHaveBeenCalledTimes(1);
     expect(fns.drawArrays).not.toHaveBeenCalled();
+  });
+
+  it('calls onUnavailable, and stops drawing, when the browser loses the context', () => {
+    const { frames, fns } = setup();
+    const onUnavailable = vi.fn();
+    const { container } = render(canvas({ uSpeed: 1 }, { onUnavailable }));
+    frames.step();
+    expect(fns.drawArrays).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      container
+        .querySelector('canvas')
+        ?.dispatchEvent(new Event('webglcontextlost'));
+    });
+    frames.step(3);
+
+    expect(onUnavailable).toHaveBeenCalledOnce();
+    expect(fns.drawArrays).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops listening for a lost context when it unmounts', () => {
+    setup();
+    const onUnavailable = vi.fn();
+    const { container, unmount } = render(
+      canvas({ uSpeed: 1 }, { onUnavailable }),
+    );
+    const element = container.querySelector('canvas');
+    if (!element) throw new Error('ShaderCanvas should render a canvas');
+
+    unmount();
+    element.dispatchEvent(new Event('webglcontextlost'));
+
+    expect(onUnavailable).not.toHaveBeenCalled();
+  });
+
+  it('reads the uniforms afresh for each frame, without being rendered again', () => {
+    const { frames, lastFloat } = setup();
+    let speed = 1;
+    render(canvas({}, { readUniforms: () => ({ uSpeed: speed }) }));
+    frames.step();
+    expect(lastFloat('uSpeed')).toBe(1);
+
+    speed = 2;
+    frames.step();
+
+    expect(lastFloat('uSpeed')).toBe(2);
+  });
+
+  it.each([
+    'Google SwiftShader',
+    'llvmpipe (LLVM 15.0.7, 256 bits)',
+    'Microsoft Basic Render Driver',
+  ])(
+    'calls onSoftwareRenderer, once, when the browser draws with %s',
+    (renderer) => {
+      const fake = fakeWebGl({ renderer });
+      canvasesGet(fake.gl);
+      stubAnimationFrames();
+      const onSoftwareRenderer = vi.fn();
+
+      const { rerender } = render(
+        canvas({ uSpeed: 1 }, { onSoftwareRenderer }),
+      );
+      rerender(canvas({ uSpeed: 2 }, { onSoftwareRenderer }));
+
+      expect(onSoftwareRenderer).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each([
+    [
+      'a GPU',
+      'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)',
+    ],
+    ['a renderer it does not name', undefined],
+  ])('does not call onSoftwareRenderer with %s', (_, renderer) => {
+    const fake = fakeWebGl({ renderer });
+    canvasesGet(fake.gl);
+    stubAnimationFrames();
+    const onSoftwareRenderer = vi.fn();
+
+    render(canvas({ uSpeed: 1 }, { onSoftwareRenderer }));
+
+    expect(onSoftwareRenderer).not.toHaveBeenCalled();
   });
 
   it('releases the program and the context when it unmounts, and draws nothing after', async () => {

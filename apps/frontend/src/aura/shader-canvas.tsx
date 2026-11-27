@@ -3,6 +3,7 @@ import {
   buildFragmentSource,
   createGlProgram,
   type GlProgram,
+  isSoftwareRenderer,
   type Uniforms,
 } from './webgl-program';
 
@@ -13,14 +14,27 @@ interface ShaderCanvasProps {
   /** A Shadertoy-style `mainImage`; it is compiled once, on mount. */
   readonly fragmentShader: string;
   /**
-   * The uniforms of the next frame. Their names are fixed on mount; only the
-   * values may change. `iTime` and `iResolution` are set by the canvas.
+   * Gives the uniforms of the next frame; it is called for every frame, so
+   * the values can move without the canvas being rendered again. Their names
+   * are fixed on mount; only the values may change. `iTime` and `iResolution`
+   * are set by the canvas.
    */
-  readonly uniforms: Uniforms;
-  /** Draws one frame, and again only when given new uniforms, instead of animating. */
+  readonly readUniforms: () => Uniforms;
+  /**
+   * Draws one frame, and again only when given a new `readUniforms`, instead
+   * of animating.
+   */
   readonly isStill: boolean;
-  /** Called once when the browser has no WebGL or the shader does not build. */
+  /**
+   * Called once when the browser has no WebGL, the shader does not build, or
+   * the browser takes the WebGL context away.
+   */
   readonly onUnavailable: () => void;
+  /**
+   * Called once when the browser draws WebGL on the CPU, where a moving canvas
+   * would load the whole machine; the canvas should then be made still.
+   */
+  readonly onSoftwareRenderer: () => void;
   readonly className?: string;
 }
 
@@ -55,25 +69,30 @@ function loseContext(gl: WebGLRenderingContext) {
 
 /**
  * A `<canvas>` that draws `fragmentShader` with WebGL. It builds the program
- * once, on mount, and draws the latest `uniforms` each animation frame; it
+ * once, on mount, and draws what `readUniforms` gives each animation frame; it
  * pauses while the page is hidden or the canvas is off-screen. On unmount it
  * stops, frees the program and releases the WebGL context.
  *
  * The context keeps WebGL's default attributes (`alpha` and
- * `premultipliedAlpha` true), which the Aura shader's output relies on.
+ * `premultipliedAlpha` true), which the Aura shader's output relies on. When
+ * the browser loses the context, the canvas is left blank, so it reports
+ * itself unavailable; it does not try to restore it.
  */
 export function ShaderCanvas({
   fragmentShader,
-  uniforms,
+  readUniforms,
   isStill,
   onUnavailable,
+  onSoftwareRenderer,
   className,
 }: ShaderCanvasProps): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef<Drawing | null>(null);
-  const uniformsRef = useRef(uniforms);
+  const readUniformsRef = useRef(readUniforms);
   const onUnavailableRef = useRef(onUnavailable);
+  const onSoftwareRendererRef = useRef(onSoftwareRenderer);
   const reportedRef = useRef(false);
+  const softwareReportedRef = useRef(false);
   /**
    * The release of the context after a cleanup. It waits a microtask, so that
    * React's StrictMode, which cleans up and runs an effect again at once, gets
@@ -82,9 +101,10 @@ export function ShaderCanvas({
   const pendingReleaseRef = useRef<{ cancelled: boolean } | null>(null);
 
   useEffect(() => {
-    uniformsRef.current = uniforms;
+    readUniformsRef.current = readUniforms;
     onUnavailableRef.current = onUnavailable;
-  }, [uniforms, onUnavailable]);
+    onSoftwareRendererRef.current = onSoftwareRenderer;
+  }, [readUniforms, onUnavailable, onSoftwareRenderer]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,7 +126,7 @@ export function ShaderCanvas({
     }
     const program = createGlProgram(
       gl,
-      buildFragmentSource(fragmentShader, uniformsRef.current),
+      buildFragmentSource(fragmentShader, readUniformsRef.current()),
     );
     if (!program) {
       loseContext(gl);
@@ -114,8 +134,18 @@ export function ShaderCanvas({
       return;
     }
     drawingRef.current = { canvas, program };
+    if (!softwareReportedRef.current && isSoftwareRenderer(gl)) {
+      softwareReportedRef.current = true;
+      onSoftwareRendererRef.current();
+    }
+    const contextLost = () => {
+      drawingRef.current = null;
+      reportUnavailable();
+    };
+    canvas.addEventListener('webglcontextlost', contextLost);
 
     return () => {
+      canvas.removeEventListener('webglcontextlost', contextLost);
       drawingRef.current = null;
       program.dispose();
       const release = { cancelled: false };
@@ -137,7 +167,7 @@ export function ShaderCanvas({
       frame = null;
       const drawing = drawingRef.current;
       if (!drawing) return;
-      drawFrame(drawing, uniformsRef.current, timeMs);
+      drawFrame(drawing, readUniformsRef.current(), timeMs);
       update();
     };
     /** Asks for the next frame while the canvas can be seen, else stops. */
@@ -172,12 +202,12 @@ export function ShaderCanvas({
     if (!isStill) return;
     const frame = requestAnimationFrame((timeMs) => {
       const drawing = drawingRef.current;
-      if (drawing) drawFrame(drawing, uniforms, timeMs);
+      if (drawing) drawFrame(drawing, readUniforms(), timeMs);
     });
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [isStill, uniforms]);
+  }, [isStill, readUniforms]);
 
   return <canvas ref={canvasRef} className={className} />;
 }

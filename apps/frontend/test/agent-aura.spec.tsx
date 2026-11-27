@@ -1,5 +1,6 @@
 import type { AgentState } from '@livekit/components-react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { Profiler } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AgentAura } from '@/aura/agent-aura';
 import { AURA_FRAGMENT_SHADER } from '@/aura/aura-shader';
@@ -43,8 +44,8 @@ function aura(state: AgentState) {
   );
 }
 
-function setup() {
-  const fake = fakeWebGl();
+function setup(options: { renderer?: string } = {}) {
+  const fake = fakeWebGl(options);
   canvasesGet(fake.gl);
   const frames = stubAnimationFrames();
   return { ...fake, frames };
@@ -154,5 +155,93 @@ describe('AgentAura', () => {
     frames.step(5);
 
     expect(fns.drawArrays).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws a single frame when the browser draws WebGL in software', () => {
+    const { frames, fns } = setup({ renderer: 'Google SwiftShader' });
+    deviceUses('light');
+
+    const { container } = render(aura('listening'));
+    frames.step(5);
+
+    expect(fns.drawArrays).toHaveBeenCalledTimes(1);
+    expect(frames.pending).toBe(0);
+    // Still, not the circle drawn without WebGL.
+    expect(container.querySelector('canvas')).toBeInTheDocument();
+    expect(container.querySelector('.aura-fallback')).not.toBeInTheDocument();
+  });
+
+  it('redraws the still frame in the other mode when it draws in software', () => {
+    const { frames, fns, lastFloat } = setup({ renderer: 'llvmpipe' });
+    deviceUses('dark');
+    render(aura('listening'));
+    frames.step(3);
+    expect(lastFloat('uMode')).toBe(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'light' }));
+    frames.step(3);
+
+    expect(lastFloat('uMode')).toBe(1);
+    expect(fns.drawArrays).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [
+      'a GPU',
+      'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)',
+    ],
+    ['a renderer it does not name', undefined],
+  ])('keeps moving with %s', (_, renderer) => {
+    const { frames, fns } = setup({ renderer });
+    deviceUses('light');
+
+    render(aura('listening'));
+    frames.step(3);
+
+    expect(fns.drawArrays).toHaveBeenCalledTimes(3);
+    expect(frames.pending).toBe(1);
+  });
+
+  it('shows the still blue circle when the browser loses the WebGL context', () => {
+    setup();
+    deviceUses('light');
+    const { container } = render(aura('listening'));
+
+    act(() => {
+      container
+        .querySelector('canvas')
+        ?.dispatchEvent(new Event('webglcontextlost'));
+    });
+
+    expect(container.querySelector('.aura-fallback')).toBeInTheDocument();
+    expect(container.querySelector('canvas')).not.toBeInTheDocument();
+  });
+
+  it('moves without rendering again on every frame', async () => {
+    const { frames, lastFloat } = setup();
+    deviceUses('light');
+    let renders = 0;
+    render(
+      <Profiler
+        id="aura"
+        onRender={() => {
+          renders += 1;
+        }}
+      >
+        {aura('listening')}
+      </Profiler>,
+    );
+    frames.step();
+    const rendersOnMount = renders;
+    const firstBrightness = lastFloat('uMix');
+
+    // The brightness pulses for as long as the tutor listens.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    frames.step(10);
+
+    expect(lastFloat('uMix')).not.toBe(firstBrightness);
+    expect(renders).toBe(rendersOnMount);
   });
 });
