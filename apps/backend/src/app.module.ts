@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { backendEnvSchema } from './config/env.schema.js';
 import { ConversationsModule } from './conversations/conversations.module.js';
 import { HealthModule } from './health/health.module.js';
+import { LearnerModule } from './learner/learner.module.js';
 import { LiveKitModule } from './livekit/livekit.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module.js';
     AuthModule,
     ConversationsModule,
     HealthModule,
+    LearnerModule,
     LiveKitModule,
     ReportsModule,
     UsersModule,
