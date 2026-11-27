@@ -257,7 +257,7 @@ function ConversationPanels({
         isTab={!sideBySide}
         isHidden={!sideBySide && tab !== 'transcript'}
       >
-        <TranscriptPanel />
+        <TranscriptPanel isShown />
       </Panel>
       <Panel
         id={notesId}

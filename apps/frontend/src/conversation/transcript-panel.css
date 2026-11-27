@@ -1,0 +1,16 @@
+/*
+ * The transcript is a column: the lines scroll in a box of their own, which
+ * takes the height the panel is given, and the button that goes back to the
+ * newest line sits under the box. min-height: 0 lets the box shrink below its
+ * content, so it scrolls instead of making the page taller. Astryx's
+ * ScrollableArea sets the overflow of the box.
+ */
+.transcript-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+.transcript-scroll {
+  flex: 1;
+  min-height: 0;
+}
