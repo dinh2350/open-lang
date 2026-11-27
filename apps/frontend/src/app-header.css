@@ -5,26 +5,17 @@
  * not show through. On a narrow screen the group wraps below the logo and
  * stays at the end. A sign-out error takes a line of its own below the
  * controls.
+ *
+ * It sticks to the top but takes its own room in the page (see app.css), so
+ * every page starts below it, however tall it really is.
  */
-:root {
-  /* How far a page starts below the fixed bar: one row, or two when it wraps. */
-  --app-header-height: 4rem;
-}
-
-@media (max-width: 639px) {
-  :root {
-    --app-header-height: 7rem;
-  }
-}
-
 .app-header {
-  position: fixed;
+  position: sticky;
   inset-block-start: 0;
-  inset-inline: 0;
   z-index: 1;
   box-sizing: border-box;
-  /* The bar is at least as tall as a page leaves room for; a sign-out error makes it taller. */
-  min-block-size: var(--app-header-height);
+  /* One row; a sign-out error makes it taller. */
+  min-block-size: 4rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -33,6 +24,13 @@
   gap: var(--spacing-1) var(--spacing-4);
   padding: var(--spacing-1) var(--spacing-4);
   background-color: var(--color-background-body);
+}
+
+/* Two rows when the group wraps below the logo. */
+@media (max-width: 639px) {
+  .app-header {
+    min-block-size: 7rem;
+  }
 }
 
 .app-header-end {

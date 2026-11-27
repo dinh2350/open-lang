@@ -1,7 +1,7 @@
 /*
- * The lesson screen fills the window below the fixed header and never
- * scrolls: the body takes the height the controls bar leaves, and the bar is
- * the last row, so it is always inside the window.
+ * The lesson screen fills the window below the header (app.css gives it
+ * that room) and never scrolls: the body takes the height the controls bar
+ * leaves, and the bar is the last row, so it is always inside the window.
  *
  * The body holds the Aura's stage and the side panel. On a phone they are one
  * column, the panel under the Aura; from 640px, while the panel is open, the
@@ -11,11 +11,9 @@
  * scroll.
  */
 .conversation-screen {
-  height: 100svh;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  padding-top: var(--app-header-height);
-  box-sizing: border-box;
   overflow: hidden;
 }
 

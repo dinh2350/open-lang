@@ -1,0 +1,28 @@
+/*
+ * Every page: the header, then the page in the room it leaves. The frame is
+ * at least as tall as the window, and the page row takes the height the
+ * header does not, so a centred page (sign-in, Start) centres in that room
+ * and a long one (History, Report, Admin) starts below the header and scrolls.
+ *
+ * The lesson screen must not scroll, so while it is shown the frame is exactly
+ * the window and the lesson screen fills the page row. The header keeps its
+ * real height either way: nothing here assumes how tall it is.
+ */
+.app-frame {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+}
+
+.app-frame:has(.conversation-screen) {
+  height: 100svh;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* One page at a time, stretched to fill its row. */
+.app-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}

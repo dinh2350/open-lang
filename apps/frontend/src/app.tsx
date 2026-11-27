@@ -15,6 +15,7 @@ import { AppNav } from './conversations/app-nav';
 import { HistoryPage } from './conversations/history-page';
 import { ReportPage } from './conversations/report-page';
 import { ThemeModeProvider } from './theme/theme-mode-provider';
+import './app.css';
 
 interface AppProps {
   /** The LiveKit Room the Conversation page connects through. */
@@ -31,33 +32,42 @@ export function App({ room, agentJoinTimeoutMilliseconds }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeModeProvider>
         <AuthProvider>
-          <AppHeader>
-            <AppNav />
-            <AdminNav />
-          </AppHeader>
-          <Routes>
-            <Route path="/sign-in" element={<SignInPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route element={<RequireSignedIn />}>
-              <Route
-                path="/"
-                element={
-                  <ConversationPage
-                    room={room}
-                    agentJoinTimeoutMilliseconds={agentJoinTimeoutMilliseconds}
-                    onEnded={(roomName) => {
-                      void navigate(`/conversations/${roomName}`);
-                    }}
+          <div className="app-frame">
+            <AppHeader>
+              <AppNav />
+              <AdminNav />
+            </AppHeader>
+            <div className="app-page">
+              <Routes>
+                <Route path="/sign-in" element={<SignInPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route element={<RequireSignedIn />}>
+                  <Route
+                    path="/"
+                    element={
+                      <ConversationPage
+                        room={room}
+                        agentJoinTimeoutMilliseconds={
+                          agentJoinTimeoutMilliseconds
+                        }
+                        onEnded={(roomName) => {
+                          void navigate(`/conversations/${roomName}`);
+                        }}
+                      />
+                    }
                   />
-                }
-              />
-              <Route path="/conversations" element={<HistoryPage />} />
-              <Route path="/conversations/:roomName" element={<ReportPage />} />
-              <Route element={<RequireAdmin />}>
-                <Route path="/admin/users" element={<UsersPage />} />
-              </Route>
-            </Route>
-          </Routes>
+                  <Route path="/conversations" element={<HistoryPage />} />
+                  <Route
+                    path="/conversations/:roomName"
+                    element={<ReportPage />}
+                  />
+                  <Route element={<RequireAdmin />}>
+                    <Route path="/admin/users" element={<UsersPage />} />
+                  </Route>
+                </Route>
+              </Routes>
+            </div>
+          </div>
         </AuthProvider>
       </ThemeModeProvider>
     </QueryClientProvider>

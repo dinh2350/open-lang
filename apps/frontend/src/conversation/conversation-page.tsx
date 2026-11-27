@@ -91,7 +91,7 @@ export function ConversationPage({
           justify="center"
           gap={6}
           padding={6}
-          minHeight="100svh"
+          minHeight="100%"
         >
           {failure !== null && (
             <Banner

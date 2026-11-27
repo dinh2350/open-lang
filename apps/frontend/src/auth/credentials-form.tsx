@@ -90,7 +90,7 @@ export function CredentialsForm({
     (request.isIdle ? initialError : null);
 
   return (
-    <Stack as="main" align="center" justify="center" minHeight="100svh">
+    <Stack as="main" align="center" justify="center" minHeight="100%">
       <Card width="100%" maxWidth={384} padding={6}>
         <Stack gap={6}>
           <Heading level={1}>{action}</Heading>
