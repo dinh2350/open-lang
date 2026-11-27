@@ -282,3 +282,35 @@ test('Cuộc nói and Ghi chú open and close the panel, and mic and Kết thúc
     page.getByRole('heading', { name: 'Hôm nay bạn học được gì' }),
   ).toBeVisible();
 });
+
+// Last in its file: the moving Aura burns CPU under software WebGL, and the
+// tests that follow (nav, sign-in, theme mode) start no Conversation, so the
+// load has dropped before the next Agent dispatch.
+test('the aura moves when motion is allowed', async ({ page }) => {
+  // The Agent joins while the Aura is still, so the moving one cannot delay
+  // its dispatch.
+  const roomName = await startConversation(page);
+  await expect(aura(page).locator('canvas')).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  // A single redraw would change the Aura once; a moving one keeps changing.
+  let previous = await aura(page).screenshot();
+  let changes = 0;
+  await expect
+    .poll(
+      async () => {
+        const next = await aura(page).screenshot();
+        if (!next.equals(previous)) {
+          changes += 1;
+        }
+        previous = next;
+        return changes;
+      },
+      { message: 'how many times the aura changed between screenshots' },
+    )
+    .toBeGreaterThanOrEqual(2);
+
+  // Ends at once, so the moving Aura unmounts and the CPU settles.
+  await page.getByRole('button', { name: 'Kết thúc' }).click();
+  await expect(page).toHaveURL(`/conversations/${roomName}`);
+});

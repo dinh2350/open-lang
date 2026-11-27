@@ -73,6 +73,8 @@ export default defineConfig({
         // moving Aura takes most of the machine's CPU. The Agent's server
         // then reports itself full, and LiveKit sends no Agent to the next
         // test's room. Reduced motion draws the Aura once and keeps it still.
+        // The moving Aura is covered by `the aura moves when motion is
+        // allowed` only.
         reducedMotion: 'reduce',
         launchOptions: {
           args: [
