@@ -283,10 +283,67 @@ test('Cuộc nói and Ghi chú open and close the panel, and mic and Kết thúc
   ).toBeVisible();
 });
 
+/**
+ * Makes WebGL name a GPU as its renderer, as on a machine with one: headless
+ * Chromium draws WebGL in software (SwiftShader), where the Aura stays still.
+ * Only `UNMASKED_RENDERER_WEBGL` changes; every other parameter is the real one.
+ */
+async function pretendToHaveAGpu(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const UNMASKED_RENDERER_WEBGL = 0x9246;
+    for (const context of [
+      WebGLRenderingContext,
+      WebGL2RenderingContext,
+    ] as const) {
+      const getParameter = Reflect.get(context.prototype, 'getParameter') as (
+        this: WebGLRenderingContextBase,
+        parameter: number,
+      ) => unknown;
+      function withAGpu(
+        this: WebGLRenderingContextBase,
+        parameter: number,
+      ): unknown {
+        if (parameter === UNMASKED_RENDERER_WEBGL) {
+          return 'Mock Hardware GPU';
+        }
+        return getParameter.call(this, parameter);
+      }
+      Object.defineProperty(context.prototype, 'getParameter', {
+        configurable: true,
+        writable: true,
+        value: withAGpu,
+      });
+    }
+  });
+}
+
+test('the aura stays still when the browser draws WebGL in software, even with motion allowed', async ({
+  page,
+}) => {
+  const roomName = await startConversation(page);
+  await expect(aura(page).locator('canvas')).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  // Headless Chromium draws in software: the Aura is drawn once, then holds.
+  // A moving one changes from one screenshot to the next (see the test below).
+  const first = await aura(page).screenshot();
+  for (let shot = 0; shot < 5; shot++) {
+    expect(
+      (await aura(page).screenshot()).equals(first),
+      'the aura is the same in every screenshot',
+    ).toBe(true);
+  }
+  await expect(aura(page).locator('.aura-fallback')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Kết thúc' }).click();
+  await expect(page).toHaveURL(`/conversations/${roomName}`);
+});
+
 // Last in its file: the moving Aura burns CPU under software WebGL, and the
 // tests that follow (nav, sign-in, theme mode) start no Conversation, so the
 // load has dropped before the next Agent dispatch.
 test('the aura moves when motion is allowed', async ({ page }) => {
+  await pretendToHaveAGpu(page);
   // The Agent joins while the Aura is still, so the moving one cannot delay
   // its dispatch.
   const roomName = await startConversation(page);
