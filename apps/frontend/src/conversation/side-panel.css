@@ -1,0 +1,54 @@
+/*
+ * The side panel is a card in the page's layout: a column with the tabs and
+ * Đóng on top, and the two panels under them. The page gives it its width and
+ * height; min-height: 0 lets it shrink to that height instead of growing to
+ * its content, so a long transcript never makes the page taller.
+ *
+ * Only the Ghi chú panel scrolls itself. The Cuộc nói panel is a column in
+ * which the transcript (.transcript-panel, which takes the remaining height)
+ * scrolls in a box of its own, so there is never a second scrollbar around it.
+ *
+ * display: flex would override the hidden attribute, which is how the closed
+ * panel and the panel not selected are hidden, so each rule that sets display
+ * is followed by one that puts the hidden attribute back in charge.
+ */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  box-sizing: border-box;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--spacing-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-container);
+  background-color: var(--color-background-card);
+}
+
+.side-panel-header {
+  flex: none;
+}
+
+.side-panel-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.side-panel-transcript {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.side-panel-notes {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.side-panel[hidden],
+.side-panel-transcript[hidden],
+.side-panel-notes[hidden] {
+  display: none;
+}
