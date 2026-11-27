@@ -9,10 +9,17 @@
   margin-inline: auto;
 }
 
+/*
+ * The shader's dithering leaves an alpha of about 1/255 over the whole canvas,
+ * in both modes, which shows the square's edge on a page that is not pure
+ * white or black. A round mask fades that edge out; the ring reaches about
+ * 80% of the half-width, inside the mask's solid part.
+ */
 .agent-aura-canvas {
   display: block;
   inline-size: 100%;
   block-size: 100%;
+  mask-image: radial-gradient(closest-side, #000 85%, transparent 100%);
 }
 
 .aura-fallback {
