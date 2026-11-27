@@ -3,10 +3,11 @@ import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Stack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { useConnectionState, useTrackToggle } from '@livekit/components-react';
-import { ConnectionState, MediaDeviceFailure, Track } from 'livekit-client';
+import { useTrackToggle } from '@livekit/components-react';
+import { MediaDeviceFailure, Track } from 'livekit-client';
 import { useState } from 'react';
 import { MicrophoneOffIcon } from '@/icons';
+import { useMicMuted } from './use-mic-muted';
 
 /**
  * Why the microphone could not be switched: the browser blocks it for this
@@ -35,9 +36,8 @@ export function MicToggle() {
   const { enabled, pending, toggle } = useTrackToggle({
     source: Track.Source.Microphone,
   });
-  const connectionState = useConnectionState();
+  const muted = useMicMuted();
   const [failure, setFailure] = useState<string | null>(null);
-  const muted = !enabled && connectionState === ConnectionState.Connected;
 
   // The hook re-throws what the Room throws (its onError takes only Error
   // instances, and a browser's DOMException may not be one), so catch here.

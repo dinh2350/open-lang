@@ -104,6 +104,49 @@ describe('Conversation page', () => {
     expect(getStatusMessage()).toHaveTextContent('Gia sư đang nói…');
   });
 
+  it('status line says the tutor waits for the mic while it is off', async () => {
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Tắt mic' }),
+    );
+    await screen.findByText('Mic đang tắt. Gia sư không nghe thấy bạn.');
+
+    expect(screen.getByText('Gia sư đang chờ bạn bật mic.')).toBeVisible();
+    expect(screen.queryByText('Gia sư đang nghe bạn nói.')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Bật mic' }));
+
+    expect(await screen.findByText('Gia sư đang nghe bạn nói.')).toBeVisible();
+    expect(screen.queryByText('Gia sư đang chờ bạn bật mic.')).toBeNull();
+  });
+
+  it('status line keeps waiting for the mic when the browser refuses it', async () => {
+    const liveKit = createUnconnectedRoom();
+    renderConversationPage(liveKit);
+    await pressStart();
+    act(() => {
+      liveKit.agentJoins();
+    });
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Tắt mic' }),
+    );
+    await screen.findByText('Mic đang tắt. Gia sư không nghe thấy bạn.');
+    liveKit.setMicrophoneEnabled.mockRejectedValueOnce(
+      new DOMException('Permission denied', 'NotAllowedError'),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Bật mic' }));
+
+    await screen.findByRole('alert');
+    expect(screen.getByText('Gia sư đang chờ bạn bật mic.')).toBeVisible();
+    expect(screen.queryByText('Gia sư đang nghe bạn nói.')).toBeNull();
+  });
+
   it('has Tắt mic and Kết thúc and no Chưa nghe kịp', async () => {
     const liveKit = createUnconnectedRoom();
     renderConversationPage(liveKit);

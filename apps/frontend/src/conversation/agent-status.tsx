@@ -4,13 +4,19 @@ import {
   BarVisualizer,
   type TrackReference,
 } from '@livekit/components-react';
+import { useMicMuted } from './use-mic-muted';
 import './voice-bars.css';
 
-/** What the status line says about the tutor in each state it reports. */
-function statusLine(agentState: AgentState): string {
+/**
+ * What the status line says about the tutor in each state it reports. The
+ * tutor is not listening while the Member's mic is off, so it says it waits.
+ */
+function statusLine(agentState: AgentState, isMicMuted: boolean): string {
   switch (agentState) {
     case 'listening':
-      return 'Gia sư đang nghe bạn nói.';
+      return isMicMuted
+        ? 'Gia sư đang chờ bạn bật mic.'
+        : 'Gia sư đang nghe bạn nói.';
     case 'thinking':
       return 'Gia sư đang suy nghĩ.';
     case 'speaking':
@@ -31,6 +37,7 @@ interface AgentStatusProps {
  * listening, thinking or speaking, so the Member knows when to talk.
  */
 export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
+  const isMicMuted = useMicMuted();
   return (
     <>
       <BarVisualizer
@@ -43,7 +50,7 @@ export function AgentStatus({ agentState, agentVoice }: AgentStatusProps) {
       />
       <div role="status">
         <Text as="p" color="secondary">
-          {statusLine(agentState)}
+          {statusLine(agentState, isMicMuted)}
         </Text>
       </div>
     </>
