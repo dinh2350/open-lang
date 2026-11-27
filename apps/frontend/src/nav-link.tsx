@@ -5,7 +5,8 @@ import { useMatch } from 'react-router';
 /**
  * A link in a nav. The link to the page you are on says so with
  * `aria-current="page"`, as react-router's `NavLink` did, and shows in the
- * primary text color without an underline.
+ * primary text color, medium weight and underlined. The other links are not
+ * underlined until hovered.
  */
 export function NavLink({
   href,
@@ -24,7 +25,7 @@ export function NavLink({
       aria-current={isActive ? 'page' : undefined}
       color={isActive ? 'primary' : 'accent'}
       weight={isActive ? 'medium' : 'normal'}
-      hasUnderline={!isActive}
+      hasUnderline={isActive}
     >
       {children}
     </Link>
