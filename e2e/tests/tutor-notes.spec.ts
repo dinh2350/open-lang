@@ -189,6 +189,38 @@ test('a note the Agent saves appears in the notes panel', async ({ page }) => {
   await expect(phrases.getByText(PHRASE.meaning)).toBeVisible();
 });
 
+test('a keyboard reaches the Ghi chú panel when its Notes overflow it, to scroll it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const roomName = await startConversation(page);
+  for (let index = 1; index <= 8; index++) {
+    await postNote(roomName, {
+      ...PHRASE,
+      english: `Phrase number ${String(index)} for the notes panel.`,
+    });
+  }
+  await notesButton(page).click();
+  const notesPanel = page.getByRole('tabpanel', { name: 'Ghi chú' });
+  await expect(
+    notesPanel.getByText('Phrase number 8 for the notes panel.'),
+  ).toBeAttached({ timeout: NOTES_TIMEOUT });
+
+  // Đóng is the last control of the panel's header; the Notes come next.
+  await page.getByRole('button', { name: 'Đóng' }).focus();
+  await page.keyboard.press('Tab');
+
+  const focusIsInNotes = await notesPanel.evaluate((panel) =>
+    panel.contains(document.activeElement),
+  );
+  expect(focusIsInNotes, 'focus is in the Ghi chú panel').toBe(true);
+  // From there the arrow keys scroll the Notes.
+  await page.keyboard.press('End');
+  await expect(
+    notesPanel.getByText('Phrase number 8 for the notes panel.'),
+  ).toBeInViewport();
+});
+
 test('the notes panel survives a failing poll', async ({ page }) => {
   const roomName = await startConversation(page);
   await postNote(roomName, PHRASE);

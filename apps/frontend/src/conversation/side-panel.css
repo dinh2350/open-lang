@@ -4,9 +4,10 @@
  * height; min-height: 0 lets it shrink to that height instead of growing to
  * its content, so a long transcript never makes the page taller.
  *
- * Only the Ghi chú panel scrolls itself. The Cuộc nói panel is a column in
- * which the transcript (.transcript-panel, which takes the remaining height)
- * scrolls in a box of its own, so there is never a second scrollbar around it.
+ * Each panel is a column whose content scrolls in a box of its own: the
+ * transcript (.transcript-panel, which takes the remaining height) in
+ * Cuộc nói, and the Notes in an Astryx ScrollableArea in Ghi chú, which a
+ * keyboard can reach and scroll while they overflow it.
  *
  * display: flex would override the hidden attribute, which is how the closed
  * panel and the panel not selected are hidden, so each rule that sets display
@@ -42,9 +43,15 @@
 }
 
 .side-panel-notes {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+}
+
+.side-panel-notes-scroll {
+  flex: 1;
+  min-height: 0;
 }
 
 .side-panel[hidden],

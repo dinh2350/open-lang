@@ -2,6 +2,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Icon } from '@astryxdesign/core/Icon';
+import { ScrollableArea } from '@astryxdesign/core/ScrollableArea';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 import type { PanelId } from './use-side-panel';
@@ -112,7 +113,10 @@ export function SidePanel({
         aria-label="Ghi chú"
         hidden={panel !== 'notes'}
       >
-        {notes}
+        {/* It enters the tab order while the Notes overflow it, so a keyboard can scroll them. */}
+        <ScrollableArea className="side-panel-notes-scroll" label="Các ghi chú">
+          {notes}
+        </ScrollableArea>
       </div>
     </aside>
   );
