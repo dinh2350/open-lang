@@ -20,9 +20,14 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-/* One page at a time, stretched to fill its row. */
+/*
+ * One page at a time, as tall as its row. The row of the page can shrink
+ * below its content, so the lesson screen gets the room left, not its content
+ * height; a page that is not held to the window still grows to its content.
+ */
 .app-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
