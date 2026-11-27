@@ -1,0 +1,29 @@
+/*
+ * The logo: the mark and the name on one line, centred on each other. "Open"
+ * takes the link's text colour; "Lang" is the brand blue of the mark.
+ *
+ * The link and its content are flex boxes, not inline ones, so the link is
+ * exactly as tall as its mark and no line of text adds space below it.
+ */
+.brand-logo-link {
+  display: flex;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.brand-logo-mark {
+  block-size: var(--spacing-9);
+  inline-size: auto;
+}
+
+.brand-logo-name {
+  white-space: nowrap;
+}
+
+.brand-logo-lang {
+  color: #0176fd;
+}

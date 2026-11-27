@@ -1,18 +1,47 @@
 /*
- * The top right of every page. The nav, the mode switch and Sign out sit in
- * one row, centred on each other, and wrap on a narrow screen. A sign-out
- * error takes a line of its own below them.
+ * The bar across the top of every page. The logo sits at the start; the nav,
+ * the mode switch and Sign out sit in one group at the end, centred on each
+ * other. It paints the page's background, so a page scrolling under it does
+ * not show through. On a narrow screen the group wraps below the logo and
+ * stays at the end. A sign-out error takes a line of its own below the
+ * controls.
  */
+:root {
+  /* How far a page starts below the fixed bar: one row, or two when it wraps. */
+  --app-header-height: 4rem;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --app-header-height: 7rem;
+  }
+}
+
 .app-header {
   position: fixed;
-  top: 0;
-  right: 0;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  /* The bar is at least as tall as a page leaves room for; a sign-out error makes it taller. */
+  min-block-size: var(--app-header-height);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  justify-content: space-between;
+  gap: var(--spacing-1) var(--spacing-4);
+  padding: var(--spacing-1) var(--spacing-4);
+  background-color: var(--color-background-body);
+}
+
+.app-header-end {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--spacing-4);
-  padding: var(--spacing-4);
+  gap: var(--spacing-1) var(--spacing-4);
+  margin-inline-start: auto;
 }
 
 .app-header .sign-out-error {

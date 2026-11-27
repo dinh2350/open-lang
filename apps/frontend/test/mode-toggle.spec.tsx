@@ -47,6 +47,9 @@ describe('The mode toggle', () => {
     renderApp('/sign-in');
     await screen.findByRole('switch', { name: 'Dark mode' });
     await user.tab();
+    // The logo, at the start of the header, comes first.
+    expect(screen.getByRole('link', { name: 'Open Lang' })).toHaveFocus();
+    await user.tab();
     expect(screen.getByRole('switch', { name: 'Dark mode' })).toHaveFocus();
     await user.keyboard(' ');
     expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeChecked();
