@@ -41,9 +41,20 @@ export interface LearnerModel {
 /** The model failed, or answered in a shape we cannot use. */
 export class LearnerModelError extends Error {}
 
+/**
+ * A list the model leaves out or sends as null counts as empty: omitting an
+ * empty list is the likeliest slip, and an empty list changes nothing.
+ */
+function listOf<Item extends z.ZodType>(item: Item) {
+  return z
+    .array(item)
+    .nullish()
+    .transform((items) => items ?? []);
+}
+
 const judgmentAnswerSchema = z.object({
-  matches: z.array(z.object({ noteIndex: z.int(), itemId: z.string() })),
-  outcomes: z.array(
+  matches: listOf(z.object({ noteIndex: z.int(), itemId: z.string() })),
+  outcomes: listOf(
     z.object({
       itemId: z.string(),
       outcome: z.enum(['recalled', 'missed']),

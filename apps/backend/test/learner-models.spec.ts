@@ -61,6 +61,9 @@ const answer = {
 
 const judgment: LearnerJudgment = answer as LearnerJudgment;
 
+const match = { noteIndex: 0, itemId: 'i-2' } as const;
+const recalled = { itemId: 'i-1', outcome: 'recalled' } as const;
+
 describe('parseLearnerJudgment', () => {
   it('reads a bare JSON answer', () => {
     expect(parseLearnerJudgment(JSON.stringify(answer))).toEqual(judgment);
@@ -100,7 +103,22 @@ describe('parseLearnerJudgment', () => {
   });
 
   it.each([
-    ['a missing list', { matches: [] }],
+    ['an answer without matches', { outcomes: [recalled] }, [], [recalled]],
+    ['an answer without outcomes', { matches: [match] }, [match], []],
+    ['a null matches', { matches: null, outcomes: [recalled] }, [], [recalled]],
+    ['a null outcomes', { matches: [match], outcomes: null }, [match], []],
+    ['an object with neither list', {}, [], []],
+  ])(
+    'treats a missing or null list as empty: %s',
+    (_case, text, matches, outcomes) => {
+      expect(parseLearnerJudgment(JSON.stringify(text))).toEqual({
+        matches,
+        outcomes,
+      });
+    },
+  );
+
+  it.each([
     [
       'a note index that is not a whole number',
       { matches: [{ noteIndex: 0.5, itemId: 'i-1' }], outcomes: [] },
@@ -109,6 +127,14 @@ describe('parseLearnerJudgment', () => {
       'an item id that is not text',
       { matches: [], outcomes: [{ itemId: 1, outcome: 'missed' }] },
     ],
+    ['a list that is not a list', { matches: 'none', outcomes: [] }],
+    [
+      'a bad outcome in a list sent next to a missing one',
+      { outcomes: [{ itemId: 'i-1', outcome: 'partly' }] },
+    ],
+    ['an answer that is a list', [recalled]],
+    ['an answer that is null', null],
+    ['an answer that is a string', 'recalled'],
   ])('throws LearnerModelError for %s', (_case, wrong) => {
     expect(() => parseLearnerJudgment(JSON.stringify(wrong))).toThrow(
       LearnerModelError,
@@ -386,7 +412,7 @@ describe('both real learner models', () => {
         LearnerModelError,
       );
       await expect(
-        make('{"overview":"x","strengths":[]}').judge(input),
+        make('[{"itemId":"i-1","outcome":"recalled"}]').judge(input),
       ).rejects.toBeInstanceOf(LearnerModelError);
       await expect(make(undefined).judge(input)).rejects.toThrow(
         /empty judgment/,
