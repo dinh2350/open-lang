@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Màn hình học: aura, ngăn bên, lệnh bằng giọng nói</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --fact-bg: #def3f0;
+        --call: #a85a06;
+        --call-bg: #fdf0d2;
+        --human: #1e4fd1;
+        --human-bg: #dde8fd;
+        --chg: #b0306a;
+        --chg-bg: #fbe3ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --fact-bg: #12302d;
+          --call: #f3b34a;
+          --call-bg: #3a2a0c;
+          --human: #86a9ff;
+          --human-bg: #172650;
+          --chg: #ff8fbd;
+          --chg-bg: #3b1526;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .pair {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .pair svg {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      figure {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        min-width: 0;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        color: var(--muted);
+      }
+      svg .box {
+        fill: var(--surface);
+        stroke: var(--line);
+        stroke-width: 1.5;
+      }
+      svg .box.chg {
+        fill: var(--chg-bg);
+        stroke: var(--chg);
+        stroke-width: 2;
+      }
+      svg .ln {
+        stroke: var(--muted);
+        stroke-width: 1.5;
+        fill: none;
+      }
+      svg text {
+        fill: var(--fg);
+        font:
+          12.5px system-ui,
+          sans-serif;
+      }
+      svg .tb {
+        font-weight: 600;
+      }
+      svg .ts {
+        fill: var(--muted);
+        font-size: 11px;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      .tree {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 0;
+        overflow-x: auto;
+        font:
+          13.5px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .tree .add,
+      .tree .mod,
+      .tree .del,
+      .legend .add,
+      .legend .mod,
+      .legend .del {
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .tree .add,
+      .legend .add {
+        background: var(--fact-bg);
+        color: var(--fact);
+      }
+      .tree .mod,
+      .legend .mod {
+        background: var(--chg-bg);
+        color: var(--chg);
+      }
+      .tree .del,
+      .legend .del {
+        background: var(--call-bg);
+        color: var(--call);
+        text-decoration: line-through;
+      }
+      .tree .note {
+        color: var(--muted);
+      }
+      .legend {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Chờ bạn duyệt · 2026-11-27</p>
+        <h1>Màn hình học: aura, ngăn bên, lệnh bằng giọng nói</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Tóm tắt</h2>
+        <p class="summary">
+          Làm lại màn hình học cho gọn và tập trung vào nghe: có logo và
+          favicon; màn hình chính chỉ còn aura (port từ LiveKit), dòng trạng
+          thái và một thanh điều khiển ở dưới cùng; <strong>Cuộc nói</strong> và
+          <strong>Ghi chú</strong> ẩn trong một ngăn bên, mở bằng nút hoặc bằng
+          lời nói ("cho tôi xem hôm nay học được gì"), khi đó gia sư tóm tắt
+          bằng miệng. Gồm cả hai lỗi đã thống nhất trước (dòng "đang nghe" khi
+          mic tắt, gạch chân menu). Làm hai đợt: đợt 1 chỉ frontend, đợt 2 là
+          lệnh giọng nói (sửa Agent). Điều cần để ý: tool mới trên Gemini Live
+          phải thử với Gemini thật, vì lần trước một tool gọi sai thời điểm làm
+          gia sư im lặng.
+        </p>
+      </section>
+
+      <section id="overview">
+        <h2>Tổng quan</h2>
+        <div class="pair">
+          <figure>
+            <svg
+              viewBox="0 0 410 66"
+              role="img"
+              aria-label="Trước: gia sư ghi ghi chú vào backend, trình duyệt hỏi lại mỗi 2 giây"
+            >
+              <defs>
+                <marker
+                  id="ah-before"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">Agent</text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                Backend
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">
+                saveNote
+              </text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                hỏi 2 giây
+              </text>
+            </svg>
+            <figcaption>
+              Trước: gia sư chỉ ghi ghi chú; trình duyệt hỏi backend mỗi 2 giây
+              và luôn hiện ghi chú cùng cuộc nói trên trang.
+            </figcaption>
+          </figure>
+          <figure>
+            <svg
+              viewBox="0 0 410 170"
+              role="img"
+              aria-label="Sau: thêm đường RPC openPanel từ gia sư tới trình duyệt"
+            >
+              <defs>
+                <marker
+                  id="ah-after"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">Agent</text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                Backend
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <rect
+                class="box chg"
+                x="160"
+                y="100"
+                width="90"
+                height="44"
+                rx="6"
+              />
+              <text class="tb" x="205" y="127" text-anchor="middle">
+                RPC openPanel
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">
+                saveNote
+              </text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                hỏi 2 giây
+              </text>
+              <path
+                class="ln"
+                d="M55,54 V122 H160"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="108" y="114" text-anchor="middle">
+                gọi tool
+              </text>
+              <path
+                class="ln"
+                d="M250,122 H355 V56"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="302" y="114" text-anchor="middle">
+                mở ngăn bên
+              </text>
+            </svg>
+            <figcaption>
+              Sau: thêm đường RPC <code>openPanel</code> từ gia sư thẳng tới
+              trình duyệt. Trình duyệt mở ngăn bên (Cuộc nói hoặc Ghi chú) khi
+              Member bấm nút, hoặc khi RPC tới. Backend không đổi.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="screens">
+        <h2>Màn hình</h2>
+        <p>
+          Màn hình chính khi đang học, và khi bấm Cuộc nói (phác bằng ký tự).
+        </p>
+        <pre class="tree">
+┌──────────────────────────────────────────────────────────────┐
+│ [OL] Open Lang                Học   Lịch sử   ◐   Sign out   │
+│                                                              │
+│                          ╭────────╮                          │
+│                          │  aura  │                          │
+│                          ╰────────╯                          │
+│                                                              │
+│                  Gia sư đang nghe bạn nói.                   │
+│    ( Tắt mic )  ( Cuộc nói )  ( Ghi chú ② )  ( Kết thúc )    │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│ [OL] Open Lang                Học   Lịch sử   ◐   Sign out   │
+│                                ┌────────────────────────────┐│
+│          ╭──────╮              │ [Cuộc nói] Ghi chú ②    ✕  ││
+│          │ aura │              │────────────────────────────││
+│          ╰──────╯              │ Gia sư  Chào bạn! Hôm nay… ││
+│                                │ Bạn     Tôi muốn học…      ││
+│    Gia sư đang nghe bạn.       │ (tự cuộn, không tràn)      ││
+│                                └────────────────────────────┘│
+│    ( Tắt mic )  ( Cuộc nói )  ( Ghi chú ② )  ( Kết thúc )    │
+└──────────────────────────────────────────────────────────────┘</pre>
+        <p class="legend">
+          ② là số ghi chú. Trên điện thoại ngăn bên nằm giữa aura và thanh điều
+          khiển. Ngăn bên không phủ lên trang. Bấm lại nút của tab đang mở, hoặc
+          ✕, để đóng. Khi mic tắt, dòng trạng thái đổi thành "Gia sư đang chờ
+          bạn bật mic."
+        </p>
+      </section>
+
+      <section id="structure">
+        <h2>Cấu trúc thư mục</h2>
+        <pre class="tree">open-lang/
+├── packages/shared/src/
+│   └── <span class="add">open-panel.ts</span>   <span class="note">← tên RPC và payload (zod) cho openPanel, hai đầu dùng chung</span>
+├── apps/agent/src/
+│   ├── <span class="add">open-panel-tool.ts</span>   <span class="note">← tool openPanel: gọi RPC tới trình duyệt</span>
+│   ├── <span class="mod">conversation-agent.ts</span>   <span class="note">← đăng ký tool mới</span>
+│   └── <span class="mod">tutor-instructions.ts</span>   <span class="note">← luật openPanel, luật tóm tắt bằng miệng, thứ tự gọi tool trên Gemini Live</span>
+├── apps/frontend/
+│   ├── <span class="mod">index.html</span>   <span class="note">← favicon</span>
+│   ├── <span class="add">public/favicon.png</span>   <span class="note">← cắt từ biểu tượng OL</span>
+│   └── src/
+│       ├── <span class="add">brand/</span>   <span class="note">← biểu tượng OL nền trong suốt + thành phần logo (biểu tượng và chữ "Open Lang")</span>
+│       ├── <span class="add">aura/</span>   <span class="note">← port aura của LiveKit: hook, GLSL, thành phần, bộ vẽ WebGL nhỏ tự viết, giấy phép</span>
+│       ├── <span class="mod">app-header.tsx / .css</span>   <span class="note">← logo bên trái</span>
+│       ├── <span class="mod">nav-link.tsx</span>   <span class="note">← gạch chân trang đang đứng</span>
+│       └── conversation/
+│           ├── <span class="mod">conversation-session.tsx</span>   <span class="note">← bố cục mới, bỏ tab điện thoại cũ</span>
+│           ├── <span class="mod">agent-status.tsx</span>   <span class="note">← aura thay thanh; dòng trạng thái biết mic tắt</span>
+│           ├── <span class="mod">transcript-panel.tsx</span>   <span class="note">← tự cuộn, "Xuống cuối"</span>
+│           ├── <span class="add">side-panel.tsx</span>   <span class="note">← ngăn bên hai tab, nằm trong bố cục, không modal (không dùng Drawer của Astryx)</span>
+│           ├── <span class="add">controls-bar.tsx</span>   <span class="note">← thanh dưới: mic, Cuộc nói, Ghi chú, Kết thúc</span>
+│           ├── <span class="add">open-panel-rpc.ts</span>   <span class="note">← đăng ký RPC openPanel trên Room</span>
+│           ├── <span class="add">use-mic-muted.ts</span>   <span class="note">← luật "mic tắt trong phòng đã vào", dùng chung</span>
+│           ├── <span class="mod">mic-toggle.tsx</span>   <span class="note">← dùng use-mic-muted</span>
+│           └── <span class="del">voice-bars.css</span>   <span class="note">← thanh âm thanh cũ</span>
+└── e2e/tests/   <span class="note">← spec mới: bố cục, ngăn bên, aura vẽ ra điểm ảnh, lệnh giọng nói</span></pre>
+        <p class="legend">
+          <span class="add">mới</span> <span class="mod">đổi</span>
+          <span class="del">xóa</span> · Backend, trang Lịch sử, trang Báo cáo,
+          trang đăng nhập và Admin không đổi. <code>brand.png</code> ở thư mục
+          gốc chưa được theo dõi bởi git; chỗ cất bản gốc là việc của người làm
+          (xem "Để người làm quyết").
+        </p>
+      </section>
+
+      <section id="review">
+        <h2>Để bạn duyệt</h2>
+        <div class="group fact">
+          <h3>Đã biết chắc</h3>
+          <ul>
+            <li>
+              <code>brand.png</code> rộng 1722×913, không có kênh trong suốt,
+              nền <code>#01040c</code> nằm sẵn trong ảnh, chữ "Open" màu trắng,
+              biểu tượng OL xanh chuyển từ <code>#02a4fe</code> xuống
+              <code>#0061fd</code> (<a href="#evidence-brand">brand.png</a>).
+            </li>
+            <li>
+              Trang chưa có favicon (<a href="#evidence-index">index.html</a>).
+            </li>
+            <li>
+              Chữ của Cuộc nói chỉ nằm trong thành phần đang gắn; gắn lại là mất
+              các dòng đã nói, nên ngăn bên phải ẩn chứ không được gỡ (<a
+                href="#evidence-transcript"
+                >conversation-session.tsx</a
+              >).
+            </li>
+            <li>
+              Aura của LiveKit giấy phép Apache-2.0, bộ vẽ WebGL của nó giấy
+              phép MIT; bộ vẽ dài khoảng 650 dòng, có thêm texture, chuột, video
+              mà aura không dùng, và có hai dòng <code>eslint-disable</code> (<a
+                href="#evidence-aura"
+                >mã nguồn aura</a
+              >).
+            </li>
+            <li>
+              Hook của aura cần thư viện <code>motion</code> (app chưa cài) và
+              <code>useTrackVolume</code> (đã có trong bản đang dùng) (<a
+                href="#evidence-hook"
+                >hook aura</a
+              >).
+            </li>
+            <li>
+              Trình duyệt: <code>room.registerRpcMethod</code> là cách hiện tại
+              của <code>livekit-client</code> 2.24.1; cách
+              <code>localParticipant.registerRpcMethod</code> trong tài liệu đã
+              bị đánh dấu deprecated, và cả RPC được đánh dấu thử nghiệm (<a
+                href="#evidence-rpc-browser"
+                >RPC phía trình duyệt</a
+              >).
+            </li>
+            <li>
+              Agent: <code>localParticipant.performRpc</code> có trong
+              <code>@livekit/rtc-node</code> 1.2.2 (<a
+                href="#evidence-rpc-agent"
+                >RPC phía Agent</a
+              >).
+            </li>
+            <li>
+              Trên Gemini Live, tool gọi sau khi gia sư nói làm cắt tiếng, nên
+              phải gọi trước (<a href="#evidence-gemini">AGENTS.md</a>).
+            </li>
+            <li>
+              Agent trong e2e là FakeLLM không có VAD và không nói, nên e2e
+              không nói chuyện với nó được (<a href="#evidence-e2e-agent"
+                >fake-provider.ts</a
+              >).
+            </li>
+            <li>
+              Drawer của Astryx phủ lên trang chứ không đẩy bố cục, và mặc định
+              là modal (<code>showModal()</code>: khóa phần còn lại của trang và
+              giữ focus), nên nó không hợp khi Member còn cần bấm mic và Kết
+              thúc lúc đang đọc (<a href="#evidence-astryx">Drawer.tsx</a>).
+            </li>
+            <li>
+              Chỉ dẫn hiện tại của gia sư có câu "Do not read your notes aloud."
+              (<a href="#evidence-instructions">tutor-instructions.ts</a>).
+            </li>
+            <li>
+              Ở commit gốc <code>95839a2</code>, <code>pnpm check</code> xanh
+              với 753 test (<a href="#evidence-base">kết quả chạy</a>).
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>Tôi tự quyết</h3>
+          <ul>
+            <li>
+              Logo ở header là biểu tượng OL (cắt nền trong suốt) kèm chữ "Open
+              Lang" là chữ thật ("Open" màu chữ chính, "Lang" xanh thương hiệu),
+              để chế độ sáng và tối đều đọc được; favicon lấy từ biểu tượng. Lý
+              do: ảnh gốc có nền tối dính sẵn (<a href="#evidence-brand"
+                >brand.png</a
+              >).
+            </li>
+            <li>
+              Một ngăn bên hai tab, nằm trong bố cục chứ không phủ lên trang và
+              không modal. Màn rộng (từ 640px, như bố cục hiện tại): ngăn chiếm
+              một cột bên phải, aura và thanh điều khiển dồn về phần còn lại.
+              Điện thoại: ngăn nằm giữa aura và thanh điều khiển. Làm từ các
+              thành phần bố cục của Astryx, không dùng Drawer hay BottomSheet.
+              Lý do: mic và Kết thúc vẫn bấm được khi đang đọc, và ngăn mở bằng
+              giọng nói không giành focus giữa lúc Member đang nói (<a
+                href="#evidence-astryx"
+                >Drawer.tsx</a
+              >).
+            </li>
+            <li>
+              Cuộc nói và Ghi chú luôn được gắn vào trang (chỉ ẩn), để cuộc nói
+              không mất dòng (<a href="#evidence-transcript"
+                >conversation-session.tsx</a
+              >).
+            </li>
+            <li>
+              Nút Ghi chú hiện số ghi chú, và có dấu báo khi có ghi chú mới lúc
+              ngăn bên đang đóng, vì ghi chú không còn hiện sẵn.
+            </li>
+            <li>
+              Cuộc nói tự cuộn xuống dòng mới nhất; khi Member cuộn lên đọc thì
+              dừng theo, và hiện nút "Xuống cuối".
+            </li>
+            <li>
+              Một tool <code>openPanel</code> có tham số <code>panel</code> là
+              <code>transcript</code> hoặc <code>notes</code>; chỉ mở, không
+              đóng bằng giọng nói. Tên RPC và payload nằm trong
+              <code>packages/shared</code> để hai đầu cùng dùng. Lý do: ít tool
+              hơn thì ít độ trễ (<a href="#evidence-gemini">AGENTS.md</a>).
+            </li>
+            <li>
+              Tool không làm hỏng buổi học khi trình duyệt không trả lời (hết
+              thời gian ngắn, rồi báo cho mô hình là không mở được).
+            </li>
+            <li>
+              Aura: lấy chuỗi GLSL và hook của LiveKit, thêm
+              <code>motion</code> (ghim đúng phiên bản), và tự viết một bộ vẽ
+              WebGL nhỏ chỉ có những gì aura dùng, thay vì chép bộ vẽ 650 dòng,
+              vì luật của repo cấm <code>eslint-disable</code> không có người
+              duyệt (<a href="#evidence-aura">mã nguồn aura</a>). Màu aura lấy
+              từ biểu tượng: <code>#0176fd</code>.
+            </li>
+            <li>
+              Chế độ sáng/tối của aura đi theo chế độ của app, không theo class
+              <code>dark</code> như bản gốc.
+            </li>
+            <li>
+              Khi người dùng bật "giảm chuyển động" của hệ điều hành, aura vẽ
+              một khung tĩnh. Khi không có WebGL, aura thành một vòng tròn xanh
+              tĩnh; buổi học vẫn chạy.
+            </li>
+            <li>
+              Hai lỗi đã chốt trước: dòng trạng thái không nói "đang nghe" khi
+              mic tắt (đổi thành "Gia sư đang chờ bạn bật mic."), và menu gạch
+              chân trang đang đứng. Cả hai nằm trong đợt 1.
+            </li>
+            <li>
+              Chia hai đợt: đợt 1 chỉ động vào frontend; đợt 2 là lệnh bằng
+              giọng nói vì sửa Agent và cần thử với Gemini thật.
+            </li>
+            <li>
+              Nút Cuộc nói và Ghi chú bật tắt ngăn bên: bấm nút của tab đang mở
+              thì đóng, bấm nút của tab kia thì chuyển tab; ✕ và phím Esc (khi
+              focus ở trong ngăn) cũng đóng. Mỗi nút báo trạng thái bằng
+              <code>aria-expanded</code>.
+            </li>
+            <li>
+              Khi mic tắt, dòng "đang suy nghĩ" và "đang nói" giữ nguyên; dòng
+              gợi ý "Mic đang tắt. Gia sư không nghe thấy bạn." và băng báo lỗi
+              mic vẫn có, nằm cạnh thanh điều khiển dưới cùng (như kế hoạch hai
+              lỗi trước).
+            </li>
+            <li>
+              Kế hoạch hai lỗi
+              (<code>docs/superpowers/plans/2026-11-27-tutor-screen-status-and-nav.md</code>)
+              được thay bằng bản thiết kế này: việc của nó vào đợt 1 và tên test
+              của nó được dùng lại.
+            </li>
+            <li>
+              Giao hàng: mỗi đợt một nhánh và một PR; Member xem trên trình
+              duyệt giữa hai đợt. <code>pnpm check</code>,
+              <code>pnpm sonar</code>, <code>pnpm test:e2e</code> chạy ở cuối
+              mỗi đợt.
+            </li>
+            <li>
+              Đợt 2 chỉ coi là xong khi kiểm chứng sống tự động qua (tiêu chí ở
+              mục Cách làm). Lần Member tự thử bằng giọng là việc bàn giao; báo
+              cáo sẽ ghi là tôi chưa kiểm chứng phần đó.
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>Bạn đã quyết</h3>
+          <ul>
+            <li>
+              "web site đang không có logo gì hết" — logo lấy từ brand.png.
+            </li>
+            <li>
+              "phần ghi chú … không nên xuất hiện default … popup … khi người
+              dùng bấm nút trên UI, hoặc khi user nói với agent".
+            </li>
+            <li>
+              "phần Cuộc nói nên ẩn luôn … giúp user luyện nghe … handle giống
+              nút ghi chú."
+            </li>
+            <li>"Popup chỉ hiện ghi chú, gia sư tóm tắt bằng miệng."</li>
+            <li>
+              Cuộc nói tự cuộn riêng, không làm tràn UI chính; mic, kết thúc,
+              trạng thái ai đang nói nằm dưới cùng.
+            </li>
+            <li>
+              Âm thanh của LiveKit đổi thành aura: "A, port aura của LiveKit".
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>Thiết kế</h2>
+        <h3>Ý định và lý do</h3>
+        <p>
+          Member dùng web này để luyện nghe và nói tiếng Anh với gia sư bằng
+          giọng. Hôm nay màn hình đầy chữ (cuộc nói, ghi chú), một thanh âm
+          thanh nhỏ, và nút bấm rải rác, nên dễ đọc thay vì nghe. Bản mới để màn
+          hình tĩnh và đẹp: một aura, một dòng trạng thái, một thanh điều khiển.
+          Chữ và ghi chú vẫn có, nhưng chỉ hiện khi Member muốn, bằng nút hoặc
+          bằng lời nói.
+        </p>
+        <h3>Mục tiêu</h3>
+        <ul>
+          <li>Có logo và favicon; đọc được ở cả chế độ sáng và tối.</li>
+          <li>
+            Màn hình chính khi đang học chỉ có aura, dòng trạng thái và thanh
+            điều khiển dưới cùng; không bao giờ tràn trang dù buổi học dài.
+          </li>
+          <li>
+            Cuộc nói và Ghi chú mở được bằng nút; Ghi chú và Cuộc nói cũng mở
+            được bằng lời nói, và gia sư tóm tắt bằng miệng khi được xin.
+          </li>
+          <li>
+            Dòng trạng thái luôn đúng với mic (đợt 1), menu đánh dấu đúng trang.
+          </li>
+          <li>Mic và Kết thúc luôn bấm được, kể cả khi ngăn bên đang mở.</li>
+        </ul>
+        <h3>Không làm</h3>
+        <ul>
+          <li>
+            Không tạo phần đánh giá của gia sư ngay trong buổi học (phần "Gia sư
+            đánh giá" vẫn chỉ có sau Kết thúc, ở trang Báo cáo) và không thêm
+            backend mới.
+          </li>
+          <li>
+            Không đổi trang Lịch sử, trang Báo cáo, đăng nhập, Admin; không đổi
+            chữ "Dark mode" và "Sign out"; không đặt <code>lang="vi"</code> (đã
+            nằm trong danh sách việc sau).
+          </li>
+          <li>
+            Không có lệnh đóng ngăn bên bằng giọng nói, không có chế độ nghe
+            riêng.
+          </li>
+          <li>
+            Không kiểm chứng OpenAI, Vertex và Pipeline với tool mới (chỉ có
+            test giả); chỉ Gemini Live được thử thật, vì đó là model đang dùng.
+          </li>
+        </ul>
+        <h3>Điều làm bản này thất bại dù trông chạy được</h3>
+        <ul>
+          <li>
+            Gia sư im lặng hoặc bị cắt tiếng sau khi gọi
+            <code>openPanel</code> (lỗi đã gặp với <code>saveNote</code> trên
+            Gemini Live).
+          </li>
+          <li>Cuộc nói mất dòng đã nói vì ngăn bên đóng rồi mở lại.</li>
+          <li>
+            Ngăn bên tự bật khi Member không xin (mô hình gọi tool không cần).
+          </li>
+          <li>
+            Ngăn bên giành focus hoặc chặn mic và Kết thúc khi mở bằng giọng
+            nói.
+          </li>
+          <li>Aura ngốn GPU tới mức tiếng bị giật hoặc máy nóng.</li>
+          <li>Logo thành khối đen hoặc mất chữ ở chế độ sáng.</li>
+        </ul>
+        <h3>Ràng buộc</h3>
+        <ul>
+          <li>
+            Chỉ Astryx cho giao diện; không thêm Tailwind hay shadcn. Chữ mới
+            bằng tiếng Việt.
+          </li>
+          <li>
+            <code>pnpm check</code> và <code>pnpm sonar</code> phải qua; không
+            <code>NOSONAR</code>, <code>@ts-ignore</code>, ngoại lệ ESLint hay
+            Sonar. Đụng Agent và luồng Conversation nên phải chạy
+            <code>pnpm test:e2e</code>.
+          </li>
+          <li>
+            Apache-2.0 buộc giữ bản giấy phép và ghi rõ trong từng file đã sửa
+            rằng nó đã bị sửa; phần nào chép từ bộ vẽ MIT thì giữ dòng bản
+            quyền.
+          </li>
+          <li>
+            Trên Gemini Live, tool phải khai báo không chặn và được gọi
+            <em>trước</em> khi gia sư nói; OpenAI, Vertex và Pipeline giữ thứ tự
+            nói trước.
+          </li>
+          <li>
+            Chạy e2e cần các cổng 3000, 5173 và 8081; nếu dev stack của bạn đang
+            giữ chúng, hỏi bạn trước khi tắt.
+          </li>
+          <li>
+            Kiểm chứng sống dùng khóa Gemini của bạn trong
+            <code>apps/agent/.env</code> và tốn hạn mức; tôi hỏi bạn trước khi
+            chạy.
+          </li>
+        </ul>
+        <h3>Các cách làm</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Cách làm</th>
+              <th>Đánh đổi</th>
+              <th>Chọn</th>
+            </tr>
+            <tr>
+              <td>Aura: port aura của LiveKit (shader WebGL)</td>
+              <td>
+                Đẹp và mượt nhất, đúng thứ bạn muốn; thêm <code>motion</code>,
+                phải tự viết bộ vẽ nhỏ, WebGL không chạy trong jsdom nên test
+                bằng GL giả và e2e thật.
+              </td>
+              <td>Có, bạn chọn A.</td>
+            </tr>
+            <tr>
+              <td>Aura: tự vẽ bằng CSS</td>
+              <td>
+                Không thêm thư viện, test được trong jsdom, nhưng kém hữu cơ.
+              </td>
+              <td>Không.</td>
+            </tr>
+            <tr>
+              <td>Bộ vẽ: chép nguyên bộ vẽ 650 dòng của LiveKit</td>
+              <td>
+                Nhanh nhất, nhưng có <code>eslint-disable</code> và mã không
+                dùng (texture, chuột, video), kéo theo lỗi Sonar và độ phủ test
+                thấp.
+              </td>
+              <td>Không; tự viết bộ vẽ nhỏ.</td>
+            </tr>
+            <tr>
+              <td>Lệnh giọng nói: tool gọi RPC tới trình duyệt</td>
+              <td>Hiểu mọi cách nói; thêm một tool và một RPC.</td>
+              <td>Có.</td>
+            </tr>
+            <tr>
+              <td>Lệnh giọng nói: trình duyệt bắt từ khóa trong lời Member</td>
+              <td>Hỏng với các cách nói khác nhau mà bạn muốn hỗ trợ.</td>
+              <td>Không.</td>
+            </tr>
+            <tr>
+              <td>
+                Lệnh giọng nói: Agent ghi cờ vào backend, trình duyệt hỏi lại
+              </td>
+              <td>Trễ tới 2 giây và phải thêm dữ liệu ở backend.</td>
+              <td>Không.</td>
+            </tr>
+            <tr>
+              <td>Ngăn bên hai tab nằm trong bố cục, không modal</td>
+              <td>
+                Mic và Kết thúc vẫn bấm được, không giành focus; phải tự làm bố
+                cục co lại và hai chế độ (cột bên phải, giữa trang), nhưng chỉ
+                dùng thành phần Astryx có sẵn.
+              </td>
+              <td>Có.</td>
+            </tr>
+            <tr>
+              <td>Ngăn bên: Drawer hoặc BottomSheet của Astryx</td>
+              <td>
+                Có sẵn, đẹp, có hoạt ảnh; nhưng phủ lên trang và mặc định modal,
+                khóa mic và Kết thúc, giành focus khi mở bằng giọng nói; bản
+                không modal vẫn che aura và header.
+              </td>
+              <td>Không.</td>
+            </tr>
+            <tr>
+              <td>Hai popup độc lập</td>
+              <td>Có thể chồng nhau, nhiều chỗ để lỗi hơn.</td>
+              <td>Không.</td>
+            </tr>
+          </table>
+        </div>
+        <h3>Cách làm</h3>
+        <ul>
+          <li>
+            Đợt 1 (frontend): logo và favicon, bố cục mới với thanh điều khiển
+            dưới cùng, aura, ngăn bên hai tab với Cuộc nói tự cuộn, và hai lỗi
+            đã chốt. Ở đợt này ngăn bên mở bằng nút; chưa có lệnh giọng nói.
+          </li>
+          <li>
+            Đợt 2 (Agent và RPC): tool <code>openPanel</code>, hợp đồng chung
+            trong <code>packages/shared</code>, phần nhận RPC ở trình duyệt,
+            luật mới trong chỉ dẫn của gia sư (gọi <code>openPanel</code> trước
+            khi nói, và "trừ khi Member xin tóm tắt" cho câu "không đọc ghi chú
+            thành tiếng"), rồi thử với Gemini thật.
+          </li>
+          <li>
+            Tóm tắt bằng miệng lấy từ những gì gia sư đã dạy và đã ghi trong
+            buổi học (ngữ cảnh của mô hình); backend không tạo gì thêm.
+          </li>
+          <li>
+            Trình duyệt đăng ký RPC bằng <code>room.registerRpcMethod</code> một
+            lần cho mỗi Conversation và gỡ khi kết thúc (đăng ký hai lần cùng
+            tên sẽ báo lỗi).
+          </li>
+          <li>
+            Kiểm chứng sống (<code>pnpm test:live</code>, Gemini thật) đạt khi:
+            một buổi học kịch bản gồm vài lượt bình thường không gọi
+            <code>openPanel</code> lần nào; khi Member xin xem ghi chú hoặc xem
+            chữ, gia sư gọi <code>openPanel</code> với đúng
+            <code>panel</code> trước khi nói; câu trả lời không bị cắt cụt và
+            lượt kế tiếp của Member vẫn được trả lời (cùng cách phát lại bằng
+            giọng tổng hợp đã dùng ở
+            <code>docs/superpowers/evidence/2026-11-26-tool-silence</code>).
+          </li>
+        </ul>
+        <h3>Cách kiểm chứng</h3>
+        <ul>
+          <li>
+            Mở app: thấy logo ở góc trái và favicon; bật chế độ sáng, chữ "Open
+            Lang" vẫn đọc được.
+          </li>
+          <li>
+            Bắt đầu buổi học: màn hình chỉ có aura, dòng trạng thái và thanh
+            dưới cùng; aura chuyển động khác nhau khi gia sư nghe, nghĩ và nói.
+          </li>
+          <li>
+            Tắt mic: dòng trạng thái là "Gia sư đang chờ bạn bật mic."; bật lại
+            là "Gia sư đang nghe bạn nói."
+          </li>
+          <li>
+            Bấm Cuộc nói: ngăn bên hiện đủ các dòng đã nói kể cả lúc nó đóng;
+            buổi học dài thì cuộn trong ngăn bên, trang không tràn; cuộn lên thì
+            dừng tự cuộn, "Xuống cuối" đưa về dòng mới nhất.
+          </li>
+          <li>
+            Bấm Ghi chú: ngăn bên mở tab Ghi chú; có số ghi chú trên nút trước
+            khi mở, và dấu báo khi ghi chú mới tới lúc đang đóng.
+          </li>
+          <li>
+            Chiều rộng điện thoại: ngăn bên nằm giữa aura và thanh điều khiển,
+            thanh điều khiển vẫn vừa màn hình.
+          </li>
+          <li>
+            Khi ngăn bên đang mở: vẫn tắt, bật mic và bấm Kết thúc được; bấm lại
+            nút của tab đang mở thì đóng, ✕ và Esc cũng đóng; ngăn mở bằng giọng
+            nói không lấy focus khỏi chỗ đang đứng.
+          </li>
+          <li>
+            Nói "cho tôi xem hôm nay học được gì": ngăn bên mở tab Ghi chú, gia
+            sư tóm tắt bằng miệng và không bị cắt tiếng; nói "cho tôi xem chữ":
+            mở tab Cuộc nói. (Gemini thật.)
+          </li>
+          <li>Menu: trang đang đứng có gạch chân, trang khác thì không.</li>
+          <li>
+            Không có WebGL hoặc bật "giảm chuyển động": buổi học vẫn chạy, aura
+            thành hình tĩnh.
+          </li>
+        </ul>
+        <p>
+          Unit (Vitest, jsdom): luật mic tắt, dòng trạng thái, hook aura (trạng
+          thái thành 5 số), bộ vẽ WebGL với GL giả, aura khi không có WebGL,
+          ngăn bên và hai nút, tự cuộn của Cuộc nói (giả scrollTop và
+          scrollHeight), phần nhận RPC, hợp đồng trong shared, tool
+          <code>openPanel</code> của Agent với <code>AgentSession</code> giả.
+          Tích hợp: ConversationPage với Room thật không kết nối và RPC gọi vào
+          thì ngăn bên mở; Agent với FakeLLM được kịch bản gọi tool, kiểm lệnh
+          RPC đi ra đúng payload. E2E (Playwright, Chromium thật): bố cục không
+          tràn, nút mở và đóng ngăn bên (mic và Kết thúc vẫn bấm được khi ngăn
+          mở), aura vẽ ra điểm ảnh khác rỗng, menu, và đường RPC từ một người
+          tham gia thứ hai đóng vai Agent. Thêm kiểm chứng sống với Gemini thật
+          (<code>pnpm test:live</code>, tiêu chí ở mục Cách làm) và một lần
+          Member tự thử bằng giọng, ghi là việc bàn giao mà tôi chưa kiểm chứng.
+        </p>
+        <h3>Để người làm quyết</h3>
+        <ul>
+          <li>Tên và props các thành phần mới; bề rộng cột ngăn bên.</li>
+          <li>
+            Giữ trạng thái ngăn bên khi bố cục đổi giữa cột bên phải và giữa
+            trang (xoay điện thoại), không gắn lại Cuộc nói.
+          </li>
+          <li>
+            Biểu tượng OL có ba chấm trắng nằm trên phần giữa trong suốt: tô lại
+            cho chế độ sáng.
+          </li>
+          <li>Chi tiết chuyển GLSL; hình dạng GL giả để test.</li>
+          <li>Phiên bản <code>motion</code> cần ghim.</li>
+          <li>
+            Cách e2e đóng vai Agent (người tham gia thứ hai bằng
+            <code>@livekit/rtc-node</code> cùng token lấy bằng khóa dev); nếu
+            làm không nổi thì nói rõ lý do và dựa vào tích hợp, kiểm chứng sống
+            và lần thử tay.
+          </li>
+          <li>
+            Chỗ cất <code>brand.png</code> gốc trong repo (hoặc không commit) —
+            hỏi Member khi cần.
+          </li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Bằng chứng</h2>
+        <article id="evidence-brand">
+          <h3>brand.png: nền dính sẵn, màu biểu tượng</h3>
+          <p class="src">
+            Nguồn:
+            <code
+              >/Users/devinnguyen/Documents/project/open-lang/brand.png</code
+            >
+            (mở xem, và đọc điểm ảnh bằng script) · 2026-11-27
+          </p>
+          <blockquote>
+            <code>PNG image data, 1722 x 913, 8-bit/color RGB</code>; điểm ảnh
+            góc <code>#01040c</code>; biểu tượng <code>#02a4fe</code> (trên) tới
+            <code>#0061fd</code> (dưới); chữ "Open" màu trắng và "Lang" màu xanh
+            (nhìn trực tiếp ảnh).
+          </blockquote>
+        </article>
+        <article id="evidence-index">
+          <h3>Trang chưa có favicon</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/frontend/index.html"
+              >apps/frontend/index.html</a
+            >, và thư mục <code>apps/frontend/public</code> không tồn tại ·
+            2026-11-27
+          </p>
+          <blockquote>
+            Phần <code>&lt;head&gt;</code> chỉ có charset, viewport và
+            <code>&lt;title&gt;Open Lang&lt;/title&gt;</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-transcript">
+          <h3>Cuộc nói phải luôn được gắn vào trang</h3>
+          <p class="src">
+            Nguồn:
+            <a
+              href="../../../apps/frontend/src/conversation/conversation-session.tsx"
+              >conversation-session.tsx dòng 205-211</a
+            >
+            · 2026-11-27
+          </p>
+          <blockquote>
+            "Both layouts render the same tree … so turning a phone or switching
+            tabs never remounts the transcript, which would lose the lines said
+            so far."
+          </blockquote>
+        </article>
+        <article id="evidence-aura">
+          <h3>Mã nguồn aura và giấy phép</h3>
+          <p class="src">
+            Nguồn: livekit/components-js,
+            <code
+              >packages/shadcn/components/agents-ui/agent-audio-visualizer-aura.tsx</code
+            >
+            và <code>react-shader-toy.tsx</code> (commit 370cbca), file
+            <code>LICENSE</code> của repo · 2026-11-27
+          </p>
+          <blockquote>
+            LICENSE: "Apache License Version 2.0";
+            <code>react-shader-toy.tsx</code>
+            mở đầu bằng "MIT License … Copyright (c) 2018 Morgan Villedieu … (c)
+            2023 Rysana … (c) 2026 LiveKit"; file đó chứa hai dòng
+            <code>// eslint-disable-next-line react-hooks/exhaustive-deps</code>
+            và hỗ trợ texture, chuột, video, hướng thiết bị mà aura không dùng.
+            Aura chỉ truyền các số thực và một vec3 màu cùng thời gian và độ
+            phân giải.
+          </blockquote>
+        </article>
+        <article id="evidence-hook">
+          <h3>Hook aura cần motion; useTrackVolume đã có</h3>
+          <p class="src">
+            Nguồn: livekit/components-js
+            <code
+              >packages/shadcn/hooks/agents-ui/use-agent-audio-visualizer-aura.ts</code
+            >; <code>apps/frontend/node_modules</code> (không có
+            <code>motion</code>); <code>@livekit/components-react</code> 2.9.25
+            <code>dist/components-react.d.ts</code> · 2026-11-27
+          </p>
+          <blockquote>
+            Hook nhập
+            <code>animate, useMotionValue, useMotionValueEvent</code> từ
+            <code>motion/react</code> và <code>useTrackVolume</code> từ
+            <code>@livekit/components-react</code>;
+            <code>ls node_modules</code> của frontend không có
+            <code>motion</code>; <code>components-react.d.ts</code> có
+            <code>useTrackVolume</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-rpc-browser">
+          <h3>RPC phía trình duyệt trong livekit-client 2.24.1</h3>
+          <p class="src">
+            Nguồn:
+            <code>livekit-client/dist/src/room/rpc/extension.d.ts</code> và
+            <code>legacyExtension.d.ts</code> · 2026-11-27
+          </p>
+          <blockquote>
+            <code>RpcRoomApi.registerRpcMethod</code> được ghi
+            <code>@experimental</code>;
+            <code>RpcLegacyLocalParticipantApi</code>: "@deprecated use
+            <code>room.registerRpcMethod</code> instead". Đăng ký hai lần cùng
+            tên: "@throws {Error} If a handler for this method is already
+            registered".
+          </blockquote>
+        </article>
+        <article id="evidence-rpc-agent">
+          <h3>RPC phía Agent</h3>
+          <p class="src">
+            Nguồn:
+            <code>@livekit/rtc-node</code> 1.2.2
+            <code>dist/participant.d.ts</code> dòng 137; tài liệu
+            <a href="https://docs.livekit.io/agents/logic/tools/forwarding/"
+              >Forwarding to the frontend</a
+            >
+            · 2026-11-27
+          </p>
+          <blockquote>
+            <code
+              >performRpc({ destinationIdentity, method, payload,
+              responseTimeout, maxRoundTripLatency }):
+              Promise&lt;string&gt;</code
+            >; tài liệu: "Forward tool calls to a frontend app using RPC … You
+            may also use RPC to trigger actions or UI updates".
+          </blockquote>
+        </article>
+        <article id="evidence-gemini">
+          <h3>Gemini Live: tool phải gọi trước khi nói</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/agent/AGENTS.md">apps/agent/AGENTS.md</a>,
+            mục "Gemini Live and tool calls" · 2026-11-27
+          </p>
+          <blockquote>
+            "a call made after the tutor has spoken cuts off its audio … A call
+            made first has no audio to cut." Và: "Keep irrelevant context and
+            tools out of each LLM request."
+          </blockquote>
+        </article>
+        <article id="evidence-e2e-agent">
+          <h3>Agent trong e2e không nói</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/agent/src/config/fake-provider.ts"
+              >fake-provider.ts</a
+            >
+            và <code>e2e/playwright.config.ts</code> (<code
+              >REALTIME_PROVIDER: 'fake'</code
+            >) · 2026-11-27
+          </p>
+          <blockquote>
+            "The Agent joins the Conversation's room; it doesn't speak."
+            <code>llm: new voice.testing.FakeLLM(), vad: null</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-astryx">
+          <h3>Drawer của Astryx phủ lên trang và mặc định modal</h3>
+          <p class="src">
+            Nguồn: <code>@astryxdesign/core</code> 0.7.17,
+            <code>src/Drawer/Drawer.tsx</code> và thư mục
+            <code>src/BottomSheet</code> · 2026-11-27
+          </p>
+          <blockquote>
+            "floats above the page content: unlike a docked panel it never
+            reflows the layout underneath, it overlays it" và "<code
+              >showModal()</code
+            >
+            when <code>hasScrim</code> (default) — top-layer rendering, focus
+            trapping, <code>::backdrop</code>";
+            <code>showPopover()</code> (không modal) chỉ khi
+            <code>hasScrim={false}</code>.
+          </blockquote>
+        </article>
+        <article id="evidence-instructions">
+          <h3>Chỉ dẫn gia sư hiện cấm đọc ghi chú</h3>
+          <p class="src">
+            Nguồn:
+            <a href="../../../apps/agent/src/tutor-instructions.ts"
+              >tutor-instructions.ts dòng 48</a
+            >
+            · 2026-11-27
+          </p>
+          <blockquote><code>'Do not read your notes aloud.'</code></blockquote>
+        </article>
+        <article id="evidence-base">
+          <h3>pnpm check xanh ở commit gốc</h3>
+          <p class="src">
+            Nguồn: chạy <code>pnpm check</code> ở <code>95839a2</code> ngày
+            2026-11-27, ghi ở
+            <code>/private/tmp/…/scratchpad/base-check.log</code> (ngoài repo)
+          </p>
+          <blockquote>
+            <code>Test Files 70 passed (70) · Tests 753 passed (753)</code>;
+            <code>exit=0</code>.
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
