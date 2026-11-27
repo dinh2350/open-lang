@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hồ sơ người học: gia sư nhớ những gì đã dạy</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --fg: #141a23;
+        --muted: #586274;
+        --line: #d4dae3;
+        --fact: #0f766e;
+        --fact-bg: #def3f0;
+        --call: #a85a06;
+        --call-bg: #fdf0d2;
+        --human: #1e4fd1;
+        --human-bg: #dde8fd;
+        --chg: #b0306a;
+        --chg-bg: #fbe3ee;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e131b;
+          --surface: #161d28;
+          --fg: #e5e9f0;
+          --muted: #9ba5b6;
+          --line: #2c3544;
+          --fact: #5fd8c9;
+          --fact-bg: #12302d;
+          --call: #f3b34a;
+          --call-bg: #3a2a0c;
+          --human: #86a9ff;
+          --human-bg: #172650;
+          --chg: #ff8fbd;
+          --chg-bg: #3b1526;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 14px 0 4px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 3px 0;
+      }
+      a {
+        color: var(--human);
+      }
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+      }
+      .summary {
+        font-size: 17px;
+        max-width: 68ch;
+      }
+      .pair {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .pair svg {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      figure {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        min-width: 0;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        color: var(--muted);
+      }
+      svg .box {
+        fill: var(--surface);
+        stroke: var(--line);
+        stroke-width: 1.5;
+      }
+      svg .box.chg {
+        fill: var(--chg-bg);
+        stroke: var(--chg);
+        stroke-width: 2;
+      }
+      svg .ln {
+        stroke: var(--muted);
+        stroke-width: 1.5;
+        fill: none;
+      }
+      svg text {
+        fill: var(--fg);
+        font:
+          12.5px system-ui,
+          sans-serif;
+      }
+      svg .tb {
+        font-weight: 600;
+      }
+      svg .ts {
+        fill: var(--muted);
+        font-size: 11px;
+      }
+      .group {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      .group h3 {
+        margin-top: 0;
+      }
+      .group.fact {
+        border-left-color: var(--fact);
+      }
+      .group.fact h3 {
+        color: var(--fact);
+      }
+      .group.call {
+        border-left-color: var(--call);
+      }
+      .group.call h3 {
+        color: var(--call);
+      }
+      .group.human {
+        border-left-color: var(--human);
+      }
+      .group.human h3 {
+        color: var(--human);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .scroll {
+        overflow-x: auto;
+      }
+      article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 10px;
+      }
+      article:target {
+        outline: 3px solid var(--human);
+      }
+      article h3 {
+        margin-top: 0;
+      }
+      .src {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      blockquote {
+        border-left: 3px solid var(--line);
+        padding-left: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 6px;
+      }
+      pre.sql {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 6px 0 0;
+        overflow-x: auto;
+        font:
+          12.5px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .tree {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin: 0;
+        overflow-x: auto;
+        font:
+          13.5px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      .tree .add,
+      .tree .mod,
+      .tree .del,
+      .legend .add,
+      .legend .mod,
+      .legend .del {
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .tree .add,
+      .legend .add {
+        background: var(--fact-bg);
+        color: var(--fact);
+      }
+      .tree .mod,
+      .legend .mod {
+        background: var(--chg-bg);
+        color: var(--chg);
+      }
+      .tree .del,
+      .legend .del {
+        background: var(--call-bg);
+        color: var(--call);
+        text-decoration: line-through;
+      }
+      .tree .note {
+        color: var(--muted);
+      }
+      .legend {
+        color: var(--muted);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="status">Chờ bạn duyệt · 2026-11-28</p>
+        <h1>Hồ sơ người học: gia sư nhớ những gì đã dạy</h1>
+      </header>
+
+      <section id="summary">
+        <h2>Tóm tắt</h2>
+        <p class="summary">
+          Gia sư hiện không biết gì về người học: mỗi buổi là một buổi mới, nên
+          nó có thể dạy lại điều bạn đã thạo. Thiết kế này thêm một hồ sơ theo
+          từng User gồm các câu và từ đã dạy. Mỗi mục có một khoảng cách ôn: nhớ
+          đúng thì nhân đôi, sai thì về 1 ngày, và từ 7 ngày trở lên là "đã
+          thạo". Sau mỗi buổi, backend cập nhật hồ sơ từ ghi chú và transcript.
+          Khi bắt đầu buổi mới, backend gửi bản tóm tắt ngắn cho gia sư qua
+          metadata lúc dispatch, và gia sư không dạy lại mục đã thạo như mới.
+          Điều cần để ý: mọi bước đều phải hỏng mà không làm hỏng buổi học, và
+          một hồ sơ sai có thể ẩn thứ bạn còn cần.
+        </p>
+      </section>
+
+      <section id="overview">
+        <h2>Tổng quan</h2>
+        <div class="pair">
+          <figure>
+            <svg
+              viewBox="0 0 410 66"
+              role="img"
+              aria-label="Trước: trình duyệt xin token từ backend, backend dispatch agent không kèm metadata; mỗi buổi tách biệt"
+            >
+              <defs>
+                <marker
+                  id="ah-before"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                Backend
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">Agent</text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">token</text>
+              <line
+                class="ln"
+                x1="250"
+                y1="32"
+                x2="310"
+                y2="32"
+                marker-end="url(#ah-before)"
+              />
+              <text class="ts" x="280" y="24" text-anchor="middle">
+                dispatch
+              </text>
+            </svg>
+            <figcaption>
+              Trước: backend dispatch agent không kèm metadata, nên agent chỉ
+              biết tên phòng. Mỗi Conversation tách biệt; ghi chú không nối với
+              buổi sau.
+            </figcaption>
+          </figure>
+          <figure>
+            <svg
+              viewBox="0 0 410 170"
+              role="img"
+              aria-label="Sau: thêm hồ sơ người học; backend lưu và cập nhật hồ sơ, rồi gửi bản tóm tắt cho agent qua metadata"
+            >
+              <defs>
+                <marker
+                  id="ah-after"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              <rect class="box" x="10" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="55" y="37" text-anchor="middle">
+                Trình duyệt
+              </text>
+              <rect class="box" x="160" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="205" y="37" text-anchor="middle">
+                Backend
+              </text>
+              <rect class="box" x="310" y="10" width="90" height="44" rx="6" />
+              <text class="tb" x="355" y="37" text-anchor="middle">Agent</text>
+              <rect
+                class="box chg"
+                x="160"
+                y="100"
+                width="90"
+                height="44"
+                rx="6"
+              />
+              <text class="tb" x="205" y="120" text-anchor="middle">Hồ sơ</text>
+              <text class="tb" x="205" y="136" text-anchor="middle">
+                người học
+              </text>
+              <line
+                class="ln"
+                x1="100"
+                y1="32"
+                x2="160"
+                y2="32"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="130" y="24" text-anchor="middle">token</text>
+              <line
+                class="ln"
+                x1="205"
+                y1="54"
+                x2="205"
+                y2="100"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="213" y="82">cập nhật</text>
+              <path
+                class="ln"
+                d="M250,122 H355 V56"
+                marker-end="url(#ah-after)"
+              />
+              <text class="ts" x="302" y="114" text-anchor="middle">
+                tóm tắt
+              </text>
+            </svg>
+            <figcaption>
+              Sau: sau mỗi buổi (khi agent gửi end marker), backend cập nhật hồ
+              sơ; lúc cấp token cho buổi mới, backend dựng bản tóm tắt từ hồ sơ
+              và gửi cho agent qua metadata của dispatch. Agent đưa nó vào lời
+              dẫn của gia sư.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="structure">
+        <h2>Cấu trúc thư mục</h2>
+        <pre class="tree">open-lang/
+├── apps/
+│   ├── backend/
+│   │   ├── prisma/
+│   │   │   ├── <span class="mod">schema.prisma</span>   <span class="note">← thêm bảng mục đã học; thêm cột đánh dấu buổi đã xử lý vào Conversation</span>
+│   │   │   └── migrations/<span class="add">…_add_learner_items/</span>   <span class="note">← migration mới</span>
+│   │   └── src/
+│   │       ├── <span class="add">learner/</span>   <span class="note">← module mới: luật khoảng cách ôn, cập nhật sau buổi, dựng bản tóm tắt, cổng model (giả, OpenAI, Google)</span>
+│   │       ├── conversations/<span class="mod">conversations.service.ts</span>   <span class="note">← end marker kích hoạt cập nhật hồ sơ (không chờ)</span>
+│   │       ├── livekit/<span class="mod">room-token.service.ts</span>   <span class="note">← dispatch kèm metadata là bản tóm tắt; bắt lỗi thì dispatch như cũ</span>
+│   │       └── config/<span class="mod">env.schema.ts</span>   <span class="note">← chọn nhà cung cấp model cho bước cập nhật (mặc định giả)</span>
+│   └── agent/
+│       ├── src/
+│       │   ├── <span class="mod">conversation-agent.ts</span>   <span class="note">← đọc metadata của job, bỏ qua khi trống hoặc sai</span>
+│       │   ├── <span class="mod">tutor-instructions.ts</span>   <span class="note">← thêm khối "đã học" và quy tắc không dạy lại</span>
+│       │   └── <span class="add">learner-brief.ts</span>   <span class="note">← đọc và định dạng bản tóm tắt</span>
+│       └── test/live/<span class="mod">tutor-checks.ts</span>   <span class="note">← thêm check sống cho hành vi mới</span>
+├── packages/shared/src/<span class="add">learner-brief.ts</span>   <span class="note">← hợp đồng của bản tóm tắt (zod)</span>
+└── e2e/tests/<span class="add">learner-memory.spec.ts</span>   <span class="note">← buổi 1 để lại hồ sơ, token của buổi 2 mang bản tóm tắt</span></pre>
+        <p class="legend">
+          <span class="add">mới</span> <span class="mod">đổi</span> · Không đụng
+          tới: <code>saveNote</code>, thứ tự gọi tool trên Gemini Live, bảng
+          Note, Report và giao diện. Phiên bản 1 không có giao diện mới.
+        </p>
+      </section>
+
+      <section id="review">
+        <h2>Để bạn duyệt</h2>
+        <div class="group fact">
+          <h3>Đã xác nhận</h3>
+          <ul>
+            <li>
+              Agent không nhận gì về người học: code bỏ qua metadata của job, và
+              backend dispatch không kèm metadata (<a href="#ev-no-user-data"
+                >code agent và backend</a
+              >).
+            </li>
+            <li>
+              Mỗi Note thuộc một Conversation và duy nhất theo (buổi, loại,
+              english); không có thực thể nào vượt qua ranh giới một buổi (<a
+                href="#ev-schema"
+                >schema.prisma</a
+              >).
+            </li>
+            <li>
+              Dữ liệu thật rất ít: 14 buổi, 13 ghi chú, không mục nào xuất hiện
+              ở hai buổi (<a href="#ev-db">truy vấn đọc-chỉ-đọc</a>).
+            </li>
+            <li>
+              LiveKit cho gửi metadata (chuỗi ≤ 512 KiB, nên dùng JSON) khi
+              dispatch, agent đọc trong <code>JobContext</code>, và tài liệu
+              khuyên gửi dữ liệu theo người dùng bằng cách này (<a
+                href="#ev-livekit"
+                >tài liệu LiveKit</a
+              >).
+            </li>
+            <li>
+              Duolingo ước lượng half-life cho từng từ; nhớ sai thì ôn sớm hơn
+              (<a href="#ev-duolingo">blog Duolingo</a>). Anki dùng khoảng cách
+              ôn, nhớ sai thì đặt lại; "mature" là khoảng cách ≥ 21 ngày, một
+              quy ước (<a href="#ev-anki">tài liệu Anki</a>).
+            </li>
+            <li>
+              Một bài tóm tắt nghiên cứu dùng tiêu chí 3 lần nhớ đúng ở các buổi
+              cách nhau (nguồn thứ cấp, chưa đọc bài gốc) (<a
+                href="#ev-relearning"
+                >retrievalpractice.org</a
+              >).
+            </li>
+            <li>
+              Backend đã có nền để dùng lại: end marker của agent đặt
+              <code>endedAt</code>, và <code>ReportModel</code> là mẫu cổng
+              model có nhà cung cấp giả, OpenAI, Google (<a
+                href="#ev-report-pattern"
+                >code backend</a
+              >).
+            </li>
+            <li>
+              Đường gọi tool của Gemini Live đã cần hai cách xử lý riêng; thêm
+              tool là thêm rủi ro (<a href="#ev-gemini-tools"
+                >session-options.ts và AGENTS.md</a
+              >).
+            </li>
+            <li>
+              Duolingo Video Call rút "List of Facts" từ transcript sau mỗi cuộc
+              gọi và đưa vào hướng dẫn của cuộc gọi sau (<a href="#ev-lily"
+                >blog Duolingo</a
+              >).
+            </li>
+          </ul>
+        </div>
+        <div class="group call">
+          <h3>Quyết định của tôi</h3>
+          <ul>
+            <li>
+              Bản tóm tắt đi qua metadata của dispatch, do backend dựng. Lý do:
+              đúng khuyến nghị của LiveKit, không cần route mới để agent đọc, và
+              giữ nguyên nguyên tắc "server quyết định mọi thứ"; đổi sang agent
+              tự gọi backend sau này chỉ đổi đường đi (<a href="#ev-livekit"
+                >tài liệu LiveKit</a
+              >).
+            </li>
+            <li>
+              Cập nhật hồ sơ khi nhận end marker, chạy nền và không chặn gì;
+              buổi nào bỏ sót (agent chết trước khi gửi marker, backend lỗi) thì
+              được xử lý nền ở lần cấp token kế tiếp (<a href="#ev-end-marker"
+                >recordEnd</a
+              >).
+            </li>
+            <li>
+              Mục mới chỉ lấy từ ghi chú của gia sư; model chỉ làm hai việc: nối
+              ghi chú mới với mục đã có nếu cùng một ý, và phán đoán mục đang
+              theo dõi được nhớ đúng hay sai. Lý do: ghi chú đã được kiểm theo
+              hợp đồng, nên cách này rẻ và dễ test (<a href="#ev-report-pattern"
+                >mẫu ReportModel</a
+              >).
+            </li>
+            <li>
+              Bỏ qua lượt gọi model khi không có mục nào để đối chiếu: ghi chú
+              đã đủ để tạo mục, nên những buổi đầu không tốn lượt gọi nào (<a
+                href="#ev-db"
+                >dữ liệu hiện có</a
+              >).
+            </li>
+            <li>
+              Luật tính khoảng cách: một mục chỉ được tính "nhớ đúng" nếu xuất
+              hiện ở một buổi sau buổi cập nhật gần nhất của nó, và khoảng cách
+              chỉ nhân đôi khi đã đến hạn. Lý do: nghiên cứu dùng các buổi cách
+              nhau, và nói theo gia sư ngay trong cùng buổi không chứng minh
+              được trí nhớ (<a href="#ev-relearning">retrievalpractice.org</a>,
+              <a href="#ev-anki">Anki</a>).
+            </li>
+            <li>
+              Cổng model riêng cho bước này, theo đúng mẫu của
+              <code>ReportModel</code>, dùng cùng khoá API, mặc định giả; model
+              giả không đưa ra phán đoán nào và test lập trình sẵn phán đoán.
+              Builder không tự dùng khoá thật; check sống chạy khi bạn đồng ý.
+              Lý do: sau này có thể dùng model rẻ hơn, test không gọi AI, và bộ
+              chuyển đổi thật của Report còn chưa được kiểm chứng (<a
+                href="#ev-report-pattern"
+                >mẫu ReportModel</a
+              >).
+            </li>
+            <li>
+              Khi model lỗi, bước phán đoán bị bỏ cho buổi đó nhưng việc ghi sổ
+              từ ghi chú vẫn chạy và buổi được đánh dấu đã xử lý; không có đường
+              lùi bằng so chữ để phán đoán. Lý do: nhận dạng giọng nói nghe nhầm
+              làm luật so chữ dễ ghi sai, và một lần lỗi không được chặn các
+              buổi sau; thất bại chỉ làm khoảng cách ôn không tăng, tức sai theo
+              hướng thận trọng (<a href="#ev-report-pattern">mẫu ReportModel</a
+              >, <a href="#ev-anki">Anki: nhớ sai thì đặt lại</a>).
+            </li>
+            <li>
+              Một mục đã thạo bị bỏ quên quá một khoảng cách sau ngày đến hạn
+              hiện là "đang học" trong bản tóm tắt. Lý do: F6 (gia sư hỏi ôn)
+              chưa có, và nếu không có điều này thì một mục đã thạo lâu không
+              nhắc sẽ bị bỏ qua mãi (<a href="#ev-duolingo"
+                >Duolingo: ôn khi sắp quên</a
+              >).
+            </li>
+            <li>
+              Không viết riêng việc chuyển dữ liệu cũ: đường xử lý bù sẽ xử lý
+              13 ghi chú hiện có, dùng thời điểm của buổi chứ không phải thời
+              điểm xử lý (<a href="#ev-db">dữ liệu hiện có</a>).
+            </li>
+            <li>
+              Phần thay đổi phía gia sư chỉ nằm ở lời dẫn, không thêm tool mới
+              (<a href="#ev-gemini-tools">đường tool của Gemini Live</a>).
+            </li>
+          </ul>
+        </div>
+        <div class="group human">
+          <h3>Bạn đã quyết</h3>
+          <ul>
+            <li>
+              "AI không dạy lại cho user những từ hay câu hay bất cứ thứ gì mà
+              họ đã thành thạo", và mục tiêu bao trùm: "user cảm thấy học tiếng
+              anh là 1 việc rất dể dàng và nhẹ nhàng, chứ không phải nhồi nhét
+              kiến thức".
+            </li>
+            <li>Làm F0 trước, trong session này.</li>
+            <li>
+              Giao cho tôi chọn ("theo bạn"): "đã thạo" là khoảng cách ôn từ 7
+              ngày trở lên (nhớ đúng thì nhân đôi, sai thì về 1 ngày).
+            </li>
+            <li>
+              Giao cho tôi chọn ("theo bạn"): sau mỗi buổi, backend chạy một
+              lượt model để đánh giá việc nhớ đúng.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="design">
+        <h2>Thiết kế</h2>
+        <h3>Ý định và lý do</h3>
+        <p>
+          Người học nói chuyện với gia sư mỗi ngày. Nếu gia sư không nhớ gì, nó
+          sẽ dạy lại điều họ đã thạo, và đó là kiểu nhồi nhét làm người học thấy
+          việc học nặng nề. Hồ sơ này cho gia sư biết người học đã gặp gì, để
+          gia sư bỏ qua cái đã thạo và chỉ ôn nhẹ cái đang học. Nó cũng là nền
+          cho các tính năng sau: bài vừa sức (F2), đề xuất bài hôm nay (F3), ôn
+          lại bằng giọng nói (F6), tiến bộ (F7) và nhớ chuyện cũ (F10).
+        </p>
+        <h3>Mục tiêu</h3>
+        <ul>
+          <li>
+            Mỗi User có một hồ sơ các câu và từ đã dạy, tách biệt hoàn toàn khỏi
+            User khác.
+          </li>
+          <li>
+            Mỗi mục có trạng thái suy ra từ khoảng cách ôn và ngày đến hạn:
+            <strong>đã thạo</strong> khi khoảng cách từ 7 ngày trở lên và mục
+            chưa bị bỏ quên quá một khoảng cách sau ngày đến hạn; còn lại là
+            <strong>đang học</strong>. Mục mới gặp có khoảng cách 1 ngày. Nhờ
+            điều kiện sau, một mục đã thạo lâu không được nhắc tới tự quay về
+            "đang học" trong bản tóm tắt, nên gia sư không bỏ qua nó mãi mãi khi
+            F6 chưa có.
+          </li>
+          <li>
+            Khi người học bắt đầu một buổi mới, gia sư biết các mục đã học gần
+            đây và không dạy lại mục đã thạo như mới.
+          </li>
+          <li>
+            Hồ sơ được cập nhật sau mỗi buổi mà không làm buổi học chậm hay
+            hỏng.
+          </li>
+        </ul>
+        <h3>Không làm (v1)</h3>
+        <ul>
+          <li>
+            Giao diện xem, sửa hay xoá hồ sơ, và các sự thật cá nhân (nghề, chủ
+            đề): thuộc F10.
+          </li>
+          <li>
+            Gia sư chủ động hỏi ôn các mục đến hạn: thuộc F6. Phiên bản 1 chỉ
+            ghi ngày đến hạn.
+          </li>
+          <li>
+            Ước lượng trình độ và mục tiêu: thuộc F2 và F9. Phiên bản 1 không có
+            cột cho chúng.
+          </li>
+          <li>
+            Đổi câu mở đầu thành lời đề xuất bài hôm nay: thuộc F3; câu mở đầu
+            giữ nguyên.
+          </li>
+          <li>Chấm phát âm, nhịp học (streak), thông báo nhắc học.</li>
+        </ul>
+        <h3>Phản mục tiêu</h3>
+        <ul>
+          <li>
+            Gia sư đọc danh sách ra miệng, hoặc nói kiểu "bạn học cái này rồi
+            mà" làm người học thấy bị kiểm tra.
+          </li>
+          <li>
+            Hồ sơ sai làm gia sư bỏ qua thứ người học thật sự chưa nhớ, và người
+            học không có cách nào sửa trong v1. Vì vậy luật phải thận trọng: một
+            lần nhớ đúng không đủ, và một mục đã thạo bị bỏ quên lâu tự quay về
+            "đang học" trong bản tóm tắt.
+          </li>
+          <li>
+            Việc lấy bản tóm tắt làm chậm đáng kể nút Bắt đầu, hoặc một lỗi ở
+            bước nào đó làm buổi học không vào được.
+          </li>
+          <li>
+            Dữ liệu của User này xuất hiện trong buổi của User khác, hoặc client
+            đưa được bản tóm tắt tự chọn cho agent.
+          </li>
+        </ul>
+        <h3>Ràng buộc</h3>
+        <ul>
+          <li>
+            Mọi bản ghi gắn với <code>userId</code>; xoá User thì hồ sơ xoá theo
+            (cascade, như Conversation).
+          </li>
+          <li>
+            Ba chỗ đều phải mở khi lỗi (fail-open): dựng bản tóm tắt (lỗi thì
+            dispatch như cũ), đọc metadata ở agent (trống hoặc sai thì chạy như
+            cũ), và bước cập nhật (xem "Cập nhật sau buổi": model lỗi thì chỉ
+            ghi sổ từ ghi chú, không phán đoán nhớ đúng hay sai). Khi lỗi, hồ sơ
+            chỉ được sai theo hướng thận trọng: không bao giờ kéo dài khoảng
+            cách ôn của một mục vì một bước thất bại.
+          </li>
+          <li>
+            Bản tóm tắt do backend dựng từ DB, không bao giờ lấy từ yêu cầu của
+            client (giữ nguyên tắc của <code>issueRoomToken</code>). Token là
+            JWT nên trình duyệt của chính người học đọc được nội dung; đó là dữ
+            liệu của họ, nhưng không được chứa gì của người khác.
+          </li>
+          <li>
+            Transcript được gửi cho nhà cung cấp model của bước cập nhật, cùng
+            mức tiếp xúc như Report hiện nay.
+          </li>
+          <li>
+            Không dùng LiveKit Inference; không thêm tool vào model realtime;
+            không đổi thứ tự gọi <code>saveNote</code>.
+          </li>
+          <li>
+            Chữ hiển thị cho người dùng (nếu có) bằng tiếng Việt; giao diện chỉ
+            dùng Astryx.
+          </li>
+          <li>
+            Quy trình của dự án: viết test trước, và <code>pnpm check</code>,
+            <code>pnpm sonar</code> đều qua; chạy thêm
+            <code>pnpm test:e2e</code>
+            vì động tới luồng Conversation và Agent. Không dùng NOSONAR hay
+            @ts-ignore.
+          </li>
+        </ul>
+        <h3>Các cách làm</h3>
+        <div class="scroll">
+          <table>
+            <tr>
+              <th>Cách làm</th>
+              <th>Đánh đổi</th>
+              <th>Chọn</th>
+            </tr>
+            <tr>
+              <td>
+                Nguồn tín hiệu: sau buổi học, backend chạy một lượt model đọc
+                transcript, ghi chú và các mục đang theo dõi, rồi cập nhật hồ sơ
+              </td>
+              <td>
+                Thêm một lượt gọi model sau buổi (bỏ qua khi không có gì để đối
+                chiếu); hồ sơ hơi trễ nếu buổi mới bắt đầu ngay; bộ chuyển đổi
+                model thật chưa được kiểm chứng. Đổi lại: không thêm gì vào
+                đường Gemini Live, chuẩn hoá ở một chỗ, chạy lại được, test được
+                với model giả.
+              </td>
+              <td>Có, theo lời bạn giao ("theo bạn")</td>
+            </tr>
+            <tr>
+              <td>
+                Nguồn tín hiệu: gia sư tự đánh dấu "nhớ đúng, nhớ sai" ngay
+                trong buổi bằng tool
+              </td>
+              <td>
+                Tức thời và không thêm lượt gọi model, nhưng thêm tool vào đường
+                Gemini Live vốn đã mong manh, model phải vừa nói vừa phán đoán,
+                và không chạy lại được.
+              </td>
+              <td>Không</td>
+            </tr>
+            <tr>
+              <td>Nguồn tín hiệu: chỉ luật so chữ, không dùng model</td>
+              <td>
+                Rẻ và tất định, nhưng không bắt được cách diễn đạt khác, không
+                đánh giá được đúng sai, và nhận dạng giọng nói nghe nhầm sẽ làm
+                sai.
+              </td>
+              <td>
+                Không làm nguồn phán đoán. Chỉ dùng cho phần ghi sổ không cần
+                model: tạo mục từ ghi chú và nhận ra ghi chú trùng khoá với mục
+                đã có. Không dùng để lọc sơ mục ứng viên, và không đưa ra phán
+                đoán nhớ đúng hay sai khi model lỗi
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Đường đi: backend gửi bản tóm tắt qua metadata của dispatch
+              </td>
+              <td>
+                Đúng khuyến nghị của LiveKit, không thêm route; nhưng bản tóm
+                tắt cố định lúc cấp token và nằm trong JWT.
+              </td>
+              <td>Có (quyết định của tôi)</td>
+            </tr>
+            <tr>
+              <td>
+                Đường đi: agent gọi một route <code>GET</code> của backend bằng
+                <code>AGENT_API_KEY</code> trước khi vào phòng
+              </td>
+              <td>
+                Luôn mới nhất và không phình JWT, nhưng thêm một chặng mạng và
+                một đường lỗi ở lúc bắt đầu buổi.
+              </td>
+              <td>Không</td>
+            </tr>
+          </table>
+        </div>
+        <h3>Cách thực hiện</h3>
+        <ul>
+          <li>
+            <strong>Bảng mục đã học</strong> (mỗi User nhiều mục): nội dung
+            tiếng Anh và nghĩa tiếng Việt (mỗi trường ≤ 120 ký tự như Note),
+            loại (câu hoặc từ), khoá đã chuẩn hoá (duy nhất theo User), thời
+            điểm gặp lần đầu và gần nhất, khoảng cách ôn tính bằng ngày, ngày
+            đến hạn, số lần nhớ đúng và số lần quên. Các Note loại sửa lỗi hoặc
+            nghe sót cũng thành mục (câu đúng, hoặc câu bị nghe sót). (quyết
+            định của tôi)
+          </li>
+          <li>
+            <strong>Luật khoảng cách</strong> (hằng số chỉnh được): mục mới có
+            khoảng cách 1 ngày. Nhớ đúng ở một buổi sau buổi cập nhật gần nhất
+            <em>và</em> đã đến hạn thì khoảng cách nhân đôi, ngày đến hạn dời
+            theo. Nhớ đúng trước hạn thì chỉ cập nhật thời điểm gần nhất. Nhớ
+            sai thì về 1 ngày. Một Note trùng khoá với mục đã có nghĩa là gia sư
+            dạy lại, và chỉ cập nhật thời điểm gần nhất. Khoảng cách từ 7 ngày
+            là "đã thạo"; với cách nhân đôi, bạn cần khoảng 3 lần nhớ đúng trải
+            trên khoảng một tuần. (quyết định của bạn giao)
+          </li>
+          <li>
+            <strong>Cập nhật sau buổi</strong>: end marker đánh dấu
+            <code>endedAt</code> rồi kích hoạt một tác vụ nền, an toàn khi chạy
+            lại (có cột đánh dấu buổi đã xử lý). Bước 1, ghi sổ (không cần
+            model): lấy các Note của buổi, tạo mục mới; một Note trùng khoá với
+            mục đã có chỉ cập nhật thời điểm gần nhất. Bước 2, phán đoán (chỉ
+            khi người học đã có mục đang theo dõi): gọi model một lần với
+            transcript, ghi chú của buổi và các mục đang theo dõi (tối đa một số
+            lượng cố định, mục thấy gần đây trước; không lọc sơ bằng luật so
+            chữ), để model nối ghi chú với mục đã có nếu cùng một ý và phán đoán
+            từng mục được nhớ đúng, nhớ sai hay không xuất hiện; rồi áp dụng
+            luật khoảng cách. Các buổi của một User được xử lý tuần tự, cũ trước
+            mới sau, vì khoảng cách phụ thuộc thứ tự. Nếu lượt gọi model lỗi sau
+            một số lần thử có giới hạn, bỏ bước 2 cho buổi đó: giữ kết quả của
+            bước 1, không đổi khoảng cách của mục nào, đánh dấu buổi đã xử lý
+            (ghi log cảnh báo, không đưa nội dung học vào log) và không thử lại
+            phán đoán, để một lần lỗi không chặn các buổi sau. Nếu chính bước 1
+            lỗi (ví dụ DB), để buổi chưa xử lý; nó được xử lý bù ở lần cấp token
+            kế tiếp, không chặn token. (quyết định của tôi)
+          </li>
+          <li>
+            <strong>Bản tóm tắt</strong>: JSON có số phiên bản, gồm danh sách
+            mục (nội dung tiếng Anh, nghĩa, trạng thái), tối đa 40 mục và khoảng
+            4 KB, mục thấy gần đây nhất xếp trước, để lời dẫn trên Gemini Live
+            không phình ra (quyết định của tôi; builder tinh chỉnh), đặt trong
+            <code>RoomAgentDispatch.metadata</code>. Phiên bản 1 không có giao
+            diện; xem hồ sơ bằng truy vấn đọc-chỉ-đọc vào DB (quyết định của
+            tôi). Trạng thái của từng mục được tính lúc dựng bản tóm tắt theo
+            định nghĩa ở phần Mục tiêu, nên một mục đã thạo bị bỏ quên quá lâu
+            hiện là "đang học". Hợp đồng nằm trong <code>packages/shared</code>.
+            Agent đọc bằng schema đó; sai hoặc trống thì bỏ qua.
+          </li>
+          <li>
+            <strong>Lời dẫn của gia sư</strong>: thêm một khối "người học đã học
+            những gì" và các quy tắc bằng tiếng Anh như phần còn lại: mục đã
+            thạo thì không dạy lại như mới, chỉ xác nhận ngắn nếu người học nhắc
+            tới; mục đang học thì có thể ôn nhanh nếu liên quan; ưu tiên dạy nội
+            dung mới; không đọc danh sách ra miệng; không lưu ghi chú cho mục đã
+            có trong danh sách trừ khi dạy lại. (quyết định của tôi)
+          </li>
+          <li>
+            <strong>Cổng model của bước cập nhật</strong>: một giao diện riêng
+            theo đúng mẫu <code>ReportModel</code> (giả, OpenAI, Google), dùng
+            cùng khoá API, với biến môi trường chọn nhà cung cấp mặc định là
+            giả. Model giả mặc định không đưa ra phán đoán nào (nên không khoảng
+            cách nào tăng, chỉ có bước ghi sổ), và test dựng nó với các phán
+            đoán được lập trình sẵn. Khi dùng thật, bạn đặt nhà cung cấp là
+            Google (model thật của dự án là Gemini) cùng khoá của nó trong
+            <code>apps/backend/.env</code>. Builder không tự dùng khoá thật:
+            check sống và lần chạy thật đầu tiên của bộ chuyển đổi chạy khi bạn
+            đồng ý, bằng khoá đã có trong các tệp <code>.env</code> cục bộ; nếu
+            chưa có khoá thì builder dừng và hỏi. (quyết định của tôi)
+          </li>
+        </ul>
+        <h3>Cách kiểm chứng</h3>
+        <ul>
+          <li>
+            Buổi 1: gia sư dạy "I'd like to reschedule the meeting" và bạn nói
+            lại. Sau buổi, DB có mục đó, trạng thái đang học, đến hạn sau 1
+            ngày.
+          </li>
+          <li>
+            Hôm sau bạn nói "dạy mình cách xin dời lịch họp": gia sư nhận ra bạn
+            đã học câu đó, ôn rất nhanh thay vì dạy từ đầu, rồi đi tiếp nội dung
+            mới.
+          </li>
+          <li>
+            Sau khoảng 3 lần nhớ đúng, cách nhau theo hạn, mục thành đã thạo và
+            gia sư không nhắc lại; nếu bạn nhớ sai thì nó quay về đang học.
+          </li>
+          <li>
+            Tắt backend lúc bấm Bắt đầu, hoặc làm hỏng bước dựng bản tóm tắt:
+            buổi học vẫn vào được và gia sư chạy như hôm nay.
+          </li>
+          <li>
+            Hai tài khoản có hồ sơ riêng và không thấy dữ liệu của nhau; xoá một
+            tài khoản thì hồ sơ của nó biến mất.
+          </li>
+        </ul>
+        <p>
+          <strong>Unit:</strong> luật khoảng cách (bảng các tình huống: mới, nhớ
+          đúng đến hạn, nhớ đúng trước hạn, nhớ sai, ngưỡng đúng 7 ngày, biên
+          của điều kiện bị bỏ quên), chuẩn hoá khoá, dựng và giới hạn bản tóm
+          tắt, đọc metadata ở agent (hợp lệ, trống, sai), và nội dung lời dẫn
+          qua <code>AgentSession</code> với provider giả.
+          <strong>Tích hợp (backend, có DB):</strong> end marker tạo mục từ ghi
+          chú; buổi thứ hai với model giả có phán đoán lập trình sẵn cập nhật
+          khoảng cách; model lỗi thì ghi sổ vẫn chạy, khoảng cách không đổi và
+          buổi được đánh dấu đã xử lý; các buổi được xử lý theo thứ tự; chạy lại
+          không nhân đôi; cô lập giữa hai User; cascade; token mang bản tóm tắt
+          đúng của User và vẫn cấp được khi bước dựng lỗi.
+          <strong>Check sống (provider thật, có judge):</strong> với bản tóm tắt
+          liệt kê một câu đã thạo, gia sư không dạy lại câu đó như mới; không có
+          bản tóm tắt thì các check hiện có vẫn qua. Đây cũng là lúc kiểm chứng
+          bộ chuyển đổi model thật của bước cập nhật bằng ít nhất một lần chạy
+          thật. <strong>End-to-end (Playwright):</strong> mô phỏng buổi 1 bằng
+          <code>agent-ingest.ts</code> rồi cấp token cho buổi 2 và kiểm tra
+          metadata của dispatch. Không bỏ loại test nào.
+        </p>
+        <h3>Để builder quyết</h3>
+        <ul>
+          <li>
+            Tên bảng, tên cột, kiểu dữ liệu và chỉ mục; hàm chuẩn hoá khoá (hạ
+            chữ thường, gọn khoảng trắng, bỏ dấu câu cuối) và cách ánh xạ Note
+            loại sửa lỗi hoặc nghe sót thành mục.
+          </li>
+          <li>
+            Nội dung prompt và hình dạng JSON của model cập nhật; cách cắt
+            transcript dài; thời gian chờ và số lần thử của lượt gọi model (theo
+            mẫu của Report).
+          </li>
+          <li>
+            Định dạng cụ thể của metadata và của khối trong lời dẫn; cách xếp
+            mục khi vượt giới hạn; chữ thật gia sư dùng khi nhắc tới mục đã học.
+          </li>
+          <li>
+            Khi nào coi một buổi chưa có end marker là đã kết thúc (để xử lý
+            bù), và cách ghi log mà không đưa nội dung học vào log.
+          </li>
+          <li>
+            Tên biến môi trường của nhà cung cấp và model cho bước cập nhật (mặc
+            định giả, như đã nêu); số mục tối đa đưa cho model; số lần thử của
+            lượt gọi model.
+          </li>
+        </ul>
+      </section>
+
+      <section id="evidence">
+        <h2>Bằng chứng</h2>
+
+        <article id="ev-no-user-data">
+          <h3>Agent không nhận gì về người học</h3>
+          <p class="src">
+            Nguồn: <code>apps/agent/src/conversation-agent.ts:64</code> và
+            <code
+              >apps/backend/src/livekit/room-token.service.ts:26-27, 47-49</code
+            >
+            · 2026-11-28
+          </p>
+          <blockquote>
+            "The job's metadata is not read: every Conversation is the same
+            lesson." và "a dispatch of the Agent with no metadata". Danh tính
+            participant là <code>user.id</code> nhưng agent chỉ dùng tên phòng.
+          </blockquote>
+        </article>
+
+        <article id="ev-schema">
+          <h3>Không có thực thể nào vượt qua ranh giới một buổi</h3>
+          <p class="src">
+            Nguồn: <code>apps/backend/prisma/schema.prisma:72-87, 114-130</code>
+            · 2026-11-28
+          </p>
+          <blockquote>
+            <code>Note</code> có <code>conversationId</code> và
+            <code>@@unique([conversationId, kind, english])</code>;
+            <code>Conversation</code> có <code>userId</code>,
+            <code>endedAt</code>. Không có bảng nào gom theo User ngoài
+            Conversation.
+          </blockquote>
+        </article>
+
+        <article id="ev-db">
+          <h3>
+            Dữ liệu hiện có rất ít, và chưa thấy mục lặp lại giữa các buổi
+          </h3>
+          <p class="src">
+            Nguồn: hai truy vấn đọc-chỉ-đọc vào DB cục bộ qua postgres MCP ·
+            2026-11-28. Chỉ trả số đếm.
+          </p>
+          <pre class="sql">
+SELECT
+  (SELECT count(*) FROM "User") AS users,
+  (SELECT count(*) FROM "Conversation") AS conversations,
+  (SELECT count(*) FROM "Conversation" c
+    WHERE EXISTS (SELECT 1 FROM "Note" n WHERE n."conversationId" = c.id)) AS conversations_with_notes,
+  (SELECT count(*) FROM "Turn") AS turns,
+  (SELECT count(*) FROM "Note") AS notes,
+  (SELECT count(*) FROM "Note" WHERE kind = 'phrase') AS phrase_notes,
+  (SELECT count(*) FROM "Note" WHERE kind = 'word') AS word_notes,
+  (SELECT count(*) FROM "Note" WHERE kind = 'correction') AS correction_notes,
+  (SELECT count(*) FROM "Note" WHERE kind = 'missed') AS missed_notes,
+  (SELECT min("createdAt") FROM "Conversation") AS first_conversation,
+  (SELECT max("createdAt") FROM "Conversation") AS last_conversation</pre>
+          <blockquote>
+            users 2, conversations 14, conversations_with_notes 6, turns 93,
+            notes 13 (phrase 6, word 5, correction 2, missed 0), từ 2026-11-26
+            đến 2026-11-27.
+          </blockquote>
+          <pre class="sql">
+WITH items AS (
+  SELECT c."userId", lower(trim(n.english)) AS item,
+         n."conversationId" AS conversation_id, n.kind
+  FROM "Note" n JOIN "Conversation" c ON c.id = n."conversationId"
+),
+per_item AS (
+  SELECT "userId", item, count(DISTINCT conversation_id) AS conversations_seen_in
+  FROM items GROUP BY "userId", item
+)
+SELECT count(*) AS distinct_items,
+       count(*) FILTER (WHERE conversations_seen_in >= 2) AS items_in_2_or_more_conversations,
+       count(*) FILTER (WHERE conversations_seen_in >= 3) AS items_in_3_or_more_conversations,
+       max(conversations_seen_in) AS most_conversations_for_one_item
+FROM per_item</pre>
+          <blockquote>
+            distinct_items 13, items_in_2_or_more_conversations 0,
+            items_in_3_or_more_conversations 0, most_conversations_for_one_item
+            1. So khớp chữ chính xác nên không bắt được cách diễn đạt khác; dữ
+            liệu quá ít để kết luận về việc dạy lại.
+          </blockquote>
+        </article>
+
+        <article id="ev-livekit">
+          <h3>LiveKit cho gửi metadata khi dispatch và khuyên dùng nó</h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.livekit.io/agents/server/agent-dispatch/"
+              >Agent dispatch</a
+            >,
+            <a href="https://docs.livekit.io/agents/logic/external-data/"
+              >External data and RAG</a
+            >
+            · đọc 2026-11-27
+          </p>
+          <blockquote>
+            "Explicit dispatch allows you to pass metadata to the agent,
+            available in the JobContext." "The metadata field is a string,
+            limited to 512 KiB." "Send user specific data in the job metadata,
+            room metadata, or participant attributes rather than loading it in
+            the entrypoint." Ví dụ Node.js đọc
+            <code>ctx.job.metadata</code> bằng <code>JSON.parse</code> và dựng
+            chat context đầu tiên. Dispatch qua token chỉ áp dụng khi phòng được
+            tạo lần đầu; mỗi buổi của ta dùng một phòng mới.
+          </blockquote>
+        </article>
+
+        <article id="ev-duolingo">
+          <h3>Duolingo theo dõi từng từ và ôn sớm hơn khi sai</h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://blog.duolingo.com/how-we-learn-how-you-learn"
+              >How we learn how you learn (2016)</a
+            >,
+            <a href="https://blog.duolingo.com/spaced-repetition-for-learning"
+              >Spaced repetition (2023)</a
+            >
+            · 2026-11-28
+          </p>
+          <blockquote>
+            "The best time to practice is when you are on the verge of
+            forgetting." "each time you make a mistake (red Xs), h decreases and
+            you'll need to practice sooner." "Review things you got wrong
+            sooner, and you can wait a little longer to review concepts you got
+            right." Các trang này không nêu ngưỡng nào để coi một mục là thạo;
+            bài 2016 có thể không còn là hệ hiện tại.
+          </blockquote>
+        </article>
+
+        <article id="ev-anki">
+          <h3>Anki: khoảng cách ôn, sai thì đặt lại, "mature" là quy ước</h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://docs.ankiweb.net/stats.html">Anki, Statistics</a>,
+            <a
+              href="https://docs.ankiweb.net/faqs/what-spaced-repetition-algorithm.md"
+              >Anki FAQ</a
+            >,
+            <a
+              href="https://forums.ankiweb.net/t/the-idea-behind-mature-cards/40450"
+              >diễn đàn Anki (ý kiến cộng đồng, không phải tài liệu chính
+              thức)</a
+            >
+            · 2026-11-28
+          </p>
+          <blockquote>
+            "A card is defined as "mature" if its interval is ≥21 days." "The
+            current interval is multiplied by the current ease." "Like SM-2,
+            Anki's failure button resets the card interval by default." Diễn
+            đàn: "I think it is arbitrary which date is determined as maturity."
+          </blockquote>
+        </article>
+
+        <article id="ev-relearning">
+          <h3>Nghiên cứu ôn lại nhiều lần dùng tiêu chí 3 lần nhớ đúng</h3>
+          <p class="src">
+            Nguồn:
+            <a
+              href="https://www.retrievalpractice.org/strategies/2018/successive-relearning"
+              >retrievalpractice.org, "Push beyond one and done" (2018)</a
+            >
+            · 2026-11-28. Nguồn thứ cấp: bài tóm tắt nghiên cứu của Rawson,
+            Dunlosky và Sciartelli (2013); tôi không đọc được bài gốc và bài
+            blog không nêu cỡ mẫu.
+          </p>
+          <blockquote>
+            "they had to retrieve information correctly three times" ở các buổi
+            "one day after the introduction of material, 3 days later, 8 days
+            later, 10 days later, 15 days later, etc." Bài blog không đo trí nhớ
+            dài hạn; nó báo điểm thi tăng "by a letter grade".
+          </blockquote>
+        </article>
+
+        <article id="ev-report-pattern">
+          <h3>Backend đã có mẫu cổng model và nhà cung cấp</h3>
+          <p class="src">
+            Nguồn: <code>apps/backend/src/reports/report-model.ts</code>,
+            <code>create-report-model.ts</code>, <code>reports.module.ts</code>,
+            <code>apps/backend/src/config/env.schema.ts:29</code> · 2026-11-28
+          </p>
+          <blockquote>
+            <code
+              >interface ReportModel { draft(input): Promise&lt;ReportDraft&gt;
+              }</code
+            >; <code>createReportModel</code> chọn giả, OpenAI hoặc Google theo
+            <code>REPORT_PROVIDER</code>, mặc định <code>'fake'</code>. Report
+            được viết khi frontend yêu cầu và chờ end marker tối đa 15 giây.
+          </blockquote>
+          <p class="src">
+            Ghi chú dự án (bộ nhớ làm việc, 2026-11-26, chưa kiểm chứng lại hôm
+            nay): bộ chuyển đổi OpenAI và Google thật của Report chưa được kiểm
+            chứng.
+          </p>
+        </article>
+
+        <article id="ev-end-marker">
+          <h3>End marker đã có và đánh dấu <code>endedAt</code></h3>
+          <p class="src">
+            Nguồn:
+            <code
+              >apps/backend/src/conversations/conversations.service.ts:179-188</code
+            >
+            và <code>apps/agent/src/conversation-agent.ts:100-102</code> ·
+            2026-11-28
+          </p>
+          <blockquote>
+            <code
+              >updateMany({ where: { roomName, endedAt: null }, data: { endedAt:
+              new Date() } })</code
+            >; agent gọi <code>backend.sendEnd(roomName)</code> trong shutdown
+            callback sau khi gửi hết lượt nói và ghi chú. Nếu agent chết trước
+            đó thì <code>endedAt</code> vẫn null.
+          </blockquote>
+        </article>
+
+        <article id="ev-gemini-tools">
+          <h3>Tool trên Gemini Live đã cần hai cách xử lý riêng</h3>
+          <p class="src">
+            Nguồn: <code>apps/agent/src/config/session-options.ts</code> (các
+            chú thích của <code>declaresNonBlockingTools</code> và
+            <code>noteOrderOf</code>) và <code>apps/agent/AGENTS.md</code>, mục
+            "Gemini Live and tool calls" · 2026-11-28
+          </p>
+          <blockquote>
+            Tool phải khai báo <code>NON_BLOCKING</code>, và gia sư gọi
+            <code>saveNote</code> <em>trước</em> khi nói, nếu không "the lesson
+            went silent". Không dùng tool thêm cho việc này là để tránh đụng vào
+            vùng đó.
+          </blockquote>
+        </article>
+
+        <article id="ev-lily">
+          <h3>
+            Duolingo Video Call rút sự thật từ transcript sau mỗi cuộc gọi
+          </h3>
+          <p class="src">
+            Nguồn:
+            <a href="https://blog.duolingo.com/ai-and-video-call"
+              >Get to know the AI behind every Video Call with Lily</a
+            >
+            · 2026-11-28
+          </p>
+          <blockquote>
+            "The information gleaned is then added to a List of Facts." Danh
+            sách này được đưa vào hướng dẫn của cuộc gọi sau.
+          </blockquote>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
