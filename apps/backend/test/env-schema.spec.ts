@@ -119,6 +119,88 @@ describe('The backend environment schema', () => {
     });
   });
 
+  it('defaults LEARNER_PROVIDER to fake and rejects an unknown provider', () => {
+    expect(backendEnvSchema.parse(testEnv).LEARNER_PROVIDER).toBe('fake');
+    expect(
+      rejectedVariables(backendEnvSchema, {
+        ...testEnv,
+        LEARNER_PROVIDER: 'nope',
+      }),
+    ).toEqual(['LEARNER_PROVIDER']);
+  });
+
+  describe('LEARNER_PROVIDER keys', () => {
+    const rejectedFor = (env: Env) =>
+      rejectedVariables(backendEnvSchema, { ...testEnv, ...env });
+
+    it('requires OPENAI_API_KEY when LEARNER_PROVIDER is openai', () => {
+      expect(rejectedFor({ LEARNER_PROVIDER: 'openai' })).toEqual([
+        'OPENAI_API_KEY',
+      ]);
+      expect(
+        rejectedFor({ LEARNER_PROVIDER: 'openai', OPENAI_API_KEY: '' }),
+      ).toEqual(['OPENAI_API_KEY']);
+      expect(
+        rejectedFor({ LEARNER_PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test' }),
+      ).toEqual([]);
+    });
+
+    it('requires GOOGLE_API_KEY when LEARNER_PROVIDER is google', () => {
+      expect(rejectedFor({ LEARNER_PROVIDER: 'google' })).toEqual([
+        'GOOGLE_API_KEY',
+      ]);
+      expect(
+        rejectedFor({ LEARNER_PROVIDER: 'google', GOOGLE_API_KEY: '' }),
+      ).toEqual(['GOOGLE_API_KEY']);
+      expect(
+        rejectedFor({ LEARNER_PROVIDER: 'google', GOOGLE_API_KEY: 'g-test' }),
+      ).toEqual([]);
+    });
+
+    it('needs no key for fake', () => {
+      expect(rejectedFor({ LEARNER_PROVIDER: 'fake' })).toEqual([]);
+    });
+
+    it('checks the key of each provider on its own', () => {
+      // The Report provider's key does not cover the learner provider's.
+      expect(
+        rejectedFor({
+          REPORT_PROVIDER: 'google',
+          GOOGLE_API_KEY: 'g-test',
+          LEARNER_PROVIDER: 'openai',
+        }),
+      ).toEqual(['OPENAI_API_KEY']);
+      expect(
+        rejectedFor({
+          REPORT_PROVIDER: 'openai',
+          LEARNER_PROVIDER: 'google',
+          OPENAI_API_KEY: 'sk-test',
+        }),
+      ).toEqual(['GOOGLE_API_KEY']);
+    });
+
+    it('names the variable and the provider in the message', () => {
+      const result = backendEnvSchema.safeParse({
+        ...testEnv,
+        LEARNER_PROVIDER: 'google',
+      });
+
+      expect(result.success ? '' : result.error.issues[0]?.message).toBe(
+        'GOOGLE_API_KEY is required when LEARNER_PROVIDER is "google"',
+      );
+    });
+
+    it('treats a blank LEARNER_MODEL as unset', () => {
+      expect(
+        backendEnvSchema.parse({ ...testEnv, LEARNER_MODEL: '' }).LEARNER_MODEL,
+      ).toBeUndefined();
+      expect(
+        backendEnvSchema.parse({ ...testEnv, LEARNER_MODEL: 'm' })
+          .LEARNER_MODEL,
+      ).toBe('m');
+    });
+  });
+
   it.each([
     [
       'a blank JWT_SECRET, as in .env.example',

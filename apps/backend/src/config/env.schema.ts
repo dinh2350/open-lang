@@ -30,6 +30,12 @@ export const backendEnvSchema = liveKitEnvSchema
     // The Provider's model; each Provider has a default (see
     // `DEFAULT_REPORT_MODEL`).
     REPORT_MODEL: unsetIfEmpty(z.string()),
+    // Which model judges what the User recalled of the learner profile's
+    // items. `fake` judges nothing.
+    LEARNER_PROVIDER: z.enum(['fake', 'openai', 'google']).default('fake'),
+    // The Provider's model; each Provider has a default (see
+    // `DEFAULT_LEARNER_MODEL`).
+    LEARNER_MODEL: unsetIfEmpty(z.string()),
     // Each key is read only when its Provider is chosen. A blank value, as in
     // .env.example, counts as unset.
     OPENAI_API_KEY: unsetIfEmpty(z.string()),
@@ -40,17 +46,20 @@ export const backendEnvSchema = liveKitEnvSchema
       openai: 'OPENAI_API_KEY',
       google: 'GOOGLE_API_KEY',
     } as const;
-    const provider = ctx.value.REPORT_PROVIDER;
-    if (provider === 'fake') return;
 
-    const name = keys[provider];
-    if (ctx.value[name] === undefined) {
-      ctx.issues.push({
-        code: 'custom',
-        message: `${name} is required when REPORT_PROVIDER is "${provider}"`,
-        path: [name],
-        input: ctx.value[name],
-      });
+    for (const setting of ['REPORT_PROVIDER', 'LEARNER_PROVIDER'] as const) {
+      const provider = ctx.value[setting];
+      if (provider === 'fake') continue;
+
+      const name = keys[provider];
+      if (ctx.value[name] === undefined) {
+        ctx.issues.push({
+          code: 'custom',
+          message: `${name} is required when ${setting} is "${provider}"`,
+          path: [name],
+          input: ctx.value[name],
+        });
+      }
     }
   });
 

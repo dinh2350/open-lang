@@ -1,5 +1,6 @@
 import type { Note } from '@open-lang/shared';
 import { z } from 'zod';
+import { answerFromProvider, unfence } from './provider-answer.js';
 import type { Role } from './turn-times.js';
 
 /** What the model reads: the Conversation's turns, in order, and its Notes. */
@@ -46,22 +47,6 @@ const assessmentAnswerSchema = z.object({
   improvements: z.array(z.string()),
 });
 
-const FENCE = '```';
-const FENCE_LANGUAGE = 'json';
-
-/** Removes a surrounding ``` or ```json code fence, if there is one. */
-function unfence(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length < 2 * FENCE.length) return trimmed;
-  if (!trimmed.startsWith(FENCE) || !trimmed.endsWith(FENCE)) return trimmed;
-
-  const inner = trimmed.slice(FENCE.length, -FENCE.length).trimStart();
-  const unlabelled = inner.toLowerCase().startsWith(FENCE_LANGUAGE)
-    ? inner.slice(FENCE_LANGUAGE.length)
-    : inner;
-  return unlabelled.trim();
-}
-
 /**
  * Asks a Provider for its answer and reads it as a draft. A failed request,
  * such as a timeout, becomes a ReportModelError that keeps the original as its
@@ -71,18 +56,10 @@ export async function draftFromProvider(
   provider: string,
   ask: () => Promise<string | undefined>,
 ): Promise<ReportDraft> {
-  let answer: string | undefined;
-  try {
-    answer = await ask();
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : 'unknown error';
-    throw new ReportModelError(`${provider} report request failed: ${reason}`, {
-      cause: error,
-    });
-  }
-  if (!answer) {
-    throw new ReportModelError(`${provider} returned an empty report.`);
-  }
+  const answer = await answerFromProvider(
+    { provider, subject: 'report', errorClass: ReportModelError },
+    ask,
+  );
   return parseReportDraft(answer);
 }
 
