@@ -32,6 +32,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
   conversations Conversation[]
+  learnerItems  LearnerItem[]
 }
 
 /// Keeps a User signed in for 7 days without their password (ADR 0003).
@@ -70,18 +71,21 @@ enum ReportStatus {
 /// One tutoring session of a User: created with the Room Token, in the room it
 /// names.
 model Conversation {
-  id        String    @id @default(uuid(7)) @db.Uuid
-  userId    String    @db.Uuid
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// The LiveKit room of the Conversation, `conversation-<uuid>`.
-  roomName  String    @unique
-  createdAt DateTime  @default(now())
+  roomName         String    @unique
+  createdAt        DateTime  @default(now())
   /// When the Agent said it had sent every turn and Note (the end marker);
   /// null while the Conversation runs, or when the Agent never said so.
-  endedAt   DateTime?
-  turns     Turn[]
-  notes     Note[]
-  report    Report?
+  endedAt          DateTime?
+  /// When the learner profile took in the Conversation's Notes; null while it
+  /// has not, so the Conversation is processed once.
+  learnerUpdatedAt DateTime?
+  turns            Turn[]
+  notes            Note[]
+  report           Report?
 
   @@index([userId, createdAt])
 }
@@ -137,4 +141,41 @@ model Report {
   content        Json?
   startedAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+/// Whether a LearnerItem is a whole sentence or one word or expression.
+enum LearnerItemKind {
+  phrase
+  word
+}
+
+/// One thing the tutor taught a User, kept across Conversations so the tutor
+/// can bring it back at spaced intervals.
+model LearnerItem {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  userId         String          @db.Uuid
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           LearnerItemKind
+  /// The English to learn, as the tutor first wrote it.
+  english        String
+  /// What it means or why, in Vietnamese.
+  meaning        String
+  /// `english` without case, extra spaces and closing punctuation, so two
+  /// spellings of one item are one item.
+  key            String
+  /// When the first Conversation that taught it took place.
+  firstSeenAt    DateTime
+  /// When the latest Conversation that taught or tested it took place.
+  lastSeenAt     DateTime
+  /// Days between its reviews; it grows when the User recalls it once due.
+  intervalDays   Int
+  /// When it is next due for review.
+  dueAt          DateTime
+  /// How many times the User recalled it once it was due.
+  correctRecalls Int             @default(0)
+  /// How many times the User missed it.
+  lapses         Int             @default(0)
+
+  @@unique([userId, key])
+  @@index([userId, lastSeenAt])
 }
