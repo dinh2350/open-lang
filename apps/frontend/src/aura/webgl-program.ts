@@ -107,6 +107,28 @@ function buildProgram(
   return program;
 }
 
+/** `UNMASKED_RENDERER_WEBGL` of the `WEBGL_debug_renderer_info` extension. */
+const UNMASKED_RENDERER_WEBGL = 0x9246;
+
+/**
+ * The names a renderer that draws on the CPU goes by: Chrome's SwiftShader,
+ * Mesa's llvmpipe and softpipe, Windows' WARP ("Basic Render Driver"), and any
+ * that calls itself software.
+ */
+const SOFTWARE_RENDERER =
+  /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+/**
+ * Whether `gl` draws on the CPU instead of a GPU, as on a virtual machine, over
+ * remote desktop, or with hardware acceleration off. A browser that does not
+ * say which renderer it uses counts as having a GPU.
+ */
+export function isSoftwareRenderer(gl: WebGLRenderingContext): boolean {
+  if (!gl.getExtension('WEBGL_debug_renderer_info')) return false;
+  const renderer: unknown = gl.getParameter(UNMASKED_RENDERER_WEBGL);
+  return typeof renderer === 'string' && SOFTWARE_RENDERER.test(renderer);
+}
+
 /**
  * Compiles and links `fragmentSource` with a vertex shader for a full-screen
  * quad. Returns `null` when that fails: the reason goes to `console.error`

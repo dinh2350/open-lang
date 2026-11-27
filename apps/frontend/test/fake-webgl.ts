@@ -6,12 +6,22 @@ import { vi } from 'vitest';
  * and every uniform location is an object named after its uniform, so a test
  * can read back what was drawn. It compiles and links unless a test says
  * otherwise, and `WEBGL_lose_context` marks it lost.
+ *
+ * With a `renderer`, it has `WEBGL_debug_renderer_info` and names that
+ * renderer as `UNMASKED_RENDERER_WEBGL`; without one, as some browsers do, it
+ * does not have the extension.
  */
-export function fakeWebGl() {
+export function fakeWebGl({ renderer }: { renderer?: string } = {}) {
   let lost = false;
   const loseContext = vi.fn(() => {
     lost = true;
   });
+  const extensions: Record<string, object> = {
+    WEBGL_lose_context: { loseContext },
+  };
+  if (renderer !== undefined) {
+    extensions.WEBGL_debug_renderer_info = { UNMASKED_RENDERER_WEBGL: 0x9246 };
+  }
   const fns = {
     createShader: vi.fn((type: number) => ({ type })),
     shaderSource: vi.fn<(shader: object, source: string) => void>(),
@@ -43,8 +53,9 @@ export function fakeWebGl() {
     viewport: vi.fn(),
     drawArrays: vi.fn(),
     isContextLost: vi.fn(() => lost),
-    getExtension: vi.fn((name: string) =>
-      name === 'WEBGL_lose_context' ? { loseContext } : null,
+    getExtension: vi.fn((name: string) => extensions[name] ?? null),
+    getParameter: vi.fn((parameter: number) =>
+      parameter === 0x9246 && renderer !== undefined ? renderer : null,
     ),
   };
   const constants = {

@@ -3,8 +3,10 @@ import { AURA_FRAGMENT_SHADER } from '@/aura/aura-shader';
 import {
   buildFragmentSource,
   createGlProgram,
+  isSoftwareRenderer,
   type Uniforms,
 } from '@/aura/webgl-program';
+import { fakeWebGl } from './fake-webgl';
 
 const SHADER_TOY_SOURCE = 'void mainImage(out vec4 c, in vec2 p){}';
 
@@ -253,5 +255,31 @@ describe('AURA_FRAGMENT_SHADER', () => {
         'uColor',
       ]),
     );
+  });
+});
+
+describe('isSoftwareRenderer', () => {
+  it.each([
+    'Google SwiftShader',
+    'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)',
+    'llvmpipe (LLVM 15.0.7, 256 bits)',
+    'softpipe',
+    'Microsoft Basic Render Driver',
+    'ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0)',
+    'Software Rasterizer',
+  ])('is true for %s', (renderer) => {
+    expect(isSoftwareRenderer(fakeWebGl({ renderer }).gl)).toBe(true);
+  });
+
+  it.each([
+    'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)',
+    'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+    'NVIDIA GeForce RTX 3060/PCIe/SSE2',
+  ])('is false for %s', (renderer) => {
+    expect(isSoftwareRenderer(fakeWebGl({ renderer }).gl)).toBe(false);
+  });
+
+  it('is false when the browser does not say which renderer it is', () => {
+    expect(isSoftwareRenderer(fakeWebGl().gl)).toBe(false);
   });
 });
