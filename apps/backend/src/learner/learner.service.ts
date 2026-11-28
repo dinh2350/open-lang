@@ -23,6 +23,7 @@ import {
   newSchedule,
   normalizeKey,
   statusOf,
+  type Outcome,
 } from './spacing.js';
 
 /** A Conversation with no end marker is taken as ended this long after it started. */
@@ -59,8 +60,36 @@ interface Lesson {
   readonly judgment: LearnerJudgment;
 }
 
+/** What the Notes of one Conversation did to the User's existing items. */
+interface Ledger {
+  /** The items a Note taught again. */
+  readonly taughtAgain: ReadonlySet<string>;
+  /** The tracked items a `correction` Note taught again: the User missed them. */
+  readonly corrected: ReadonlySet<string>;
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * The tracked item the model matched to each Note, by the Note's index: the
+ * first match of a Note counts, and a match to an index out of range or to
+ * an item the model was not asked about is ignored.
+ */
+function matchesOf(
+  { matches }: LearnerJudgment,
+  noteCount: number,
+  trackedIds: ReadonlySet<string>,
+): Map<number, string> {
+  const matched = new Map<number, string>();
+  for (const { noteIndex, itemId } of matches) {
+    const inRange = noteIndex >= 0 && noteIndex < noteCount;
+    if (inRange && trackedIds.has(itemId) && !matched.has(noteIndex)) {
+      matched.set(noteIndex, itemId);
+    }
+  }
+  return matched;
 }
 
 /** Keeps each User's learner items: what the tutor taught, and when to bring it back. */
@@ -252,29 +281,24 @@ export class LearnerService implements OnModuleDestroy {
         data: { learnerUpdatedAt: now },
       });
       if (count === 0) return;
-      const taughtAgain = await this.storeNotes(transaction, lesson);
-      await this.storeOutcomes(transaction, lesson, taughtAgain);
+      const ledger = await this.storeNotes(transaction, lesson);
+      await this.storeOutcomes(transaction, lesson, ledger);
     });
   }
 
   /**
    * Creates an item from each new Note. A Note with the key of an item, or
    * one the model matched to a tracked item, teaches that item again: only
-   * when it was last seen moves. Returns the ids of the items taught again.
+   * when it was last seen moves, unless it is a correction of a tracked item
+   * (see `storeOutcomes`). Returns the ids of the items taught again, and of
+   * the tracked items corrected.
    */
   private async storeNotes(
     transaction: Prisma.TransactionClient,
     { userId, at, notes, tracked, judgment }: Lesson,
-  ): Promise<Set<string>> {
+  ): Promise<Ledger> {
     const trackedIds = new Set(tracked.map(({ id }) => id));
-    const matched = new Map<number, string>();
-    for (const { noteIndex, itemId } of judgment.matches) {
-      const inRange = noteIndex >= 0 && noteIndex < notes.length;
-      if (inRange && trackedIds.has(itemId) && !matched.has(noteIndex)) {
-        matched.set(noteIndex, itemId);
-      }
-    }
-
+    const matched = matchesOf(judgment, notes.length, trackedIds);
     const keys = notes.map(({ english }) => normalizeKey(english));
     const existing = await transaction.learnerItem.findMany({
       where: { userId, key: { in: keys.filter((key) => key !== '') } },
@@ -283,12 +307,18 @@ export class LearnerService implements OnModuleDestroy {
     const idByKey = new Map(existing.map(({ id, key }) => [key, id]));
 
     const taughtAgain = new Set<string>();
+    const corrected = new Set<string>();
     for (const [index, note] of notes.entries()) {
       const key = keys[index] ?? '';
       if (key === '') continue;
       const itemId = idByKey.get(key) ?? matched.get(index);
       if (itemId !== undefined) {
         taughtAgain.add(itemId);
+        // Only a tracked item was there to be got wrong: one this
+        // Conversation created, or one seen after it, gets no lapse.
+        if (note.kind === 'correction' && trackedIds.has(itemId)) {
+          corrected.add(itemId);
+        }
         continue;
       }
       const created = await transaction.learnerItem.create({
@@ -312,27 +342,44 @@ export class LearnerService implements OnModuleDestroy {
       where: { id: { in: [...taughtAgain] }, lastSeenAt: { lt: at } },
       data: { lastSeenAt: at },
     });
-    return taughtAgain;
+    return { taughtAgain, corrected };
   }
 
   /**
-   * Applies the model's outcome to each tracked item it judged, once: the
-   * first outcome for an item counts, and an item taught again in this
-   * Conversation is not tested by it.
+   * Applies an outcome to each tracked item once. A tracked item the tutor
+   * corrected in this Conversation was missed, whatever the model says or
+   * whether it answered at all. Otherwise the model's first outcome for an
+   * item counts, except a recall of an item taught again in this
+   * Conversation: the User repeating what the tutor just taught proves
+   * nothing. A miss of such an item still counts.
+   *
+   * This deliberately refines "a Note with the key of an existing item only
+   * moves when it was last seen": a wrong profile must never hide what the
+   * User still needs, so any doubt may only shorten an interval, never keep
+   * a long one. A mastered item the User got wrong would otherwise stay
+   * mastered, and the next brief would tell the tutor not to teach it.
    */
   private async storeOutcomes(
     transaction: Prisma.TransactionClient,
     { at, tracked, judgment }: Lesson,
-    taughtAgain: ReadonlySet<string>,
+    { taughtAgain, corrected }: Ledger,
   ): Promise<void> {
-    const trackedById = new Map(tracked.map((item) => [item.id, item]));
+    const outcomes = new Map<string, Outcome>(
+      [...corrected].map((itemId) => [itemId, 'missed']),
+    );
     const judged = new Set<string>();
     for (const { itemId, outcome } of judgment.outcomes) {
-      const item = trackedById.get(itemId);
-      if (item === undefined || judged.has(itemId)) continue;
+      if (judged.has(itemId)) continue;
       judged.add(itemId);
-      if (taughtAgain.has(itemId)) continue;
+      if (corrected.has(itemId)) continue;
+      if (outcome === 'recalled' && taughtAgain.has(itemId)) continue;
+      outcomes.set(itemId, outcome);
+    }
 
+    const trackedById = new Map(tracked.map((item) => [item.id, item]));
+    for (const [itemId, outcome] of outcomes) {
+      const item = trackedById.get(itemId);
+      if (item === undefined) continue;
       const { schedule, effect } = applyOutcome(item, outcome, at);
       await transaction.learnerItem.update({
         where: { id: itemId },

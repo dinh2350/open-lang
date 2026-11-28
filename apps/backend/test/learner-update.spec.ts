@@ -437,7 +437,7 @@ describe('Updating the learner profile from ended Conversations', () => {
     });
   });
 
-  it('ignores judgments for ids it did not ask about, duplicates, and items re-taught in the same Conversation', async () => {
+  it('ignores judgments for ids it did not ask about, duplicates, and recalls of items re-taught in the same Conversation, but applies their misses', async () => {
     await endedConversation(app, ada.user, {
       room: 'r1',
       at: day(0),
@@ -463,10 +463,12 @@ describe('Updating the learner profile from ended Conversations', () => {
         { itemId: word.id, outcome: 'recalled' },
       ],
     });
+    // Both items are taught again: the recall of the phrase proves nothing,
+    // the miss of the word (its first outcome) still counts.
     await endedConversation(app, ada.user, {
       room: 'r2',
       at: day(2),
-      notes: [PHRASE],
+      notes: [PHRASE, WORD],
       turns: TURNS,
     });
 
@@ -487,6 +489,187 @@ describe('Updating the learner profile from ended Conversations', () => {
       lastSeenAt: day(2),
     });
     expect(await itemOf('agenda')).toEqual(untracked);
+  });
+
+  describe('a correction of a tracked item is a miss', () => {
+    const CORRECTION_KEY = normalizeKey(CORRECTION.english);
+
+    /** A mastered item, taught on day 0 and due on day 8, of the correction's sentence. */
+    const masteredItem = () =>
+      prisma.learnerItem.create({
+        data: learnerItemData(ada.user.id, {
+          kind: 'phrase',
+          key: CORRECTION_KEY,
+          english: CORRECTION.english,
+          meaning: CORRECTION.meaning,
+          intervalDays: 8,
+          dueAt: day(8),
+        }),
+      });
+
+    /** The mastered item after it was missed on day 9. */
+    const MISSED_ON_DAY_9 = {
+      intervalDays: 1,
+      dueAt: day(10),
+      lapses: 1,
+      correctRecalls: 0,
+      lastSeenAt: day(9),
+    };
+
+    it('resets a mastered item corrected with its key when the model judges nothing', async () => {
+      await masteredItem();
+      model.script = () => NOTHING;
+      await endedConversation(app, ada.user, {
+        room: 'r1',
+        at: day(9),
+        notes: [CORRECTION],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await prisma.learnerItem.count()).toBe(1);
+      expect(await itemOf(CORRECTION_KEY)).toMatchObject(MISSED_ON_DAY_9);
+    });
+
+    it('resets it when the model fails three times', async () => {
+      await masteredItem();
+      const script = vi.fn().mockRejectedValue(new Error('model down'));
+      model.script = script;
+      await endedConversation(app, ada.user, {
+        room: 'r1',
+        at: day(9),
+        notes: [CORRECTION],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(script).toHaveBeenCalledTimes(3);
+      expect(await itemOf(CORRECTION_KEY)).toMatchObject(MISSED_ON_DAY_9);
+      expect(await processedAt('r1')).toEqual(day(10));
+    });
+
+    it('resets it when the model matched a correction in other words to it', async () => {
+      const item = await masteredItem();
+      model.script = () => ({
+        matches: [{ noteIndex: 0, itemId: item.id }],
+        outcomes: [],
+      });
+      await endedConversation(app, ada.user, {
+        room: 'r1',
+        at: day(9),
+        notes: [
+          { ...CORRECTION, english: "I've been working here for two years." },
+        ],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await prisma.learnerItem.count()).toBe(1);
+      expect(await itemOf(CORRECTION_KEY)).toMatchObject(MISSED_ON_DAY_9);
+    });
+
+    it('stays a miss when the model says the item was recalled', async () => {
+      const item = await masteredItem();
+      model.script = () => ({
+        matches: [],
+        outcomes: [{ itemId: item.id, outcome: 'recalled' }],
+      });
+      await endedConversation(app, ada.user, {
+        room: 'r1',
+        at: day(9),
+        notes: [CORRECTION],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await itemOf(CORRECTION_KEY)).toMatchObject(MISSED_ON_DAY_9);
+    });
+
+    it('gives no lapse to an item the same Conversation created, nor to one seen after it', async () => {
+      await prisma.learnerItem.create({
+        data: learnerItemData(ada.user.id, {
+          lastSeenAt: day(12),
+          intervalDays: 8,
+          dueAt: day(20),
+        }),
+      });
+      await endedConversation(app, ada.user, {
+        room: 'r1',
+        at: day(9),
+        notes: [
+          CORRECTION,
+          CORRECTION,
+          { ...CORRECTION, english: WORD.english },
+        ],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await itemOf(CORRECTION_KEY)).toMatchObject({
+        intervalDays: 1,
+        dueAt: day(10),
+        lapses: 0,
+        firstSeenAt: day(9),
+        lastSeenAt: day(9),
+      });
+      expect(await itemOf('deadline')).toMatchObject({
+        intervalDays: 8,
+        dueAt: day(20),
+        lapses: 0,
+        lastSeenAt: day(12),
+      });
+    });
+
+    it('a phrase Note with the key of a tracked item, judged missed by the model, is a miss', async () => {
+      await taughtPhrase();
+      const phrase = await itemOf(PHRASE_KEY);
+      await prisma.learnerItem.update({
+        where: { id: phrase.id },
+        data: { intervalDays: 8, dueAt: day(8) },
+      });
+      model.script = () => ({
+        matches: [],
+        outcomes: [{ itemId: phrase.id, outcome: 'missed' }],
+      });
+      await endedConversation(app, ada.user, {
+        room: 'r2',
+        at: day(9),
+        notes: [PHRASE],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await itemOf(PHRASE_KEY)).toMatchObject(MISSED_ON_DAY_9);
+    });
+
+    it('a phrase Note with the key of a tracked item, and no outcome, only re-teaches it', async () => {
+      await taughtPhrase();
+      await prisma.learnerItem.updateMany({
+        data: { intervalDays: 8, dueAt: day(8) },
+      });
+      model.script = () => NOTHING;
+      await endedConversation(app, ada.user, {
+        room: 'r2',
+        at: day(9),
+        notes: [PHRASE],
+        turns: TURNS,
+      });
+
+      await service.processPending(ada.user.id, day(10));
+
+      expect(await itemOf(PHRASE_KEY)).toMatchObject({
+        intervalDays: 8,
+        dueAt: day(8),
+        lapses: 0,
+        lastSeenAt: day(9),
+      });
+    });
   });
 
   it('ignores a note index out of range', async () => {
