@@ -8,8 +8,16 @@ export const INTERVAL_GROWTH_FACTOR = 2;
 export const MASTERED_INTERVAL_DAYS = 7;
 
 const MILLISECONDS_PER_DAY = 86_400_000;
-/** Characters that end a sentence or a clause, and carry no part of the item. */
-const TRAILING_NOISE = new Set([' ', '.', '!', '?', ',']);
+/** Quotes around an item, which carry no part of it. */
+const QUOTES = ['"', "'"];
+/** What may come before an item and carries no part of it. */
+const LEADING_NOISE = new Set([' ', ...QUOTES]);
+/**
+ * What may come after an item and carries no part of it: what ends a
+ * sentence or a clause, and closing quotes. NFKC has already turned `…` into
+ * three dots.
+ */
+const TRAILING_NOISE = new Set([' ', '.', '!', '?', ',', ';', ':', ...QUOTES]);
 
 /** When an item is next due, and how far apart its reviews are now. */
 export interface Schedule {
@@ -34,15 +42,23 @@ function scheduleFrom(at: Date, intervalDays: number): Schedule {
 }
 
 /**
- * The key two spellings of the same English item share: case, runs of
- * whitespace and the punctuation that ends a sentence do not tell items
- * apart. Punctuation inside the item stays.
+ * The key two spellings of the same English item share: Unicode forms,
+ * typographic quotes, case, runs of whitespace, surrounding quotes and the
+ * punctuation that ends a sentence do not tell items apart. Punctuation
+ * inside the item stays. Notes are written by models, which mix `’` and `'`.
  */
 export function normalizeKey(english: string): string {
-  const spaced = english.toLowerCase().replaceAll(/\s+/g, ' ').trim();
+  const spaced = english
+    .normalize('NFKC')
+    .replaceAll(/[‘’]/g, "'")
+    .replaceAll(/[“”]/g, '"')
+    .toLowerCase()
+    .replaceAll(/\s+/g, ' ');
   let end = spaced.length;
   while (end > 0 && TRAILING_NOISE.has(spaced.charAt(end - 1))) end--;
-  return spaced.slice(0, end);
+  let start = 0;
+  while (start < end && LEADING_NOISE.has(spaced.charAt(start))) start++;
+  return spaced.slice(start, end);
 }
 
 export function newSchedule(at: Date): Schedule {

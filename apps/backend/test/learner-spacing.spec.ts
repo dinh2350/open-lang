@@ -102,6 +102,23 @@ describe('learner spacing', () => {
     ['a   b\nc', 'a b c'],
     ['Hello, world ... ', 'hello, world'],
     ['Really?!', 'really'],
+    [
+      'I’d like to reschedule the meeting',
+      "i'd like to reschedule the meeting",
+    ],
+    [
+      "I'd like to reschedule the meeting.",
+      "i'd like to reschedule the meeting",
+    ],
+    ['“Deadline”', 'deadline'],
+    ['"Deadline."', 'deadline'],
+    ["'agenda'", 'agenda'],
+    ['wait…', 'wait'],
+    ['as follows:', 'as follows'],
+    ['see you then;', 'see you then'],
+    ['Don’t worry', "don't worry"],
+    ['Ａgenda', 'agenda'],
+    ['?!… "', ''],
   ])('normalizeKey(%j) is %j', (english, key) => {
     expect(normalizeKey(english)).toBe(key);
   });
