@@ -1,5 +1,6 @@
 import {
   type AuthResponse,
+  learnerBriefSchema,
   roomTokenResponseSchema,
   type RoomTokenRequest,
 } from '@open-lang/shared';
@@ -7,9 +8,11 @@ import type { INestApplication } from '@nestjs/common';
 import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { LearnerService } from '../src/learner/learner.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { signInFirstAdmin } from './support/admins.js';
+import { day, endedConversation, learnerItemData } from './support/learner.js';
 import { startTestApp, stopTestApp, testEnv } from './support/test-app.js';
 import { registerUser } from './support/users.js';
 
@@ -17,6 +20,7 @@ const TEN_MINUTES_IN_SECONDS = 600;
 
 describe('POST /api/token (Room Token endpoint)', () => {
   let app: INestApplication<App>;
+  let prisma: PrismaService;
   let signedIn: AuthResponse;
   const verifier = new TokenVerifier(
     testEnv.LIVEKIT_API_KEY,
@@ -25,10 +29,12 @@ describe('POST /api/token (Room Token endpoint)', () => {
 
   beforeEach(async () => {
     app = await startTestApp();
+    prisma = app.get(PrismaService);
     signedIn = await registerUser(app);
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await stopTestApp(app);
   });
 
@@ -47,11 +53,24 @@ describe('POST /api/token (Room Token endpoint)', () => {
     return { roomToken, claims };
   }
 
-  const storedConversations = () => app.get(PrismaService).conversation.count();
+  const storedConversations = () => prisma.conversation.count();
 
   function agentNamesDispatchedBy(claims: ClaimGrants): string[] {
     return (claims.roomConfig?.agents ?? []).map((agent) => agent.agentName);
   }
+
+  /** The dispatch metadata of the Room Token; empty when it has none. */
+  const metadataOf = (claims: ClaimGrants): string =>
+    claims.roomConfig?.agents[0]?.metadata ?? '';
+
+  /** A learner item of the User: the phrase "I'd like to reschedule the meeting." */
+  const phraseOf = (userId: string) =>
+    learnerItemData(userId, {
+      kind: 'phrase',
+      english: "I'd like to reschedule the meeting.",
+      meaning: 'Tôi muốn dời cuộc họp.',
+      key: "i'd like to reschedule the meeting",
+    });
 
   it('returns 401 without an Auth Token', async () => {
     const response = await postRoomTokenRequest({});
@@ -145,6 +164,93 @@ describe('POST /api/token (Room Token endpoint)', () => {
     expect(agents).toHaveLength(1);
     expect(agents[0]?.metadata ?? '').toBe('');
     expect(await storedConversations()).toBe(1);
+  });
+
+  it('dispatches no metadata for a User with no items', async () => {
+    const { claims } = await requestRoomToken();
+
+    expect(metadataOf(claims)).toBe('');
+  });
+
+  it("carries the User's brief as the dispatch metadata", async () => {
+    await prisma.learnerItem.create({ data: phraseOf(signedIn.user.id) });
+
+    const { claims } = await requestRoomToken();
+
+    const metadata = metadataOf(claims);
+    expect(learnerBriefSchema.parse(JSON.parse(metadata))).toEqual({
+      version: 1,
+      items: [
+        {
+          english: "I'd like to reschedule the meeting.",
+          meaning: 'Tôi muốn dời cuộc họp.',
+          status: 'learning',
+        },
+      ],
+    });
+  });
+
+  it("never carries another User's items", async () => {
+    const grace = await registerUser(app, 'grace@example.test');
+    await prisma.learnerItem.create({ data: phraseOf(grace.user.id) });
+
+    const { claims } = await requestRoomToken();
+
+    expect(metadataOf(claims)).toBe('');
+  });
+
+  it('ignores client-supplied dispatch metadata', async () => {
+    const { claims } = await requestRoomToken({
+      room_config: { agents: [{ agent_name: 'x', metadata: 'evil' }] },
+    });
+
+    expect(metadataOf(claims)).toBe('');
+  });
+
+  it("sends the User's brief, not the client's metadata, to a User with items", async () => {
+    await prisma.learnerItem.create({ data: phraseOf(signedIn.user.id) });
+
+    const { claims } = await requestRoomToken({
+      room_config: { agents: [{ agent_name: 'x', metadata: 'evil' }] },
+    });
+
+    // 'evil' is not JSON: the metadata parses only when it is the brief.
+    const brief = learnerBriefSchema.parse(JSON.parse(metadataOf(claims)));
+    expect(brief.items.map(({ english }) => english)).toEqual([
+      "I'd like to reschedule the meeting.",
+    ]);
+  });
+
+  it('still issues the Room Token when building the brief fails', async () => {
+    vi.spyOn(app.get(LearnerService), 'briefFor').mockRejectedValue(
+      new Error('db'),
+    );
+
+    const { claims } = await requestRoomToken();
+
+    expect(agentNamesDispatchedBy(claims)).toEqual([testEnv.AGENT_NAME]);
+    expect(metadataOf(claims)).toBe('');
+  });
+
+  it('processes a missed Conversation at the next Room Token', async () => {
+    await endedConversation(app, signedIn.user, {
+      room: 'missed-room',
+      at: day(0),
+      notes: [
+        {
+          kind: 'phrase',
+          english: "I'd like to reschedule the meeting.",
+          meaning: 'Tôi muốn dời cuộc họp.',
+          said: null,
+        },
+      ],
+    });
+
+    await requestRoomToken();
+
+    await vi.waitFor(async () => {
+      expect(await prisma.learnerItem.count()).toBe(1);
+    });
   });
 
   it('rejects a body that is not in the standard token request shape', async () => {

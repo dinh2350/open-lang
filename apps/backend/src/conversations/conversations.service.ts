@@ -11,6 +11,7 @@ import {
   type User,
 } from '@open-lang/shared';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { LearnerService } from '../learner/learner.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { conversationDurationSeconds } from '../reports/fluency.js';
 import {
@@ -35,7 +36,10 @@ const summarySelect = {
 export class ConversationsService {
   private readonly logger = new Logger(ConversationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly learner: LearnerService,
+  ) {}
 
   /** Records a new Conversation of the User, in the room the Room Token names. */
   async create(user: User, roomName: string): Promise<void> {
@@ -132,7 +136,7 @@ export class ConversationsService {
    * A repeat that leaves out `endedAt` keeps the one stored.
    */
   async recordTurn(roomName: string, turn: TurnIngest): Promise<void> {
-    const conversationId = await this.conversationIdOf(roomName);
+    const { id: conversationId } = await this.conversationOf(roomName);
     const times = {
       startedAt: new Date(turn.startedAt),
       endedAt: turn.endedAt === undefined ? undefined : new Date(turn.endedAt),
@@ -156,7 +160,7 @@ export class ConversationsService {
    * Conversation holds `MAX_NOTES_PER_CONVERSATION` Notes, the rest are ignored.
    */
   async recordNote(roomName: string, note: Note): Promise<void> {
-    const conversationId = await this.conversationIdOf(roomName);
+    const { id: conversationId } = await this.conversationOf(roomName);
     const stored = await this.prisma.note.count({ where: { conversationId } });
     if (stored >= MAX_NOTES_PER_CONVERSATION) return;
     await this.prisma.note.upsert({
@@ -177,26 +181,28 @@ export class ConversationsService {
    * all it had. Only the first marker counts; a repeat changes nothing.
    */
   async recordEnd(roomName: string): Promise<void> {
-    const { count } = await this.prisma.conversation.updateMany({
+    const { userId } = await this.conversationOf(roomName);
+    await this.prisma.conversation.updateMany({
       where: { roomName, endedAt: null },
       data: { endedAt: new Date() },
     });
-    if (count === 0) {
-      // Ended already, or there is no such room: tell them apart.
-      await this.conversationIdOf(roomName);
-    }
+    // Whether or not this call set the end: processing is idempotent. Not
+    // awaited, so the Agent's request does not wait for the model; it never rejects.
+    void this.learner.processPending(userId);
   }
 
   /** `404` when no Conversation was created for the room. */
-  private async conversationIdOf(roomName: string): Promise<string> {
+  private async conversationOf(
+    roomName: string,
+  ): Promise<{ id: string; userId: string }> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { roomName },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
     if (conversation === null) {
       throw new NotFoundException('There is no Conversation in that room.');
     }
-    return conversation.id;
+    return conversation;
   }
 }
 

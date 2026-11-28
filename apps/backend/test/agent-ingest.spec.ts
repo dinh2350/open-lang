@@ -7,10 +7,13 @@ import {
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConversationsService } from '../src/conversations/conversations.service.js';
+import { FakeLearnerModel } from '../src/learner/fake-learner-model.js';
+import { LEARNER_MODEL } from '../src/learner/learner-model.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { ingestNote, listNotes } from './support/conversations.js';
+import { ingestNote, ingestTurn, listNotes } from './support/conversations.js';
+import { learnerItemData } from './support/learner.js';
 import { startTestApp, stopTestApp, testEnv } from './support/test-app.js';
 import { registerUser } from './support/users.js';
 
@@ -21,9 +24,13 @@ const ENDED_AT = '2026-11-23T10:00:04.500Z';
 describe('The Agent ingest API', () => {
   let app: INestApplication<App>;
   let signedIn: AuthResponse;
+  let model: FakeLearnerModel;
 
   beforeEach(async () => {
-    app = await startTestApp();
+    model = new FakeLearnerModel();
+    app = await startTestApp({}, (builder) =>
+      builder.overrideProvider(LEARNER_MODEL).useValue(model),
+    );
     signedIn = await registerUser(app);
     await app.get(ConversationsService).create(signedIn.user, ROOM_NAME);
   });
@@ -318,6 +325,54 @@ describe('The Agent ingest API', () => {
     expect(await storedNotes()).toMatchObject([
       { kind: 'phrase', english: 'I finished the report yesterday.' },
     ]);
+  });
+
+  it("the end marker creates the User's items from the Conversation's notes", async () => {
+    await ingestNote(app, ROOM_NAME, note());
+
+    const response = await ingest('end', {});
+
+    expect(response.status).toBe(204);
+    await vi.waitFor(async () => {
+      const items = await app.get(PrismaService).learnerItem.findMany();
+      expect(items).toMatchObject([
+        {
+          userId: signedIn.user.id,
+          english: 'I finished the report yesterday.',
+        },
+      ]);
+    });
+  });
+
+  it('a failing update does not fail the end marker', async () => {
+    const prisma = app.get(PrismaService);
+    // An earlier item and a turn: the model is asked about the Conversation.
+    await prisma.learnerItem.create({
+      data: learnerItemData(signedIn.user.id),
+    });
+    await ingestTurn(app, ROOM_NAME, {
+      itemId: 'item-1',
+      role: 'user',
+      text: 'I finished the report yesterday.',
+      startedAt: STARTED_AT,
+    });
+    await ingestNote(app, ROOM_NAME, note());
+    const asked = vi.fn();
+    model.script = () => {
+      asked();
+      throw new Error('the model is down');
+    };
+
+    const response = await ingest('end', {});
+
+    expect(response.status).toBe(204);
+    await vi.waitFor(() => {
+      expect(asked).toHaveBeenCalled();
+    });
+    // The Notes are kept without a judgment.
+    await vi.waitFor(async () => {
+      expect(await prisma.learnerItem.count()).toBe(2);
+    });
   });
 
   it('the end route is Agent-only, 404 for unknown rooms and idempotent', async () => {
