@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { initializeLogger, llm, voice } from '@livekit/agents';
-import type { Note } from '@open-lang/shared';
+import type { LearnerBrief, Note } from '@open-lang/shared';
 import { afterEach } from 'vitest';
 import { createBackendClient } from '../../src/backend-client.ts';
 import {
@@ -69,15 +69,19 @@ function judgeOf(provider: LiveTarget['provider']): llm.LLM {
  * Registers the cleanup of the tutors a describe block starts, and returns
  * the function that starts one: a fresh tutor in the given Agent Mode, with
  * the `saveNote` tool wired to a fake backend, that has said its opening
- * line. Without a room, as LiveKit's testing docs do: the User types.
+ * line. It knows what the User has already studied from the learner brief it
+ * is given, if any, as a job passes it from the dispatch metadata. Without a
+ * room, as LiveKit's testing docs do: the User types.
  */
-export function liveTutor(target: LiveTarget): () => Promise<LiveTutor> {
+export function liveTutor(
+  target: LiveTarget,
+): (brief?: LearnerBrief) => Promise<LiveTutor> {
   const cleanups: (() => Promise<void>)[] = [];
   afterEach(async () => {
     await Promise.all(cleanups.splice(0).map((cleanup) => cleanup()));
   });
 
-  return async () => {
+  return async (brief) => {
     initializeLogger({ pretty: true, level: 'warn' });
     const config = loadAgentConfig(agentEnvironment(target));
     const session = new voice.AgentSession(createSessionOptions(config));
@@ -97,6 +101,7 @@ export function liveTutor(target: LiveTarget): () => Promise<LiveTutor> {
       tools: [createSaveNoteTool({ backend: client, roomName: ROOM })],
       // As the job does: Gemini Live's tutor calls the tool before it speaks.
       noteOrder: noteOrderOf(config),
+      brief,
     });
 
     return {

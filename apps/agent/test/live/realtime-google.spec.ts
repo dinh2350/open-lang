@@ -4,15 +4,17 @@
 import { describe, expect, it } from 'vitest';
 import { hasGoogleCredentials } from './google-credentials.ts';
 import { liveTutor } from './live-tutor.ts';
-import { basicChecks } from './tutor-checks.ts';
+import { basicChecks, learnerBriefChecks } from './tutor-checks.ts';
 
 describe.skipIf(!hasGoogleCredentials(process.env))(
   'Agent in Realtime mode with Google (live)',
   () => {
     const start = liveTutor({ mode: 'realtime', provider: 'google' });
 
-    it.each(basicChecks)('$name', async (check) => {
-      await expect(check.run(await start())).resolves.toBeUndefined();
+    it.each([...basicChecks, ...learnerBriefChecks])('$name', async (check) => {
+      await expect(
+        check.run(await start(check.brief)),
+      ).resolves.toBeUndefined();
     });
   },
 );

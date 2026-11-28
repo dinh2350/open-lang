@@ -1,3 +1,8 @@
+import {
+  LEARNER_BRIEF_VERSION,
+  type LearnerBrief,
+  type LearnerBriefItem,
+} from '@open-lang/shared';
 import { expect } from 'vitest';
 import { assertAgentMessage } from '../agent-messages.ts';
 import type { LiveTutor } from './live-tutor.ts';
@@ -10,6 +15,8 @@ import type { LiveTutor } from './live-tutor.ts';
 export interface TutorCheck {
   /** The name of the test that runs the check. */
   name: string;
+  /** What the tutor knows the User has studied when the check starts it. */
+  brief?: LearnerBrief;
   run(tutor: LiveTutor): Promise<void>;
 }
 
@@ -108,6 +115,90 @@ export const repeatingChecks: readonly TutorCheck[] = [
       turn.expect.containsFunctionCall({ name: 'saveNote' });
       const missed = tutor.notes().filter(({ kind }) => kind === 'missed');
       expect(missed, 'the missed notes the tutor saved').not.toHaveLength(0);
+    },
+  },
+];
+
+/** The sentence the tutor must not teach as new in the first learner brief check. */
+const MASTERED_SENTENCE = "I'd like to reschedule the meeting.";
+
+function briefOf(items: LearnerBriefItem[]): LearnerBrief {
+  return { version: LEARNER_BRIEF_VERSION, items };
+}
+
+/**
+ * A sentence as it compares in a note: the model may save it without its
+ * final punctuation mark, in other case or with a typographic apostrophe,
+ * and it is still the same sentence.
+ */
+function sentenceKey(sentence: string): string {
+  return sentence
+    .trim()
+    .toLowerCase()
+    .replaceAll('\u2019', "'")
+    .replace(/[.!?]$/, '');
+}
+
+/**
+ * The checks of the learner brief: what the User has already studied changes
+ * what the tutor teaches, and the tutor does not recite it. Each check starts
+ * the tutor with its brief. The first fails when the tutor ignores the brief;
+ * the second fails when it uses the brief too much.
+ */
+export const learnerBriefChecks: readonly TutorCheck[] = [
+  {
+    name: 'the tutor does not teach a mastered item as new',
+    brief: briefOf([
+      {
+        english: MASTERED_SENTENCE,
+        meaning: 'Tôi muốn dời cuộc họp.',
+        status: 'mastered',
+      },
+    ]),
+    run: async (tutor) => {
+      const turn = await tutor.say(
+        'Dạy mình cách xin dời lịch họp bằng tiếng Anh.',
+      );
+
+      await turn.expect
+        .containsMessage({ role: 'assistant' })
+        .judge(tutor.judge, {
+          intent: `Does not teach the sentence "${MASTERED_SENTENCE}" from scratch: it may say the User already knows it, or give a different expression or new content`,
+        });
+      const saved = tutor.notes().map(({ english }) => sentenceKey(english));
+      expect(
+        saved,
+        'the sentences of the notes the tutor saved, none of them the mastered one',
+      ).not.toContain(sentenceKey(MASTERED_SENTENCE));
+    },
+  },
+  {
+    name: 'the tutor does not read the list aloud',
+    brief: briefOf([
+      {
+        english: MASTERED_SENTENCE,
+        meaning: 'Tôi muốn dời cuộc họp.',
+        status: 'mastered',
+      },
+      {
+        english: 'Could you send me the report by Friday?',
+        meaning: 'Bạn gửi cho mình báo cáo trước thứ Sáu được không?',
+        status: 'learning',
+      },
+      {
+        english: "I'll get back to you by the end of the day.",
+        meaning: 'Mình sẽ phản hồi bạn trước cuối ngày.',
+        status: 'learning',
+      },
+    ]),
+    run: async (tutor) => {
+      const turn = await tutor.say('Chào bạn');
+
+      await turn.expect
+        .containsMessage({ role: 'assistant' })
+        .judge(tutor.judge, {
+          intent: 'Does not list or read out the items the User studied before',
+        });
     },
   },
 ];

@@ -4,15 +4,24 @@
 // exact words.
 import { describe, expect, it } from 'vitest';
 import { liveTutor } from './live-tutor.ts';
-import { basicChecks, repeatingChecks } from './tutor-checks.ts';
+import {
+  basicChecks,
+  learnerBriefChecks,
+  repeatingChecks,
+} from './tutor-checks.ts';
 
 describe.skipIf(!process.env.OPENAI_API_KEY)(
   'Agent in Realtime mode with OpenAI (live)',
   () => {
     const start = liveTutor({ mode: 'realtime', provider: 'openai' });
 
-    it.each([...basicChecks, ...repeatingChecks])('$name', async (check) => {
-      await expect(check.run(await start())).resolves.toBeUndefined();
-    });
+    it.each([...basicChecks, ...repeatingChecks, ...learnerBriefChecks])(
+      '$name',
+      async (check) => {
+        await expect(
+          check.run(await start(check.brief)),
+        ).resolves.toBeUndefined();
+      },
+    );
   },
 );

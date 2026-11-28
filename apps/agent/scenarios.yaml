@@ -2,10 +2,11 @@
 # The CLI offers to add the `id` each scenario needs on its first run.
 # Format: https://docs.livekit.io/testing/simulations/write-a-scenario/
 #
-# The Agent needs no job metadata: every Conversation is the same lesson, so
-# the simulator can dispatch it as it is. It posts the transcript and its
-# notes to BACKEND_URL as usual; with no backend there, the posts fail with a
-# warning and the tutor goes on.
+# The Agent reads job metadata only for the learner brief and runs without it:
+# without a brief every Conversation is the same lesson, so the simulator can
+# dispatch it as it is. It posts the transcript and its notes to BACKEND_URL as
+# usual; with no backend there, the posts fail with a warning and the tutor
+# goes on.
 name: English Tutor
 scenarios:
   - label: The tutor opens in Vietnamese and asks what to learn
