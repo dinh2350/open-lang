@@ -1,4 +1,9 @@
-import type { NoteKind } from '@open-lang/shared';
+import {
+  LEARNER_BRIEF_LIMITS,
+  LEARNER_BRIEF_VERSION,
+  type LearnerBrief,
+  type NoteKind,
+} from '@open-lang/shared';
 import {
   Inject,
   Injectable,
@@ -13,7 +18,12 @@ import {
   type LearnerJudgment,
   type LearnerModel,
 } from './learner-model.js';
-import { applyOutcome, newSchedule, normalizeKey } from './spacing.js';
+import {
+  applyOutcome,
+  newSchedule,
+  normalizeKey,
+  statusOf,
+} from './spacing.js';
 
 /** A Conversation with no end marker is taken as ended this long after it started. */
 const UNMARKED_END_MS = 6 * 3_600_000;
@@ -86,6 +96,43 @@ export class LearnerService implements OnModuleDestroy {
       });
     this.runs.set(userId, run);
     return run;
+  }
+
+  /**
+   * What the Agent is told about the User before a Conversation: the items
+   * the User saw most recently, newest first, with whether each is still being
+   * learned. It holds at most `LEARNER_BRIEF_LIMITS.items` items and its JSON
+   * at most `LEARNER_BRIEF_LIMITS.bytes` bytes: the oldest items are left out
+   * to fit. Rejects when the database fails, so the caller can go without it.
+   */
+  async briefFor(
+    userId: string,
+    now: Date = new Date(),
+  ): Promise<LearnerBrief> {
+    const stored = await this.prisma.learnerItem.findMany({
+      where: { userId },
+      orderBy: [{ lastSeenAt: 'desc' }, { id: 'asc' }],
+      take: LEARNER_BRIEF_LIMITS.items,
+      select: {
+        english: true,
+        meaning: true,
+        intervalDays: true,
+        dueAt: true,
+      },
+    });
+    const items = stored.map(({ english, meaning, intervalDays, dueAt }) => ({
+      english,
+      meaning,
+      status: statusOf({ intervalDays, dueAt }, now),
+    }));
+    const brief: LearnerBrief = { version: LEARNER_BRIEF_VERSION, items };
+    while (
+      items.length > 0 &&
+      Buffer.byteLength(JSON.stringify(brief)) > LEARNER_BRIEF_LIMITS.bytes
+    ) {
+      items.pop();
+    }
+    return brief;
   }
 
   /** Waits for the runs in progress, so none is cut off by the shutdown. */
