@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 
 /** Where the backend that playwright.config.ts starts listens. */
-const BACKEND_URL = 'http://localhost:3000';
+export const BACKEND_URL = 'http://localhost:3000';
 
 /** One finished turn, as the Agent reports it. */
 export interface PostedTurn {
@@ -41,8 +41,12 @@ function agentApiKey(): string {
   return key;
 }
 
-/** The `video.room` claim of a LiveKit Room Token: the Conversation's room. */
-export function roomNameOfToken(jwt: string): string {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/** The claims a LiveKit Room Token carries, read without checking its signature. */
+function claimsOfToken(jwt: string): Record<string, unknown> {
   const parts = jwt.split('.');
   if (parts.length !== 3) {
     throw new Error('The Room Token is not a JWT.');
@@ -51,18 +55,44 @@ export function roomNameOfToken(jwt: string): string {
   const claims: unknown = JSON.parse(
     Buffer.from(payload, 'base64url').toString('utf8'),
   );
-  if (
-    typeof claims === 'object' &&
-    claims !== null &&
-    'video' in claims &&
-    typeof claims.video === 'object' &&
-    claims.video !== null &&
-    'room' in claims.video &&
-    typeof claims.video.room === 'string'
-  ) {
-    return claims.video.room;
+  if (!isRecord(claims)) {
+    throw new Error('The Room Token has no claims.');
+  }
+  return claims;
+}
+
+/** The `video.room` claim of a LiveKit Room Token: the Conversation's room. */
+export function roomNameOfToken(jwt: string): string {
+  const { video } = claimsOfToken(jwt);
+  if (isRecord(video) && typeof video.room === 'string') {
+    return video.room;
   }
   throw new Error('The Room Token names no room.');
+}
+
+/**
+ * The metadata of the Agent dispatch the Room Token carries
+ * (`roomConfig.agents[0].metadata`): where the backend puts the learner
+ * brief. Undefined when the dispatch has none, which a decoded token shows as
+ * a missing claim or as an empty string. Throws when the token dispatches no
+ * Agent at all, so a token that is not the backend's cannot pass for one
+ * without metadata.
+ */
+export function dispatchMetadataOfToken(jwt: string): string | undefined {
+  const { roomConfig } = claimsOfToken(jwt);
+  const agents = isRecord(roomConfig) ? roomConfig.agents : undefined;
+  const dispatch: unknown = Array.isArray(agents) ? agents[0] : undefined;
+  if (!isRecord(dispatch)) {
+    throw new Error('The Room Token dispatches no Agent.');
+  }
+  const { metadata } = dispatch;
+  if (metadata === undefined || metadata === '') {
+    return undefined;
+  }
+  if (typeof metadata !== 'string') {
+    throw new Error('The dispatch metadata of the Room Token is not a string.');
+  }
+  return metadata;
 }
 
 /**
@@ -90,8 +120,8 @@ export async function roomNameOfNextConversation(page: Page): Promise<string> {
 
 async function postToAgentIngest(
   roomName: string,
-  path: 'turns' | 'notes',
-  body: object,
+  path: 'turns' | 'notes' | 'end',
+  body?: object,
 ): Promise<void> {
   const response = await fetch(
     `${BACKEND_URL}/api/agent/conversations/${encodeURIComponent(roomName)}/${path}`,
@@ -99,9 +129,10 @@ async function postToAgentIngest(
       method: 'POST',
       headers: {
         Authorization: `Bearer ${agentApiKey()}`,
-        'Content-Type': 'application/json',
+        // The end marker has no body, as the Agent sends it.
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
       },
-      body: JSON.stringify(body),
+      ...(body !== undefined && { body: JSON.stringify(body) }),
     },
   );
   if (response.status !== 204) {
@@ -131,6 +162,15 @@ export async function postNote(
   note: PostedNote,
 ): Promise<void> {
   await postToAgentIngest(roomName, 'notes', note);
+}
+
+/**
+ * Posts the end marker of the Conversation in `roomName`, as the Agent does
+ * once it has sent every turn and Note: the backend may now write the Report
+ * and update the User's learner profile.
+ */
+export async function postEnd(roomName: string): Promise<void> {
+  await postToAgentIngest(roomName, 'end');
 }
 
 /** A moment `seconds` before now; after now when `seconds` is negative. */

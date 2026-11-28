@@ -104,6 +104,9 @@ export default defineConfig({
         AGENT_API_KEY,
         // Canned Reports: no AI calls, and an outcome the tests can check.
         REPORT_PROVIDER: 'fake',
+        // The learner profile's model judges nothing, so no AI calls and
+        // intervals never move; the Notes still become items.
+        LEARNER_PROVIDER: 'fake',
       },
       reuseExistingServer: false,
       timeout: 60_000,

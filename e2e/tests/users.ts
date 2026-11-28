@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 
 /** A random private IPv4 address, 10.x.y.z. */
-function randomClientAddress(): string {
+export function randomClientAddress(): string {
   return ['10', ...randomBytes(3)].join('.');
 }
 

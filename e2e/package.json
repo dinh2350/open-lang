@@ -7,6 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@open-lang/shared": "workspace:*",
     "@playwright/test": "^1.65.1",
     "@types/node": "catalog:",
     "typescript": "catalog:"
