@@ -23,9 +23,9 @@ const NOTE_ORDER_LINE: Readonly<Record<NoteOrder, string>> = {
 /**
  * The tutor's instructions. The model reads them, so they are in English,
  * one idea per sentence, one sentence per line. The rules do not say when the
- * tutor calls saveNote; the last rule does, in the given order. The learner
- * brief, when it has items, adds its lines at the end and changes nothing
- * before them.
+ * tutor calls saveNote; the note-order line says when, in the given order.
+ * The learner brief, when it has items, adds its lines at the end and changes
+ * nothing before them.
  */
 export function tutorInstructions(
   order: NoteOrder,

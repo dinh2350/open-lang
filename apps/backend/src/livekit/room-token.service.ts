@@ -9,6 +9,7 @@ import {
 } from 'livekit-server-sdk';
 import { ConversationsService } from '../conversations/conversations.service.js';
 import { LearnerService } from '../learner/learner.service.js';
+import { messageOf } from '../message-of.js';
 
 const ROOM_TOKEN_TTL = '10m';
 
@@ -73,16 +74,18 @@ export class RoomTokenService {
   /**
    * The User's brief as the dispatch metadata, or undefined when the User has
    * no items or the brief could not be built: the Conversation goes ahead
-   * without it. Only the User id is logged, never what the User learned.
+   * without it. Only the User id and the error's message (a database error,
+   * which carries nothing the User learned) are logged, never the items.
    */
   private async briefMetadataOf(user: User): Promise<string | undefined> {
     try {
       const brief = await this.learner.briefFor(user.id);
       return brief.items.length > 0 ? JSON.stringify(brief) : undefined;
-    } catch {
+    } catch (error) {
       this.logger.warn({
         message: 'Could not build the learner brief; dispatching without it',
         userId: user.id,
+        error: messageOf(error),
       });
       return undefined;
     }

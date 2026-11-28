@@ -4,7 +4,7 @@ import {
   roomTokenResponseSchema,
   type RoomTokenRequest,
 } from '@open-lang/shared';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 import { type ClaimGrants, TokenVerifier } from 'livekit-server-sdk';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -221,15 +221,21 @@ describe('POST /api/token (Room Token endpoint)', () => {
     ]);
   });
 
-  it('still issues the Room Token when building the brief fails', async () => {
+  it('still issues the Room Token when building the brief fails, and logs why', async () => {
     vi.spyOn(app.get(LearnerService), 'briefFor').mockRejectedValue(
       new Error('db'),
     );
+    const warn = vi.spyOn(Logger.prototype, 'warn');
 
     const { claims } = await requestRoomToken();
 
     expect(agentNamesDispatchedBy(claims)).toEqual([testEnv.AGENT_NAME]);
     expect(metadataOf(claims)).toBe('');
+    expect(warn).toHaveBeenCalledWith({
+      message: 'Could not build the learner brief; dispatching without it',
+      userId: signedIn.user.id,
+      error: 'db',
+    });
   });
 
   it('processes a missed Conversation at the next Room Token', async () => {

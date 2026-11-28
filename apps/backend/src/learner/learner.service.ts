@@ -11,6 +11,7 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
+import { messageOf } from '../message-of.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   LEARNER_MODEL,
@@ -66,10 +67,6 @@ interface Ledger {
   readonly taughtAgain: ReadonlySet<string>;
   /** The tracked items a `correction` Note taught again: the User missed them. */
   readonly corrected: ReadonlySet<string>;
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -166,10 +163,16 @@ export class LearnerService implements OnModuleDestroy {
 
   /** Waits for the runs in progress, so none is cut off by the shutdown. */
   async onModuleDestroy(): Promise<void> {
+    // A run started during the drain fails open: its Conversation stays
+    // unprocessed, and the next Room Token takes it.
     await Promise.all(this.runs.values());
   }
 
   private async processAll(userId: string, now: Date): Promise<void> {
+    // Not strictly oldest first, on purpose: an older Conversation with no end
+    // marker becomes eligible 6 hours after it started, so it may come after a
+    // newer ended one. That is safe: an item is tracked only when it was seen
+    // before the Conversation, and nothing is moved back in time.
     const conversations = await this.prisma.conversation.findMany({
       where: {
         userId,
@@ -223,6 +226,8 @@ export class LearnerService implements OnModuleDestroy {
         select: { kind: true, english: true, meaning: true },
       }),
       // Only what was seen before the Conversation can be recalled in it.
+      // Read outside the transaction: safe with one backend process, since
+      // the runs of one User are chained and none changes them meanwhile.
       this.prisma.learnerItem.findMany({
         where: { userId, lastSeenAt: { lt: at } },
         orderBy: [{ lastSeenAt: 'desc' }, { id: 'desc' }],

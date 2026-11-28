@@ -741,6 +741,96 @@ describe('Updating the learner profile from ended Conversations', () => {
     expect(await processedAt('r2')).toEqual(day(2));
   });
 
+  it('does not call the model for a Conversation without turns, and still keeps its ledger', async () => {
+    await taughtPhrase();
+    const script = vi.fn(() => NOTHING);
+    model.script = script;
+    await endedConversation(app, ada.user, {
+      room: 'r2',
+      at: day(1),
+      notes: [WORD],
+    });
+
+    await service.processPending(ada.user.id, day(2));
+
+    expect(script).not.toHaveBeenCalled();
+    expect(await itemOf('deadline')).toMatchObject({ firstSeenAt: day(1) });
+    expect(await processedAt('r2')).toEqual(day(2));
+  });
+
+  it('skips a Note with no text left once normalized', async () => {
+    await endedConversation(app, ada.user, {
+      room: 'r1',
+      at: day(0),
+      notes: [{ ...WORD, english: ' ?! ... ' }, PHRASE],
+    });
+
+    await service.processPending(ada.user.id, day(1));
+
+    expect(normalizeKey(' ?! ... ')).toBe('');
+    expect(
+      await prisma.learnerItem.findMany({ select: { key: true } }),
+    ).toEqual([{ key: PHRASE_KEY }]);
+    expect(await processedAt('r1')).toEqual(day(1));
+  });
+
+  it('processes an older Conversation with no end marker after a newer one, without moving anything back', async () => {
+    await taughtPhrase();
+    model.script = ({ items }) => ({
+      matches: [],
+      outcomes: items.map(({ id }) => ({ itemId: id, outcome: 'missed' })),
+    });
+    const older = day(2);
+    const newer = new Date(day(2).getTime() + HOUR_MS);
+    await endedConversation(app, ada.user, {
+      room: 'r-older',
+      at: older,
+      notes: [{ ...CORRECTION, english: PHRASE.english }, WORD],
+      turns: TURNS,
+    });
+    await prisma.conversation.update({
+      where: { roomName: 'r-older' },
+      data: { endedAt: null },
+    });
+    await endedConversation(app, ada.user, {
+      room: 'r-newer',
+      at: newer,
+      notes: [],
+      turns: TURNS,
+    });
+    // The newer one was ended; the older one is not stale yet.
+    await service.processPending(
+      ada.user.id,
+      new Date(day(2).getTime() + 2 * HOUR_MS),
+    );
+    expect(await processedAt('r-older')).toBeNull();
+    const recallAll = vi.fn(
+      ({ items }: LearnerJudgeInput): LearnerJudgment => ({
+        matches: [],
+        outcomes: items.map(({ id }) => ({ itemId: id, outcome: 'recalled' })),
+      }),
+    );
+    model.script = recallAll;
+    const afterNewer = await itemOf(PHRASE_KEY);
+    expect(afterNewer).toMatchObject({
+      intervalDays: 1,
+      lapses: 1,
+      lastSeenAt: newer,
+    });
+
+    await service.processPending(ada.user.id, day(3));
+
+    expect(await processedAt('r-older')).toEqual(day(3));
+    // The phrase was seen after the older Conversation: it is not tracked
+    // there, so neither its correction nor the model touches it.
+    expect(recallAll).not.toHaveBeenCalled();
+    expect(await itemOf(PHRASE_KEY)).toEqual(afterNewer);
+    expect(await itemOf('deadline')).toMatchObject({
+      firstSeenAt: older,
+      lastSeenAt: older,
+    });
+  });
+
   it("processes the User's Conversations oldest first", async () => {
     model.script = ({ items }) => ({
       matches: [],

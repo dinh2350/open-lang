@@ -24,7 +24,7 @@ The Agent sends the transcript of each Conversation to the backend at `BACKEND_U
 
 The example Agent config uses the `fake` Provider, which needs no API key and stays silent. To talk with the Agent, set `REALTIME_PROVIDER` in `apps/agent/.env` to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY` or Vertex AI (see `apps/agent/.env.example`). To try Pipeline mode instead, set `AGENT_MODE=pipeline` and choose `openai` or `google` for each of `STT_PROVIDER`, `LLM_PROVIDER` and `TTS_PROVIDER`; the Providers may be mixed. The Agent refuses to start, naming the variable, when its configuration is invalid.
 
-The backend writes each Conversation's Report with the model `REPORT_PROVIDER` names in `apps/backend/.env`: `fake` (the default) gives canned Reports with no API key. Set it to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY`; `REPORT_MODEL` picks the Provider's model, and blank uses its default (see `apps/backend/.env.example`). The backend refuses to start without the key of the chosen Provider.
+The backend writes each Conversation's Report with the model `REPORT_PROVIDER` names in `apps/backend/.env`: `fake` (the default) gives canned Reports with no API key. Set it to `openai` with `OPENAI_API_KEY`, or to `google` with `GOOGLE_API_KEY`; `REPORT_MODEL` picks the Provider's model, and blank uses its default (see `apps/backend/.env.example`). In the same way, `LEARNER_PROVIDER` names the model that judges what the User recalled of the items the tutor taught (`fake`, the default, judges nothing), and `LEARNER_MODEL` picks its model. The backend refuses to start without the key of a chosen Provider.
 
 ## Commands
 
