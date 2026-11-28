@@ -20,8 +20,12 @@ import { saveLog } from './evidence.ts';
 import { randomClientAddress } from './users.ts';
 
 /**
- * The profile is updated in the background once the end marker is posted, so
- * the next Room Token may not carry it at once.
+ * The profile is updated in the background, so the next Room Token may not
+ * carry it at once. The Agent's end marker starts the update, and each Room
+ * Token request also takes the User's Conversations that were not processed
+ * yet, so the poll sees the item whichever of the two gets there first. These
+ * tests do not tell the two apart: the end marker's own trigger is covered by
+ * the backend's integration tests.
  */
 const PROFILE_TIMEOUT = 15_000;
 
@@ -219,7 +223,8 @@ async function finishConversationWith(
 
 /**
  * Asks the User for Room Tokens until one carries a brief, and gives its
- * metadata. The profile is written in the background after the end marker.
+ * metadata. The profile is written in the background, started by the end
+ * marker or by a Room Token request, so the first tokens may not carry it.
  */
 async function metadataOfFirstBrief(user: SignedInUser): Promise<string> {
   const asked: (string | undefined)[] = [];

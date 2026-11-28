@@ -713,8 +713,8 @@ The tests are API-level against the real stack (backend, Postgres, LiveKit): the
 Run: `E2E_EVIDENCE_DIR=docs/superpowers/evidence/2026-11-28-learner-profile pnpm test:e2e learner-memory`
 Expected: PASS, and `docs/superpowers/evidence/2026-11-28-learner-profile/learner-memory.json` exists. The stack needs ports 3000, 5173 and 8081: if a dev stack is running, ask the human before stopping it.
 
-- [ ] **Step 3: Prove the tests can fail.** (a) In `ConversationsService.recordEnd`, comment out the `processPending` call; run the command above.
-      Expected: `a finished Conversation leaves items that the next Room Token carries` FAILS (the poll times out). Restore the call. (b) In `RoomTokenService.issueRoomToken`, make the dispatch always carry `metadata: '{"version":1,"items":[]}'`; run again.
+- [ ] **Step 3: Prove the tests can fail.** (a) Make `LearnerService` create no items from Notes (for example, in `apply`, do not call `storeNotes` and pass an empty set to `storeOutcomes`; or remove both `processPending` call sites, the one in `ConversationsService.recordEnd` and the one in `RoomTokenService.issueRoomToken`); run the command above.
+      Expected: `a finished Conversation leaves items that the next Room Token carries` FAILS (the poll times out). Restore the code. Removing only the call in `recordEnd` would not make it fail: each Room Token request also processes the User's pending Conversations, so the poll's own requests take the ended Conversation. The end-marker trigger alone has no e2e coverage; its proof is the integration test `the end marker creates the User's items from the Conversation's notes` in `apps/backend/test/agent-ingest.spec.ts`. (b) In `RoomTokenService.issueRoomToken`, make the dispatch always carry `metadata: '{"version":1,"items":[]}'`; run again.
       Expected: `a new User's Room Token carries no metadata` and `a second User's Room Token carries none of the first User's items` FAIL. Restore the code and run once more: PASS.
 
 - [ ] **Step 4: Commit**
