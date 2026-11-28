@@ -1,4 +1,5 @@
 import { voice } from '@livekit/agents';
+import type { LearnerBrief } from '@open-lang/shared';
 import { describe, expect, it } from 'vitest';
 import { TutorAgent } from '../src/agent.ts';
 import { createBackendClient } from '../src/backend-client.ts';
@@ -20,6 +21,23 @@ describe('TutorAgent', () => {
   it('follows the instructions of the note order it is given', () => {
     expect(new TutorAgent([], 'before-speaking').instructions).toBe(
       tutorInstructions('before-speaking'),
+    );
+  });
+
+  it('a TutorAgent with a brief follows the instructions that include it', () => {
+    const brief: LearnerBrief = {
+      version: 1,
+      items: [{ english: 'deadline', meaning: 'hạn chót', status: 'learning' }],
+    };
+    const { instructions } = new TutorAgent([], 'before-speaking', brief);
+
+    expect(instructions).toBe(tutorInstructions('before-speaking', brief));
+    expect(instructions).toContain('- [learning] deadline = hạn chót');
+  });
+
+  it('follows the tutor instructions when the brief is null', () => {
+    expect(new TutorAgent([], 'after-speaking', null).instructions).toBe(
+      TUTOR_INSTRUCTIONS,
     );
   });
 

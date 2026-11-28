@@ -6,6 +6,7 @@ import {
   voice,
 } from '@livekit/agents';
 import type { Room } from '@livekit/rtc-node';
+import { type LearnerBrief, parseLearnerBrief } from '@open-lang/shared';
 import {
   createSessionOptions,
   loadAgentConfig,
@@ -23,9 +24,10 @@ import { recordTranscript } from './transcript-recorder.ts';
  * Starts a Conversation: the tutor joins the room, if there is one, in the
  * given AgentSession, with the given tools, and opens with its opening line,
  * so the User knows it is listening. The tutor calls its tools in the given
- * order, after it speaks by default. Without a room, the AgentSession runs
- * as in LiveKit's testing docs. Text the User types is handled as the SDK
- * does by default.
+ * order, after it speaks by default, and knows from the learner brief, if
+ * there is one, what the User has already studied. Without a room, the
+ * AgentSession runs as in LiveKit's testing docs. Text the User types is
+ * handled as the SDK does by default.
  */
 export async function startConversation(
   session: voice.AgentSession,
@@ -33,11 +35,12 @@ export async function startConversation(
     room?: Room;
     tools?: llm.ToolContextLike;
     noteOrder?: NoteOrder;
+    brief?: LearnerBrief | null;
   } = {},
 ): Promise<void> {
   // In a job, start() also connects to the room.
   await session.start({
-    agent: new TutorAgent(options.tools, options.noteOrder),
+    agent: new TutorAgent(options.tools, options.noteOrder, options.brief),
     room: options.room,
   });
   // Greets only once the room is connected: the Agent's state changes
@@ -61,7 +64,10 @@ export default defineAgent({
     const roomName = ctx.job.room?.name;
     const config = loadAgentConfig(process.env);
     const { BACKEND_URL, AGENT_API_KEY } = loadBackendEnvironment(process.env);
-    // The job's metadata is not read: every Conversation is the same lesson.
+    // The job's metadata is read for the learner brief only. Without a valid
+    // brief, or with one that has no items, the Conversation is the same
+    // lesson as ever.
+    const brief = parseLearnerBrief(ctx.job.metadata);
     const session = new voice.AgentSession(createSessionOptions(config));
     session.on(voice.AgentSessionEventTypes.Close, (event) => {
       logger.info({ roomName, reason: event.reason }, 'Conversation ended');
@@ -88,6 +94,7 @@ export default defineAgent({
         ? [createSaveNoteTool({ backend: pendingSends.client, roomName })]
         : [],
       noteOrder,
+      brief,
     });
     // Each turn goes to the backend as soon as it is in the history, so a
     // Conversation that ends abruptly keeps its transcript. The job process
@@ -102,8 +109,14 @@ export default defineAgent({
         await backend.sendEnd(roomName);
       });
     }
+    // Only how many items, never the items: they come from the User's Notes.
     logger.info(
-      { roomName, ...modelsOf(config), noteOrder },
+      {
+        roomName,
+        ...modelsOf(config),
+        noteOrder,
+        briefItems: brief?.items.length ?? 0,
+      },
       'Conversation started',
     );
   },

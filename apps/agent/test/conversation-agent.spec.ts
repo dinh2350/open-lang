@@ -1,4 +1,5 @@
 import { initializeLogger, llm, voice } from '@livekit/agents';
+import type { LearnerBrief } from '@open-lang/shared';
 import {
   afterAll,
   afterEach,
@@ -18,8 +19,23 @@ import {
   startFakeBackend,
   TEST_AGENT_API_KEY,
 } from './fake-backend.ts';
-import { tutorInstructions } from '../src/tutor-instructions.ts';
+import {
+  TUTOR_INSTRUCTIONS,
+  tutorInstructions,
+} from '../src/tutor-instructions.ts';
 import { dispatchToRoom } from './fake-job.ts';
+
+/** What the backend sends as the job's metadata: one item the User has studied. */
+const brief: LearnerBrief = {
+  version: 1,
+  items: [
+    {
+      english: 'I fixed the login bug.',
+      meaning: 'Tôi đã sửa lỗi đăng nhập.',
+      status: 'mastered',
+    },
+  ],
+};
 
 describe('Agent dispatched into a Conversation room', () => {
   let backend: FakeBackend;
@@ -282,6 +298,52 @@ describe('Agent dispatched into a Conversation room', () => {
     );
   });
 
+  it('gives the tutor the brief that came in the job metadata', async () => {
+    const job = await dispatchToRoom(
+      conversationAgent,
+      'conversation-brief',
+      JSON.stringify(brief),
+    );
+    const instructions = job.session()?.currentAgent.instructions;
+    await job.end();
+
+    expect(job.logs()).toContainEqual(
+      expect.objectContaining({
+        msg: 'Conversation started',
+        roomName: 'conversation-brief',
+        briefItems: 1,
+      }),
+    );
+    expect(instructions).toBe(tutorInstructions('after-speaking', brief));
+  });
+
+  it.each([
+    ['text that is not JSON', 'nope'],
+    ['empty text', ''],
+    ['JSON that is not a brief', '{"version":1,"items":"none"}'],
+    ['a brief with no items', JSON.stringify({ version: 1, items: [] })],
+  ])(
+    'teaches as it does today when the job metadata is %s',
+    async (_name, metadata) => {
+      const job = await dispatchToRoom(
+        conversationAgent,
+        'conversation-no-brief',
+        metadata,
+      );
+      const instructions = job.session()?.currentAgent.instructions;
+      await job.end();
+
+      expect(job.logs()).toContainEqual(
+        expect.objectContaining({
+          msg: 'Conversation started',
+          roomName: 'conversation-no-brief',
+          briefItems: 0,
+        }),
+      );
+      expect(instructions).toBe(TUTOR_INSTRUCTIONS);
+    },
+  );
+
   it('waits for a note still being sent before the end marker', async () => {
     const slowBackend = await startFakeBackend([], { responseDelayMs: 300 });
     vi.stubEnv('BACKEND_URL', slowBackend.url);
@@ -409,6 +471,33 @@ describe('The tutor, run with voice.testing', () => {
 
       expect(session.currentAgent.instructions).toBe(
         tutorInstructions('before-speaking'),
+      );
+    } finally {
+      await session.close();
+    }
+  });
+
+  it('follows the instructions that include the brief the Conversation starts with', async () => {
+    initializeLogger({ pretty: false, level: 'error' });
+    const session = new voice.AgentSession({
+      ...createSessionOptions(
+        loadAgentConfig({
+          AGENT_MODE: 'pipeline',
+          STT_PROVIDER: 'fake',
+          LLM_PROVIDER: 'fake',
+          TTS_PROVIDER: 'fake',
+        }),
+      ),
+      llm: new voice.testing.FakeLLM([]),
+    });
+    try {
+      await startConversation(session, { brief });
+
+      expect(session.currentAgent.instructions).toBe(
+        tutorInstructions('after-speaking', brief),
+      );
+      expect(session.currentAgent.instructions).toContain(
+        '- [mastered] I fixed the login bug. = Tôi đã sửa lỗi đăng nhập.',
       );
     } finally {
       await session.close();

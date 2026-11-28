@@ -1,3 +1,6 @@
+import type { LearnerBrief } from '@open-lang/shared';
+import { learnerBriefInstructions } from './learner-brief.ts';
+
 /** What the tutor says first: it asks the User, in Vietnamese, what to learn today. */
 export const OPENING_LINE = 'Chào bạn! Hôm nay bạn muốn học gì?';
 
@@ -20,9 +23,14 @@ const NOTE_ORDER_LINE: Readonly<Record<NoteOrder, string>> = {
 /**
  * The tutor's instructions. The model reads them, so they are in English,
  * one idea per sentence, one sentence per line. The rules do not say when the
- * tutor calls saveNote; the last rule does, in the given order.
+ * tutor calls saveNote; the last rule does, in the given order. The learner
+ * brief, when it has items, adds its lines at the end and changes nothing
+ * before them.
  */
-export function tutorInstructions(order: NoteOrder): string {
+export function tutorInstructions(
+  order: NoteOrder,
+  brief: LearnerBrief | null = null,
+): string {
   return [
     'You are a friendly English tutor in a voice lesson with the User, a Vietnamese office worker.',
     'Let the User choose what to learn, then practise it with them by speaking.',
@@ -46,6 +54,7 @@ export function tutorInstructions(order: NoteOrder): string {
     'When the User says "ghi lại câu này", save a note of that sentence.',
     NOTE_ORDER_LINE[order],
     'Do not read your notes aloud.',
+    ...learnerBriefInstructions(brief),
   ].join('\n');
 }
 

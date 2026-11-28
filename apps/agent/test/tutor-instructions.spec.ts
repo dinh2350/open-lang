@@ -1,3 +1,4 @@
+import type { LearnerBrief } from '@open-lang/shared';
 import { describe, expect, it } from 'vitest';
 import {
   OPENING_INSTRUCTIONS,
@@ -107,5 +108,47 @@ describe('The opening', () => {
 
   it('tells the model to say the opening line exactly, in quotes at the end', () => {
     expect(OPENING_INSTRUCTIONS.endsWith(`"${OPENING_LINE}"`)).toBe(true);
+  });
+});
+
+describe('The tutor instructions with a learner brief', () => {
+  const brief: LearnerBrief = {
+    version: 1,
+    items: [
+      { english: 'deadline', meaning: 'hạn chót', status: 'mastered' },
+      { english: 'follow up', meaning: 'theo dõi lại', status: 'learning' },
+    ],
+  };
+
+  it('tutorInstructions with a brief lists the items and the rules', () => {
+    const instructions = tutorInstructions('after-speaking', brief);
+
+    expect(instructions).toContain('- [mastered] deadline = hạn chót');
+    expect(instructions).toContain('- [learning] follow up = theo dõi lại');
+    expect(instructions).toContain('Do not teach a mastered item as new.');
+    expect(instructions).toContain('Do not read this list aloud.');
+  });
+
+  it('puts the brief after the existing instructions, which stay as they are', () => {
+    for (const order of ['after-speaking', 'before-speaking'] as const) {
+      expect(
+        tutorInstructions(order, brief).startsWith(
+          `${tutorInstructions(order)}\n`,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("without a brief it is today's text", () => {
+    expect(tutorInstructions('after-speaking', null)).toBe(TUTOR_INSTRUCTIONS);
+    expect(tutorInstructions('before-speaking', null)).toBe(
+      tutorInstructions('before-speaking'),
+    );
+  });
+
+  it("with a brief that has no items it is today's text", () => {
+    expect(tutorInstructions('after-speaking', { version: 1, items: [] })).toBe(
+      TUTOR_INSTRUCTIONS,
+    );
   });
 });
